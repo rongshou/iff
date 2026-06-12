@@ -6,4 +6,4 @@ RUN mkdir -p /usr/share/nginx/html
 COPY frontend/dist/ /usr/share/nginx/html/
 
 HEALTHCHECK --interval=30s --timeout=3s \
-  CMD wget -qO- http://localhost/api/health || exit 1
+  CMD wget -qO- http://localhost:3470/api/health || exit 1

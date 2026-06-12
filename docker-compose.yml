@@ -6,17 +6,18 @@ services:
     ports:
       - "127.0.0.1:3470:3470"
     volumes:
-      - /home/admin/.openclaw/workspace-study-abroad/study-abroad-advisor/data:/app/data:ro
+      - /home/admin/.openclaw/workspace-study-abroad/study-abroad-advisor/data:/app/data
     environment:
       - TIANQUAN_DB_PATH=/app/data/advisor.db
       - TIANQUAN_DATA_DIR=/app/data
       - TIANQUAN_HOST=0.0.0.0
       - TIANQUAN_PORT=3470
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3470/api/health"]
-      interval: 30s
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:3470/api/health')"]
+      interval: 15s
       timeout: 5s
-      retries: 3
+      retries: 5
+      start_period: 10s
 
   nginx:
     build:

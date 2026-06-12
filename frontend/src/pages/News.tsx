@@ -29,7 +29,7 @@ export default function NewsPage() {
         setArticles(res.articles);
         setTotal(res.total);
       })
-      .catch((e: any) => setError(e?.message || "加载失败"))
+      .catch((_e: any) => setError(_e?.message || "加载失败"))
       .finally(() => setLoading(false));
   }, [selectedCat, page]);
 
@@ -78,6 +78,11 @@ export default function NewsPage() {
         </div>
       )}
 
+      {/* 错误提示 */}
+      {error && (
+        <div style={{ padding: "20px", textAlign: "center", color: "#dc2626" }}>{error}</div>
+      )}
+
       {/* 文章列表 */}
       <div style={{ padding: "20px", maxWidth: "800px", margin: "0 auto" }}>
         {loading && articles.length === 0 && (
@@ -101,9 +106,9 @@ export default function NewsPage() {
             }}
             onClick={() => article.url && window.open(article.url, "_blank")}
           >
-            {article.cover && (
+            {article.pic_url && (
               <img
-                src={article.cover}
+                src={article.pic_url}
                 alt={article.title}
                 style={{ width: "100%", height: "160px", objectFit: "cover", borderRadius: "6px", marginBottom: "10px" }}
               />
@@ -111,9 +116,9 @@ export default function NewsPage() {
             <h3 style={{ fontSize: "15px", fontWeight: "bold", color: "#1a1a1a", marginBottom: "6px", lineHeight: "1.4" }}>
               {article.title}
             </h3>
-            {article.summary && (
+            {article.description && (
               <p style={{ fontSize: "13px", color: "#666", lineHeight: "1.5", marginBottom: "8px" }}>
-                {article.summary.length > 100 ? article.summary.slice(0, 100) + "..." : article.summary}
+                {article.description.length > 100 ? article.description.slice(0, 100) + "..." : article.description}
               </p>
             )}
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>

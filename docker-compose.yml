@@ -14,6 +14,10 @@ services:
       - TIANQUAN_WERS_DB_PATH=/app/data/werss.db
       - TIANQUAN_HOST=0.0.0.0
       - TIANQUAN_PORT=3470
+      - TIANQUAN_LLM_PROVIDER=${TIANQUAN_LLM_PROVIDER:-dashscope}
+      - TIANQUAN_LLM_API_KEY=${TIANQUAN_LLM_API_KEY:-}
+      - TIANQUAN_LLM_BASE_URL=${TIANQUAN_LLM_BASE_URL:-https://dashscope.aliyuncs.com/compatible-mode/v1}
+      - TIANQUAN_LLM_MODEL=${TIANQUAN_LLM_MODEL:-qwen3.5-plus}
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:3470/api/health')"]
       interval: 15s

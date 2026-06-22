@@ -130,7 +130,7 @@ async def call_llm(messages: list[dict], stream: bool = False):
     if stream:
         return _stream_response(url, headers, payload)
 
-    async with httpx.AsyncClient(timeout=httpx.Timeout(60.0)) as client:
+    async with httpx.AsyncClient(timeout=httpx.Timeout(180.0)) as client:
         resp = await client.post(url, json=payload, headers=headers)
         resp.raise_for_status()
         data = resp.json()
@@ -141,7 +141,7 @@ def _stream_response(url: str, headers: dict, payload: dict):
     from fastapi.responses import StreamingResponse
 
     async def generate():
-        async with httpx.AsyncClient(timeout=httpx.Timeout(60.0)) as client:
+        async with httpx.AsyncClient(timeout=httpx.Timeout(180.0)) as client:
             async with client.stream("POST", url, json=payload, headers=headers) as resp:
                 resp.raise_for_status()
                 async for line in resp.aiter_lines():

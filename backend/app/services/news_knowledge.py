@@ -3,6 +3,7 @@ import sqlite3
 from pathlib import Path
 
 from ..core.config import settings
+from ..core.database import get_db
 
 CATEGORY_KEYWORDS: dict[str, list[str]] = {
     "选校与申请": ["选校", "申请", "录取", "offer", "定位", "排名", "择校", "院校", "专业", "项目", "硕士", "本科", "博士", "文书", "PS", "简历", "CV", "推荐信", "作品集", "面试"],
@@ -62,10 +63,24 @@ def _extract_keywords(text: str) -> list[str]:
     return list(set(keywords))
 
 
+def _load_excluded_ids() -> set[str]:
+    """从 advisor.db 的 excluded_articles 表加载被排除的 article_id 集合"""
+    try:
+        with get_db() as conn:
+            rows = conn.execute(
+                "SELECT article_id FROM excluded_articles"
+            ).fetchall()
+            return {r[0] for r in rows}
+    except Exception:
+        return set()
+
+
 def search_articles(query: str, limit: int = 8) -> list[dict]:
     wers_db = Path(settings.WERS_DB_PATH)
     if not wers_db.exists():
         return []
+
+    excluded_ids = _load_excluded_ids()
 
     keywords = _extract_keywords(query)
     if not keywords:
@@ -79,31 +94,33 @@ def search_articles(query: str, limit: int = 8) -> list[dict]:
 
         category_placeholders = ",".join("?" * len(keywords))
         sql = f"""
-            SELECT title, ai_category, description
+            SELECT id, title, ai_category, description
             FROM articles
-            WHERE ai_category IN ({category_placeholders})
-               OR title LIKE ?
+            WHERE (ai_category IN ({category_placeholders})
+                   OR title LIKE ?)
             ORDER BY publish_time DESC
             LIMIT ?
         """
         like_param = f"%{query[:20]}%"
-        params = keywords + [like_param, limit * 3]
+        params = keywords + [like_param, limit * 5]
 
         rows = conn.execute(sql, params).fetchall()
 
         if not rows:
             sql = """
-                SELECT title, ai_category, description
+                SELECT id, title, ai_category, description
                 FROM articles
                 WHERE title LIKE ?
                 ORDER BY publish_time DESC
                 LIMIT ?
             """
-            rows = conn.execute(sql, (like_param, limit)).fetchall()
+            rows = conn.execute(sql, (like_param, limit * 3)).fetchall()
 
         results: list[dict] = []
         seen_titles: set[str] = set()
         for r in rows:
+            if r["id"] in excluded_ids:
+                continue
             if r["title"] in seen_titles:
                 continue
             seen_titles.add(r["title"])

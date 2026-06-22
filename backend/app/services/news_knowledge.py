@@ -141,24 +141,32 @@ def search_articles(query: str, limit: int = 8) -> list[dict]:
         where_sql = " OR ".join(where_clauses)
 
         idx_rows = advisor_conn.execute(
-            f"SELECT article_id FROM article_search_index WHERE {where_sql}",
+            f"SELECT article_id, inferred_category FROM article_search_index WHERE {where_sql}",
             params_idx,
         ).fetchall()
         advisor_conn.close()
 
         matched_ids = [r["article_id"] for r in idx_rows]
+        # article_id -> inferred_category 映射,用于补全空分类
+        inferred_map: dict[str, str] = {
+            r["article_id"]: r["inferred_category"] for r in idx_rows
+        }
 
         if matched_ids:
-            id_placeholders = ",".join("?" * len(matched_ids))
-            # 不在 SQL 侧 LIMIT,取所有匹配文章由 Python 侧评分排序
-            # 匹配数通常几百量级,性能可控
-            sql = f"""
-                SELECT id, title, ai_category, description
-                FROM articles
-                WHERE id IN ({id_placeholders})
-                ORDER BY publish_time DESC
-            """
-            rows = conn.execute(sql, matched_ids).fetchall()
+            # SQLite 默认变量上限 999,分批查询
+            all_rows: list = []
+            chunk_size = 900
+            for i in range(0, len(matched_ids), chunk_size):
+                chunk = matched_ids[i : i + chunk_size]
+                id_placeholders = ",".join("?" * len(chunk))
+                sql = f"""
+                    SELECT id, title, ai_category, description
+                    FROM articles
+                    WHERE id IN ({id_placeholders})
+                    ORDER BY publish_time DESC
+                """
+                all_rows.extend(conn.execute(sql, chunk).fetchall())
+            rows = all_rows
         else:
             # fallback: 只用分类 + title LIKE
             category_placeholders = ",".join("?" * len(keywords))
@@ -193,9 +201,10 @@ def search_articles(query: str, limit: int = 8) -> list[dict]:
                 continue
             seen_titles.add(r["title"])
             desc = (r["description"] or "")[:120]
+            cat = r["ai_category"] or inferred_map.get(r["id"], "") or "综合资讯"
             item = {
                 "title": r["title"],
-                "category": r["ai_category"] or "综合资讯",
+                "category": cat,
                 "description": desc,
             }
             # 简单相关性评分: 标题命中 term 得 5 分, search_text 命中得 1 分

@@ -24,6 +24,21 @@ TAG_RE = re.compile(r"<[^>]+>")
 ENTITY_RE = re.compile(r"&[a-zA-Z]+;|&#\d+;")
 WS_RE = re.compile(r"\s+")
 
+# 分类关键词(与 news_knowledge.py 的 CATEGORY_KEYWORDS 保持一致)
+CATEGORY_KEYWORDS: dict[str, list[str]] = {
+    "选校与申请": ["选校", "申请", "录取", "offer", "定位", "排名", "择校", "院校", "专业", "项目", "硕士", "本科", "博士", "文书", "PS", "简历", "CV", "推荐信", "作品集", "面试"],
+    "语言考试": ["雅思", "托福", "IELTS", "TOEFL", "GRE", "GMAT", "PTE", "DET", "多邻国", "语言成绩", "语言考试", "标化", "SAT", "ACT"],
+    "签证与出入境": ["签证", "出入境", "入境", "签证材料", "I-20", "CAS", "COE", "护照", "续签", "工签"],
+    "就业与实习": ["就业", "实习", "求职", "OPT", "CPT", "秋招", "春招", "校招", "薪酬", "薪资", "年薪"],
+    "费用与奖学金": ["费用", "学费", "奖学金", "省钱", "花费", "开支", "助学金", "全奖", "半奖", "生活费"],
+    "排名与榜单": ["排名", "QS", "USNews", "THE", "软科", "ARWU", "榜单"],
+    "政策与解读": ["政策", "解读", "改革", "变化", "新政", "规定", "调整"],
+    "大学动态": ["大学", "学院", "校区", "新开", "扩招", "停招", "升级", "成立"],
+    "低龄留学": ["低龄", "高中", "初中", "小学", "陪读", "预科", "游学", "夏校", "夏令营"],
+    "生活适应": ["住宿", "租房", "医保", "交通", "饮食", "安全", "文化差异"],
+    "考试技巧": ["技巧", "备考", "提分", "刷题", "单词", "口语", "写作"],
+}
+
 
 def strip_html(html: str) -> str:
     if not html:
@@ -39,15 +54,41 @@ def build_search_text(title: str, description: str, content_clean: str) -> str:
     return " ".join(parts)[:8000]
 
 
+def infer_category(title: str, description: str, content_excerpt: str) -> str:
+    """根据标题+描述+正文摘要,用关键词规则推断文章分类。
+    优先用标题命中(权重高),其次描述,最后正文。
+    """
+    scores: dict[str, int] = {}
+    text_layers = [(title, 3), (description, 2), (content_excerpt[:500], 1)]
+    for text, weight in text_layers:
+        if not text:
+            continue
+        for category, words in CATEGORY_KEYWORDS.items():
+            for w in words:
+                if w.lower() in text.lower():
+                    scores[category] = scores.get(category, 0) + weight
+                    break
+    if not scores:
+        return "综合资讯"
+    return max(scores, key=scores.get)
+
+
 def ensure_schema(advisor_db: Path) -> None:
     conn = sqlite3.connect(str(advisor_db))
     conn.execute("""
         CREATE TABLE IF NOT EXISTS article_search_index (
             article_id TEXT PRIMARY KEY,
             search_text TEXT NOT NULL,
+            inferred_category TEXT DEFAULT '综合资讯',
             updated_at TEXT DEFAULT (datetime('now', '+8 hours'))
         )
     """)
+    # 兼容已有表: 补列
+    cols = {r[1] for r in conn.execute("PRAGMA table_info(article_search_index)").fetchall()}
+    if "inferred_category" not in cols:
+        conn.execute(
+            "ALTER TABLE article_search_index ADD COLUMN inferred_category TEXT DEFAULT '综合资讯'"
+        )
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_search_text ON article_search_index(article_id)"
     )
@@ -66,7 +107,7 @@ def build_index(wers_db: Path, advisor_db: Path) -> int:
     )
     total = src.execute("SELECT COUNT(*) FROM articles").fetchone()[0]
 
-    batch: list[tuple[str, str]] = []
+    batch: list[tuple[str, str, str]] = []
     done = 0
     while True:
         rows = cursor.fetchmany(BATCH_SIZE)
@@ -77,9 +118,11 @@ def build_index(wers_db: Path, advisor_db: Path) -> int:
             if len(content_clean) > CONTENT_EXCERPT_LEN:
                 content_clean = content_clean[:CONTENT_EXCERPT_LEN]
             text = build_search_text(r[1] or "", r[2] or "", content_clean)
-            batch.append((r[0], text))
+            cat = infer_category(r[1] or "", r[2] or "", content_clean)
+            batch.append((r[0], text, cat))
         dst.executemany(
-            "INSERT OR REPLACE INTO article_search_index(article_id, search_text) VALUES(?, ?)",
+            "INSERT OR REPLACE INTO article_search_index(article_id, search_text, inferred_category) "
+            "VALUES(?, ?, ?)",
             batch,
         )
         dst.commit()
@@ -88,6 +131,16 @@ def build_index(wers_db: Path, advisor_db: Path) -> int:
         batch.clear()
 
     src.close()
+
+    # 统计推断分类覆盖率
+    stats = dst.execute(
+        "SELECT inferred_category, COUNT(*) FROM article_search_index "
+        "GROUP BY inferred_category ORDER BY COUNT(*) DESC"
+    ).fetchall()
+    print("\n推断分类分布:", file=sys.stderr)
+    for cat, n in stats:
+        print(f"  {cat}: {n}", file=sys.stderr)
+
     dst.close()
     return done
 

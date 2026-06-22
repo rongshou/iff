@@ -100,6 +100,7 @@ export interface ChatMessage {
   role: "user" | "assistant";
   content: string;
   timestamp: number;
+  reasoning?: string;
 }
 
 export interface ChatRequest {

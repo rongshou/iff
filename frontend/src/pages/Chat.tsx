@@ -286,6 +286,7 @@ export default function ChatPage() {
       }));
 
       let accumulated = "";
+      let reasoningText = "";
       await streamChat(
         apiMessages,
         (chunk) => {
@@ -299,7 +300,16 @@ export default function ChatPage() {
           }));
         },
         () => {},
-        controller.signal
+        controller.signal,
+        (reasoning) => {
+          reasoningText += reasoning;
+          setScenes((prev) => ({
+            ...prev,
+            [activeScene]: prev[activeScene].map((m) =>
+              m.id === assistantId ? { ...m, reasoning: reasoningText } : m
+            ),
+          }));
+        }
       );
     } catch (e: any) {
       if (e?.name === "AbortError") {
@@ -667,6 +677,14 @@ function MessageBubble({ msg }: { msg: ChatMessage }) {
             <div className="whitespace-pre-wrap break-words">{msg.content}</div>
           ) : msg.content ? (
             <div className="break-words">{renderMarkdown(msg.content)}</div>
+          ) : msg.reasoning ? (
+            <div className="flex items-center gap-2 text-slate-400 text-[13px]">
+              <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none">
+                <circle className="opacity-20" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" />
+                <path className="opacity-80" d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+              </svg>
+              <span>正在思考…</span>
+            </div>
           ) : (
             <TypingDots />
           )}

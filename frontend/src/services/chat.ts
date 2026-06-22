@@ -30,7 +30,8 @@ export async function streamChat(
   messages: ChatMessageInput[],
   onChunk: (text: string) => void,
   onDone: () => void,
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  onReasoning?: (text: string) => void
 ): Promise<void> {
   const res = await fetch(`${API_BASE}/chat`, {
     method: "POST",
@@ -70,6 +71,7 @@ export async function streamChat(
         try {
           const obj = JSON.parse(data);
           if (obj.content) onChunk(obj.content);
+          if (obj.reasoning && onReasoning) onReasoning(obj.reasoning);
         } catch {
           // skip invalid JSON
         }

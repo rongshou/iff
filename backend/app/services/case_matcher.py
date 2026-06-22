@@ -5,7 +5,7 @@ from typing import Optional
 from ..utils.gpa import normalize_gpa, GPA_FORMAT_ALIASES
 from ..utils.tier import classify_school_tier, get_tier_label
 from .gpa_requirement import meets_requirement
-from .probability import classify_admission_chance
+from .probability import classify_admission_chance, get_school_percentiles
 
 COUNTRY_RANK_FIELD = {
     "英国": "qs_rank", "美国": "usnews_rank", "澳大利亚": "qs_rank",
@@ -18,7 +18,6 @@ COUNTRY_RANK_FIELD = {
 }
 
 MAX_SCHOOLS_PER_COUNTRY = 15
-SCHOOL_DISTRIBUTION = {"冲刺": 3, "匹配": 7, "安全": 2}
 
 # 非大学机构关键词 - 排除语言学校/教育局/中学
 NON_UNIVERSITY_KEYWORDS = [
@@ -323,12 +322,38 @@ def _enrich_with_ranking(
     if not all_ids:
         return by_country
 
-    ph = ",".join("?" for _ in all_ids)
+    id_list = list(all_ids)
+    ph = ",".join("?" for _ in id_list)
     rows = conn.execute(
         f"SELECT id, qs_rank, usnews_rank, the_rank FROM universities WHERE id IN ({ph})",
-        list(all_ids),
+        id_list,
     ).fetchall()
     rank_map = {r["id"]: {"qs_rank": r["qs_rank"], "usnews_rank": r["usnews_rank"], "the_rank": r["the_rank"]} for r in rows}
+
+    # D: 查每个学校所有录取案例的真实 GPA（不受过滤容差限制）
+    gpa_rows = conn.execute(
+        f"""SELECT c.university_id, c.gpa_score, c.gpa_format
+            FROM cases c
+            WHERE c.university_id IN ({ph})
+              AND c.gpa_score IS NOT NULL
+              AND c.gpa_format IS NOT NULL
+              AND c.gpa_format NOT IN ('英制百分制', '学位等级对应分数', '中国高考')
+              AND c.study_level NOT IN ('中学', '语言课程', '专科/职业学院', '预科')""",
+        id_list,
+    ).fetchall()
+
+    all_gpas_by_uni: dict = defaultdict(list)
+    for r in gpa_rows:
+        try:
+            score = float(r["gpa_score"])
+        except (ValueError, TypeError):
+            continue
+        fmt = GPA_FORMAT_ALIASES.get((r["gpa_format"] or "").strip(), r["gpa_format"] or "")
+        if fmt in ("英制百分制", "学位等级对应分数", "中国高考"):
+            continue
+        _, g4 = normalize_gpa(score, fmt)
+        if g4:
+            all_gpas_by_uni[r["university_id"]].append(g4)
 
     for country, schools in by_country.items():
         for slot in schools.values():
@@ -337,8 +362,43 @@ def _enrich_with_ranking(
             slot["usnews_rank"] = r.get("usnews_rank")
             slot["the_rank"] = r.get("the_rank")
             slot["majors"] = list(slot["majors"])[:5]
+            slot["all_gpas"] = all_gpas_by_uni.get(slot["uni_id"], [])
 
     return by_country
+
+
+def _adjust_chance_by_rank(school_list: list[dict], gpa_percent: float) -> None:
+    """以 GPA 百分位分档为主，QS 排名作为名校下限保护。
+
+    GPA 百分位（p25/p50/p75 来自 classify_admission_chance）是分档核心依据，
+    QS 排名仅防止"名校保底"这种不合理结果：
+      - QS≤30 顶尖名校：最低"冲刺"（即使 GPA 远超 p75 也不算保底）
+      - QS≤50 名校：最低"匹配"
+      - QS>50：完全按 GPA 百分位分档
+    """
+    chance_num = {"彩票": -1, "冲刺": 0, "匹配": 1, "安全": 2}
+    num_chance = {-1: "彩票", 0: "冲刺", 1: "匹配", 2: "安全"}
+
+    for s in school_list:
+        rank = s["_sort_rank"]
+        if rank >= 9999:
+            continue  # 无排名保持 GPA 分档
+
+        current = chance_num.get(s["admission_chance"])
+        if current is None:
+            continue  # 未知保持
+
+        if rank <= 30:
+            floor = 0  # 顶尖名校最低冲刺
+        elif rank <= 50:
+            floor = 1  # 名校最低匹配
+        else:
+            continue  # QS>50 完全按 GPA 百分位
+
+        if current > floor:
+            current = floor
+
+        s["admission_chance"] = num_chance[current]
 
 
 def _build_response(by_country: dict, target_countries: list[str], gpa_percent: float, tier_label: str) -> dict:
@@ -361,26 +421,32 @@ def _build_response(by_country: dict, target_countries: list[str], gpa_percent: 
             if rank is None or rank == 0:
                 rank = 9999
 
-            # 基于真实百分位的录取概率
             chance_label, chance_score, p50_ref, prob_n = classify_admission_chance(
                 gpa_percent, uni_name, tier_label,
             )
 
-            gpas = slot["gpas"]
+            # D: GPA 展示用匹配案例区间 + 该校录取 GPA 中位数(p50)
+            all_gpas = slot.get("all_gpas", [])
+            matched_gpas = slot["gpas"]
             case_count = len(slot["cases"])
 
-            # 综合评分: sqrt(案例数) × 概率分数, 严格达标学校加分 (降权案例数避免大校挤压小校)
             import math
             strict_bonus = 1.2 if slot.get("strict_meets", True) else 1.0
             composite = math.sqrt(max(case_count, 1)) * chance_score * strict_bonus
+
+            # 获取 p25/p75 用于 A 的 QS 排名调整
+            perc = get_school_percentiles(uni_name, tier_label)
+            p25 = perc.get("p25") if perc else None
+            p75 = perc.get("p75") if perc else None
 
             school_list.append({
                 "name": uni_name,
                 "qs_rank": slot.get("qs_rank"),
                 "usnews_rank": slot.get("usnews_rank"),
                 "matched_cases": case_count,
-                "gpa_min": round(min(gpas), 2) if gpas else None,
-                "gpa_max": round(max(gpas), 2) if gpas else None,
+                "gpa_min": round(min(matched_gpas), 2) if matched_gpas else None,
+                "gpa_max": round(max(matched_gpas), 2) if matched_gpas else None,
+                "gpa_p50": round(p50_ref, 1) if p50_ref else None,
                 "majors": slot["majors"],
                 "meets_requirement": slot["meets_req"],
                 "requirement_value": slot.get("req_value"),
@@ -390,35 +456,40 @@ def _build_response(by_country: dict, target_countries: list[str], gpa_percent: 
                 "_strict_meets": slot.get("strict_meets", True),
                 "_composite": composite,
                 "_sort_rank": rank,
+                "_p25": p25,
+                "_p75": p75,
             })
 
-        # 排序: 严格达标的优先, 其次按综合评分降序
-        school_list.sort(key=lambda x: (0 if x["_strict_meets"] else 1, -x["_composite"]))
-        by_chance = {"冲刺": [], "匹配": [], "安全": [], "彩票": [], "未知": []}
-        for s in school_list:
-            by_chance.get(s["admission_chance"], by_chance["未知"]).append(s)
+        # A: 结合 QS 排名和 GPA 重新分档
+        _adjust_chance_by_rank(school_list, gpa_percent)
 
+        # C: 每档最多 8 所（按综合评分排序），不硬编码 3-7-2
+        chance_order = {"冲刺": 0, "匹配": 1, "安全": 2, "彩票": 3, "未知": 4}
+        by_chance: dict[str, list] = {}
+        for s in school_list:
+            by_chance.setdefault(s["admission_chance"], []).append(s)
+        for group in by_chance.values():
+            group.sort(key=lambda x: -x["_composite"])
+
+        MAX_PER_CHANCE = 8
         selected = []
-        for chance, limit in SCHOOL_DISTRIBUTION.items():
-            selected.extend(by_chance.get(chance, [])[:limit])
+        for chance in ("冲刺", "匹配", "安全", "彩票", "未知"):
+            selected.extend(by_chance.get(chance, [])[:MAX_PER_CHANCE])
 
-        school_list = selected
+        # 按档位+QS排名排序
+        selected.sort(key=lambda x: (chance_order.get(x["admission_chance"], 9), x["_sort_rank"]))
 
-        # 在截断列表内再按排名排序 (保持可读性)
-        school_list.sort(key=lambda x: x["_sort_rank"])
+        for s in selected:
+            for key in ("_sort_rank", "_strict_meets", "_composite", "_p25", "_p75"):
+                s.pop(key, None)
 
-        for s in school_list:
-            del s["_sort_rank"]
-            del s["_strict_meets"]
-            del s["_composite"]
-
-        total_cases = sum(s["matched_cases"] for s in school_list)
+        total_cases = sum(s["matched_cases"] for s in selected)
 
         result_countries.append({
             "country": country_name,
             "matched_cases": total_cases,
-            "matched_schools": len(school_list),
-            "schools": school_list,
+            "matched_schools": len(selected),
+            "schools": selected,
         })
 
     return {"by_country": result_countries}

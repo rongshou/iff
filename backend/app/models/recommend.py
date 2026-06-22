@@ -9,6 +9,7 @@ class SchoolMatchItem(BaseModel):
     matched_cases: int = 0
     gpa_min: Optional[float] = None
     gpa_max: Optional[float] = None
+    gpa_p50: Optional[float] = None
     majors: list[str] = []
     meets_requirement: bool = True
     requirement_value: Optional[float] = None

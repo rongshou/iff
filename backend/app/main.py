@@ -5,6 +5,7 @@ from .api.recommend import router as recommend_router
 from .api.mbti import router as mbti_router
 from .api.timeline import router as timeline_router
 from .api.news import router as news_router
+from .api.chat import router as chat_router
 from .core.config import settings
 
 
@@ -26,6 +27,7 @@ def create_app() -> FastAPI:
     app.include_router(mbti_router)
     app.include_router(timeline_router)
     app.include_router(news_router)
+    app.include_router(chat_router)
 
     return app
 

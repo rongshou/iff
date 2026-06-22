@@ -94,3 +94,15 @@ export interface TimelinePhase {
   phase: string;
   tasks: string[];
 }
+
+export interface ChatMessage {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+  timestamp: number;
+}
+
+export interface ChatRequest {
+  messages: { role: "user" | "assistant"; content: string }[];
+  stream?: boolean;
+}

@@ -7,9 +7,11 @@ services:
       - "127.0.0.1:3470:3470"
     volumes:
       - /home/admin/.openclaw/workspace-study-abroad/study-abroad-advisor/data:/app/data
+      - /home/admin/werss/data/db.db:/app/data/werss.db:ro
     environment:
       - TIANQUAN_DB_PATH=/app/data/advisor.db
       - TIANQUAN_DATA_DIR=/app/data
+      - TIANQUAN_WERS_DB_PATH=/app/data/werss.db
       - TIANQUAN_HOST=0.0.0.0
       - TIANQUAN_PORT=3470
     healthcheck:

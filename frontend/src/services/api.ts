@@ -1,6 +1,6 @@
 import type { RecommendRequest, RecommendResult } from "../types";
 
-const API_BASE = "http://localhost:3470/api";
+const API_BASE = "/tianquan-api";
 
 export async function fetchRecommend(
   data: RecommendRequest

@@ -368,13 +368,12 @@ def _enrich_with_ranking(
 
 
 def _adjust_chance_by_rank(school_list: list[dict], gpa_percent: float) -> None:
-    """以 GPA 百分位分档为主，QS 排名作为名校下限保护。
+    """以 GPA 百分位分档为主，排名作为名校下限保护。
 
-    GPA 百分位（p25/p50/p75 来自 classify_admission_chance）是分档核心依据，
-    QS 排名仅防止"名校保底"这种不合理结果：
-      - QS≤30 顶尖名校：最低"冲刺"（即使 GPA 远超 p75 也不算保底）
-      - QS≤50 名校：最低"匹配"
-      - QS>50：完全按 GPA 百分位分档
+    排名字段因国家而异（美国用 USNews，其余用 QS），阈值通用：
+      - 排名≤15（超顶尖名校）：最低冲刺（防帝国理工/UCL/牛剑当保底）
+      - 排名≤30（名校）：最低匹配（防墨尔本/UNSW/港大当保底）
+      - 排名>30：完全按 GPA 百分位（p25/p50/p75 主导）
     """
     chance_num = {"彩票": -1, "冲刺": 0, "匹配": 1, "安全": 2}
     num_chance = {-1: "彩票", 0: "冲刺", 1: "匹配", 2: "安全"}
@@ -382,18 +381,18 @@ def _adjust_chance_by_rank(school_list: list[dict], gpa_percent: float) -> None:
     for s in school_list:
         rank = s["_sort_rank"]
         if rank >= 9999:
-            continue  # 无排名保持 GPA 分档
+            continue
 
         current = chance_num.get(s["admission_chance"])
         if current is None:
-            continue  # 未知保持
+            continue
 
-        if rank <= 30:
-            floor = 0  # 顶尖名校最低冲刺
-        elif rank <= 50:
-            floor = 1  # 名校最低匹配
+        if rank <= 15:
+            floor = 0
+        elif rank <= 30:
+            floor = 1
         else:
-            continue  # QS>50 完全按 GPA 百分位
+            continue
 
         if current > floor:
             current = floor

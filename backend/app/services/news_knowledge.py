@@ -1,5 +1,6 @@
 import re
 import sqlite3
+import time
 from pathlib import Path
 
 from ..core.config import settings
@@ -63,14 +64,27 @@ def _extract_keywords(text: str) -> list[str]:
     return list(set(keywords))
 
 
+_EXCLUDED_CACHE: set[str] | None = None
+_EXCLUDED_CACHE_TIME: float = 0
+_CACHE_TTL = 600  # 10 分钟
+
+
 def _load_excluded_ids() -> set[str]:
-    """从 advisor.db 的 excluded_articles 表加载被排除的 article_id 集合"""
+    """从 advisor.db 的 excluded_articles 表加载被排除的 article_id 集合。
+    带 10 分钟内存缓存,避免每次查询都读 DB。
+    """
+    global _EXCLUDED_CACHE, _EXCLUDED_CACHE_TIME
+    now = time.time()
+    if _EXCLUDED_CACHE is not None and (now - _EXCLUDED_CACHE_TIME) < _CACHE_TTL:
+        return _EXCLUDED_CACHE
     try:
         with get_db() as conn:
             rows = conn.execute(
                 "SELECT article_id FROM excluded_articles"
             ).fetchall()
-            return {r[0] for r in rows}
+        _EXCLUDED_CACHE = {r[0] for r in rows}
+        _EXCLUDED_CACHE_TIME = now
+        return _EXCLUDED_CACHE
     except Exception:
         return set()
 
@@ -106,12 +120,53 @@ def _split_query_terms(query: str) -> list[str]:
     return terms[:8] if terms else [query[:10]]
 
 
+_SEARCH_CACHE: dict[str, tuple[float, list[dict]]] = {}
+
+
+_INDEX_CACHE: list[dict] | None = None
+_INDEX_CACHE_TIME: float = 0
+
+
+def _load_index() -> list[dict]:
+    """预加载 article_search_index 到内存,避免每次 LIKE 都扫表。
+    2153 行,约 4MB,加载一次后常驻内存。
+    """
+    global _INDEX_CACHE, _INDEX_CACHE_TIME
+    now = time.time()
+    if _INDEX_CACHE is not None and (now - _INDEX_CACHE_TIME) < _CACHE_TTL:
+        return _INDEX_CACHE
+    try:
+        with get_db() as conn:
+            rows = conn.execute(
+                "SELECT article_id, search_text, inferred_category FROM article_search_index"
+            ).fetchall()
+        _INDEX_CACHE = [
+            {
+                "id": r[0],
+                "text": r[1] or "",
+                "category": r[2] or "综合资讯",
+            }
+            for r in rows
+        ]
+        _INDEX_CACHE_TIME = now
+        return _INDEX_CACHE
+    except Exception:
+        return []
+
+
 def search_articles(query: str, limit: int = 8) -> list[dict]:
+    cache_key = f"{query}:{limit}"
+    now = time.time()
+    cached = _SEARCH_CACHE.get(cache_key)
+    if cached and (now - cached[0]) < _CACHE_TTL:
+        return cached[1]
+
     wers_db = Path(settings.WERS_DB_PATH)
     if not wers_db.exists():
         return []
 
     excluded_ids = _load_excluded_ids()
+    index_rows = _load_index()
 
     keywords = _extract_keywords(query)
     if not keywords:
@@ -120,76 +175,51 @@ def search_articles(query: str, limit: int = 8) -> list[dict]:
         keywords = words[:4] if words else ["留学"]
 
     terms = _split_query_terms(query)
+    top_terms = terms[:4]
 
     try:
-        conn = sqlite3.connect(str(wers_db))
-        conn.row_factory = sqlite3.Row
+        # 在内存中做全文匹配(索引表小,4MB,加载快)
+        matched: list[dict] = []
+        for row in index_rows:
+            if any(t in row["text"] for t in top_terms):
+                if row["id"] not in excluded_ids:
+                    matched.append(row)
 
-        like_param = f"%{query[:20]}%"
+        # 按相关性评分排序(标题命中加分),只取 top N 去查 werss.db
+        # 这样最多只查几十篇,避免大 IN 查询
+        scored_matched: list[tuple[int, dict]] = []
+        for m in matched:
+            # 用 search_text 前 80 字符(通常是标题)做评分
+            title_hint = m["text"][:80]
+            score = 0
+            for term in terms:
+                if term in title_hint:
+                    score += 5
+                else:
+                    score += 1
+            if query[:10] in title_hint:
+                score += 10
+            scored_matched.append((score, m))
 
-        # 第一优先: 全文匹配(title+description+content 摘要)
-        # 通过 JOIN advisor.db 的 article_search_index 扩展检索字段
-        # 对查询分词后多词 OR 匹配,提升召回率
-        advisor_conn = sqlite3.connect(str(settings.DB_PATH))
-        advisor_conn.row_factory = sqlite3.Row
+        scored_matched.sort(key=lambda x: x[0], reverse=True)
+        # 只取 top 30 去查 werss.db 取标题/描述
+        top_matched = scored_matched[:30]
+        top_ids = [m["id"] for _, m in top_matched]
+        inferred_map = {m["id"]: m["category"] for _, m in top_matched}
 
-        where_clauses = ["search_text LIKE ?"]
-        params_idx = [like_param]
-        for term in terms:
-            where_clauses.append("search_text LIKE ?")
-            params_idx.append(f"%{term}%")
-        where_sql = " OR ".join(where_clauses)
-
-        idx_rows = advisor_conn.execute(
-            f"SELECT article_id, inferred_category FROM article_search_index WHERE {where_sql}",
-            params_idx,
-        ).fetchall()
-        advisor_conn.close()
-
-        matched_ids = [r["article_id"] for r in idx_rows]
-        # article_id -> inferred_category 映射,用于补全空分类
-        inferred_map: dict[str, str] = {
-            r["article_id"]: r["inferred_category"] for r in idx_rows
-        }
-
-        if matched_ids:
-            # SQLite 默认变量上限 999,分批查询
-            all_rows: list = []
-            chunk_size = 900
-            for i in range(0, len(matched_ids), chunk_size):
-                chunk = matched_ids[i : i + chunk_size]
-                id_placeholders = ",".join("?" * len(chunk))
-                sql = f"""
-                    SELECT id, title, ai_category, description
-                    FROM articles
-                    WHERE id IN ({id_placeholders})
-                    ORDER BY publish_time DESC
-                """
-                all_rows.extend(conn.execute(sql, chunk).fetchall())
-            rows = all_rows
-        else:
-            # fallback: 只用分类 + title LIKE
-            category_placeholders = ",".join("?" * len(keywords))
+        if top_ids:
+            wers_conn = sqlite3.connect(str(Path(settings.WERS_DB_PATH)))
+            wers_conn.row_factory = sqlite3.Row
+            id_placeholders = ",".join("?" * len(top_ids))
             sql = f"""
                 SELECT id, title, ai_category, description
                 FROM articles
-                WHERE ai_category IN ({category_placeholders})
-                   OR title LIKE ?
-                ORDER BY publish_time DESC
-                LIMIT ?
+                WHERE id IN ({id_placeholders})
             """
-            params = keywords + [like_param, limit * 5]
-            rows = conn.execute(sql, params).fetchall()
-
-        if not rows:
-            sql = """
-                SELECT id, title, ai_category, description
-                FROM articles
-                WHERE title LIKE ?
-                ORDER BY publish_time DESC
-                LIMIT ?
-            """
-            rows = conn.execute(sql, (like_param, limit * 3)).fetchall()
+            rows = wers_conn.execute(sql, top_ids).fetchall()
+            wers_conn.close()
+        else:
+            rows = []
 
         results: list[dict] = []
         seen_titles: set[str] = set()
@@ -197,38 +227,30 @@ def search_articles(query: str, limit: int = 8) -> list[dict]:
         for r in rows:
             if r["id"] in excluded_ids:
                 continue
-            if r["title"] in seen_titles:
+            title = r["title"] or ""
+            if title in seen_titles:
                 continue
-            seen_titles.add(r["title"])
-            desc = (r["description"] or "")[:120]
+            seen_titles.add(title)
             cat = r["ai_category"] or inferred_map.get(r["id"], "") or "综合资讯"
             item = {
-                "title": r["title"],
+                "title": title,
                 "category": cat,
-                "description": desc,
+                "description": (r["description"] or "")[:120],
             }
-            # 简单相关性评分: 标题命中 term 得 5 分, search_text 命中得 1 分
-            # 标题匹配权重高,确保标题相关的文章排前面
-            title = r["title"] or ""
             score = 0
             for term in terms:
                 if term in title:
                     score += 5
                 else:
                     score += 1
-            # 完整查询短语出现在标题中,额外加分
             if query[:10] in title:
                 score += 10
             scored.append((score, item))
 
-        # 按相关性降序,同分按发布时间(已 DESC)保持稳定
         scored.sort(key=lambda x: x[0], reverse=True)
-        for _, item in scored:
-            results.append(item)
-            if len(results) >= limit:
-                break
+        results = [item for _, item in scored[:limit]]
 
-        conn.close()
+        _SEARCH_CACHE[cache_key] = (now, results)
         return results
     except Exception:
         return []

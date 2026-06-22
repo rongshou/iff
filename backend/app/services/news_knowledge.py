@@ -75,6 +75,37 @@ def _load_excluded_ids() -> set[str]:
         return set()
 
 
+STOPWORD_BIGRAMS = {
+    "的", "了", "是", "在", "和", "与", "或", "也", "都", "就", "还", "又",
+    "可以", "什么", "怎么", "如何", "为什么", "需要", "应该", "可能",
+    "他们", "我们", "你们", "自己", "这个", "那个", "这些", "那些",
+}
+
+
+def _split_query_terms(query: str) -> list[str]:
+    """把查询拆成搜索词: 英文按空格,中文按 2-gram 拆分"""
+    terms: list[str] = []
+    # 提取英文词
+    en_words = re.findall(r"[a-zA-Z]{2,}", query)
+    terms.extend(w.lower() for w in en_words[:3])
+
+    # 提取中文连续段,做 2-gram
+    cn_segments = re.findall(r"[\u4e00-\u9fff]+", query)
+    for seg in cn_segments:
+        if len(seg) <= 2:
+            if seg not in STOPWORD_BIGRAMS:
+                terms.append(seg)
+        else:
+            for i in range(len(seg) - 1):
+                bigram = seg[i : i + 2]
+                if bigram not in STOPWORD_BIGRAMS:
+                    terms.append(bigram)
+                if len(terms) >= 8:
+                    break
+
+    return terms[:8] if terms else [query[:10]]
+
+
 def search_articles(query: str, limit: int = 8) -> list[dict]:
     wers_db = Path(settings.WERS_DB_PATH)
     if not wers_db.exists():
@@ -88,23 +119,59 @@ def search_articles(query: str, limit: int = 8) -> list[dict]:
         words = [w for w in text.split() if len(w) >= 2]
         keywords = words[:4] if words else ["留学"]
 
+    terms = _split_query_terms(query)
+
     try:
         conn = sqlite3.connect(str(wers_db))
         conn.row_factory = sqlite3.Row
 
-        category_placeholders = ",".join("?" * len(keywords))
-        sql = f"""
-            SELECT id, title, ai_category, description
-            FROM articles
-            WHERE (ai_category IN ({category_placeholders})
-                   OR title LIKE ?)
-            ORDER BY publish_time DESC
-            LIMIT ?
-        """
         like_param = f"%{query[:20]}%"
-        params = keywords + [like_param, limit * 5]
 
-        rows = conn.execute(sql, params).fetchall()
+        # 第一优先: 全文匹配(title+description+content 摘要)
+        # 通过 JOIN advisor.db 的 article_search_index 扩展检索字段
+        # 对查询分词后多词 OR 匹配,提升召回率
+        advisor_conn = sqlite3.connect(str(settings.DB_PATH))
+        advisor_conn.row_factory = sqlite3.Row
+
+        where_clauses = ["search_text LIKE ?"]
+        params_idx = [like_param]
+        for term in terms:
+            where_clauses.append("search_text LIKE ?")
+            params_idx.append(f"%{term}%")
+        where_sql = " OR ".join(where_clauses)
+
+        idx_rows = advisor_conn.execute(
+            f"SELECT article_id FROM article_search_index WHERE {where_sql}",
+            params_idx,
+        ).fetchall()
+        advisor_conn.close()
+
+        matched_ids = [r["article_id"] for r in idx_rows]
+
+        if matched_ids:
+            id_placeholders = ",".join("?" * len(matched_ids))
+            # 不在 SQL 侧 LIMIT,取所有匹配文章由 Python 侧评分排序
+            # 匹配数通常几百量级,性能可控
+            sql = f"""
+                SELECT id, title, ai_category, description
+                FROM articles
+                WHERE id IN ({id_placeholders})
+                ORDER BY publish_time DESC
+            """
+            rows = conn.execute(sql, matched_ids).fetchall()
+        else:
+            # fallback: 只用分类 + title LIKE
+            category_placeholders = ",".join("?" * len(keywords))
+            sql = f"""
+                SELECT id, title, ai_category, description
+                FROM articles
+                WHERE ai_category IN ({category_placeholders})
+                   OR title LIKE ?
+                ORDER BY publish_time DESC
+                LIMIT ?
+            """
+            params = keywords + [like_param, limit * 5]
+            rows = conn.execute(sql, params).fetchall()
 
         if not rows:
             sql = """
@@ -118,6 +185,7 @@ def search_articles(query: str, limit: int = 8) -> list[dict]:
 
         results: list[dict] = []
         seen_titles: set[str] = set()
+        scored: list[tuple[int, dict]] = []
         for r in rows:
             if r["id"] in excluded_ids:
                 continue
@@ -125,11 +193,29 @@ def search_articles(query: str, limit: int = 8) -> list[dict]:
                 continue
             seen_titles.add(r["title"])
             desc = (r["description"] or "")[:120]
-            results.append({
+            item = {
                 "title": r["title"],
                 "category": r["ai_category"] or "综合资讯",
                 "description": desc,
-            })
+            }
+            # 简单相关性评分: 标题命中 term 得 5 分, search_text 命中得 1 分
+            # 标题匹配权重高,确保标题相关的文章排前面
+            title = r["title"] or ""
+            score = 0
+            for term in terms:
+                if term in title:
+                    score += 5
+                else:
+                    score += 1
+            # 完整查询短语出现在标题中,额外加分
+            if query[:10] in title:
+                score += 10
+            scored.append((score, item))
+
+        # 按相关性降序,同分按发布时间(已 DESC)保持稳定
+        scored.sort(key=lambda x: x[0], reverse=True)
+        for _, item in scored:
+            results.append(item)
             if len(results) >= limit:
                 break
 

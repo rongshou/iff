@@ -500,7 +500,7 @@ export default function ChatPage() {
           <div
             ref={scrollRef}
             onScroll={onScroll}
-            className="flex-1 overflow-y-auto thin-scrollbar space-y-5 pr-1 -mr-1"
+            className="flex-1 overflow-y-auto thin-scrollbar space-y-4 sm:space-y-5 pr-1 -mr-1 pb-2"
           >
             {messages.map((msg) => (
               <MessageBubble key={msg.id} msg={msg} />
@@ -683,14 +683,14 @@ function MessageBubble({ msg }: { msg: ChatMessage }) {
       <div
         className={`group flex flex-col ${
           isUser ? "items-end" : "items-start"
-        } max-w-[78%]`}
+        } max-w-[85%] sm:max-w-[75%]`}
       >
         <div
           className={`bubble-shadow ${
             isUser
               ? "bubble-user px-4 py-2.5 rounded-2xl rounded-tr-md"
-              : "bubble-ai px-4 py-3 rounded-2xl rounded-tl-md"
-          } text-[14.5px] sm:text-[15px] leading-relaxed ${
+              : "bubble-ai px-[18px] py-3.5 rounded-2xl rounded-tl-md"
+          } text-[15px] sm:text-[15.5px] leading-relaxed ${
             isUser ? "" : "prose-chat"
           }`}
         >

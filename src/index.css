@@ -27,11 +27,11 @@ body {
     linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
 }
 
-/* 消息气泡的微妙阴影与玻璃感 */
+/* 消息气泡的微妙阴影 */
 .bubble-shadow {
   box-shadow:
-    0 1px 1px rgba(15, 23, 42, 0.04),
-    0 4px 12px rgba(15, 23, 42, 0.05);
+    0 1px 2px rgba(15, 23, 42, 0.04),
+    0 4px 16px rgba(15, 23, 42, 0.06);
 }
 
 /* 用户气泡：高级感渐变 */
@@ -124,35 +124,42 @@ body {
   border-bottom: 1px solid rgba(226, 232, 240, 0.7);
 }
 
-/* Markdown 渲染基础样式（轻量） */
+/* Markdown 渲染基础样式 */
 .prose-chat {
   white-space: pre-wrap;
   overflow-wrap: break-word;
+  line-height: 1.7;
 }
-.prose-chat p { margin: 0.4em 0; }
+.prose-chat p { margin: 0.5em 0; }
 .prose-chat p:first-child { margin-top: 0; }
 .prose-chat p:last-child { margin-bottom: 0; }
-.prose-chat ul, .prose-chat ol { padding-left: 1.25rem; margin: 0.4em 0; }
+.prose-chat ul, .prose-chat ol {
+  padding-left: 1.35rem;
+  margin: 0.5em 0;
+}
 .prose-chat ul { list-style: disc; }
 .prose-chat ol { list-style: decimal; }
-.prose-chat li { margin: 0.15em 0; }
-.prose-chat strong { font-weight: 600; color: #111827; }
+.prose-chat li { margin: 0.25em 0; }
+.prose-chat strong { font-weight: 600; color: #0f172a; }
 .prose-chat code {
-  background: #f1f5f9;
-  border: 1px solid #e2e8f0;
+  background: #eef2ff;
+  border: 1px solid #c7d2fe;
   padding: 1px 6px;
-  border-radius: 6px;
-  font-size: 0.85em;
+  border-radius: 5px;
+  font-size: 0.83em;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: #4338ca;
 }
 .prose-chat pre {
   background: #0f172a;
   color: #e2e8f0;
-  padding: 10px 12px;
+  padding: 14px 16px;
   border-radius: 10px;
   overflow-x: auto;
-  font-size: 0.85em;
-  margin: 0.5em 0;
+  font-size: 0.83em;
+  line-height: 1.55;
+  margin: 0.6em 0;
+  border: 1px solid #1e293b;
 }
 .prose-chat pre code {
   background: transparent;
@@ -162,17 +169,20 @@ body {
 }
 .prose-chat h1, .prose-chat h2, .prose-chat h3 {
   font-weight: 600;
-  margin: 0.6em 0 0.3em;
+  margin: 0.75em 0 0.35em;
 }
-.prose-chat h1 { font-size: 1.15em; }
-.prose-chat h2 { font-size: 1.05em; }
-.prose-chat h3 { font-size: 1em; }
+.prose-chat h1 { font-size: 1.15em; color: #0f172a; }
+.prose-chat h2 { font-size: 1.08em; color: #1e293b; }
+.prose-chat h3 { font-size: 1.02em; color: #334155; }
 .prose-chat a { color: #4f46e5; text-decoration: underline; text-underline-offset: 2px; }
+.prose-chat a:hover { color: #4338ca; }
 .prose-chat blockquote {
-  border-left: 3px solid #c7d2fe;
-  padding-left: 10px;
+  border-left: 3px solid #a5b4fc;
+  padding: 6px 12px;
   color: #475569;
   margin: 0.5em 0;
+  background: #f8fafc;
+  border-radius: 0 6px 6px 0;
 }
 
 /* 自动滚动行为 */

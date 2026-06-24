@@ -1,8 +1,0 @@
-**/__pycache__
-**/*.pyc
-**/node_modules
-**/.venv
-**/dist
-!frontend/dist/
-.git
-*.md

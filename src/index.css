@@ -125,6 +125,10 @@ body {
 }
 
 /* Markdown 渲染基础样式（轻量） */
+.prose-chat {
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+}
 .prose-chat p { margin: 0.4em 0; }
 .prose-chat p:first-child { margin-top: 0; }
 .prose-chat p:last-child { margin-bottom: 0; }

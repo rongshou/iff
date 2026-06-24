@@ -6,6 +6,8 @@ interface Props {
 }
 
 export default function SchoolTable({ data, rankLabel }: Props) {
+  const getRank = (s: { qs_rank: number | null; usnews_rank: number | null }) =>
+    rankLabel === "USNews" ? s.usnews_rank : s.qs_rank;
   const chanceColors: Record<string, string> = {
     安全: "bg-green-100 text-green-800",
     匹配: "bg-blue-100 text-blue-800",
@@ -34,7 +36,7 @@ export default function SchoolTable({ data, rankLabel }: Props) {
             return (
             <tr key={i} className="border-b hover:bg-gray-50">
               <td className="p-2 font-medium">{s.name}</td>
-              <td className="p-2 text-right">{s.qs_rank ?? s.usnews_rank ?? "-"}</td>
+              <td className="p-2 text-right">{getRank(s) ?? "-"}</td>
               <td className="p-2 text-right">{s.matched_cases}</td>
               <td className="p-2 text-right">
                 {s.gpa_min !== null ? `${s.gpa_min}-${s.gpa_max}` : "-"}

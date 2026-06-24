@@ -7,6 +7,7 @@ interface Props {
 
 export default function SchoolCard({ school, rankLabel }: Props) {
   const label = school.admission_chance || (school.meets_requirement ? "可达" : "冲刺");
+  const rankValue = rankLabel === "USNews" ? school.usnews_rank : school.qs_rank;
   const colors: Record<string, string> = {
     安全: "bg-green-100 text-green-800",
     匹配: "bg-blue-100 text-blue-800",
@@ -22,7 +23,7 @@ export default function SchoolCard({ school, rankLabel }: Props) {
         <div>
           <h3 className="text-lg font-semibold text-gray-900">{school.name}</h3>
           <p className="text-sm text-gray-500">
-            {rankLabel}: {school.qs_rank ?? school.usnews_rank ?? "-"}
+            {rankLabel}: {rankValue ?? "-"}
           </p>
         </div>
         <span className={`px-2 py-1 rounded-full text-xs font-medium ${colors[label] || "bg-gray-100 text-gray-600"}`}>

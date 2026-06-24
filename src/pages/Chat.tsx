@@ -31,10 +31,10 @@ const SCENES: Scene[] = [
     greeting: "选校定位 · 我来帮你定校",
     intro: "告诉我你的 GPA、学校、专业和目标，我会给你冲刺 / 主申 / 保底三档方案。",
     quickPrompts: [
-      { icon: "🇬🇧", text: "我想申请英国硕士，GPA 82/100，可以申哪些学校？" },
-      { icon: "🇦🇺", text: "澳洲计算机硕士选校建议？" },
-      { icon: "🇺🇸", text: "GPA 3.4/4.0 申请美国 CS 硕士有机会吗？" },
-      { icon: "📅", text: "留学申请时间线怎么规划？" },
+      { icon: "🇬🇧", text: "英国硕士选校：北京邮电大学 通信工程 82/100 大三" },
+      { icon: "🇺🇸", text: "美国 CS 硕士：985 计算机 GPA 3.4/4.0 已毕业" },
+      { icon: "🇦🇺", text: "双非金融 85/100 大四，澳洲八大有机会吗？" },
+      { icon: "📋", text: "先帮我评估选校，一步步问我的情况" },
     ],
     followups: [
       "推荐几所保底院校",
@@ -334,13 +334,26 @@ export default function ChatPage() {
               m.id === assistantId ? { ...m, content: res.reply } : m
             ),
           }));
-        } catch {
-          setError("网络异常，请稍后重试");
+        } catch (retryErr: any) {
+          const msg = retryErr?.message || "";
+          let errorMsg = "网络异常，请稍后重试";
+          let contentMsg = "抱歉，请求失败，请稍后重试。";
+          if (msg.includes("401") || msg.includes("余额")) {
+            errorMsg = "AI 服务暂不可用（余额不足），请联系管理员";
+            contentMsg = "AI 服务暂不可用，请联系管理员处理。";
+          } else if (msg.includes("500")) {
+            errorMsg = "服务端处理出错，已记录日志，请稍后重试";
+          } else if (msg.includes("timeout") || msg.includes("超时")) {
+            errorMsg = "请求超时，请稍后重试";
+          } else if (msg.includes("429") || msg.includes("Too Many Requests")) {
+            errorMsg = "请求过于频繁，请稍后再试";
+          }
+          setError(errorMsg);
           setScenes((prev) => ({
             ...prev,
             [activeScene]: prev[activeScene].map((m) =>
               m.id === assistantId && !m.content
-                ? { ...m, content: "抱歉，请求失败，请稍后重试。" }
+                ? { ...m, content: contentMsg }
                 : m
             ),
           }));
@@ -610,6 +623,14 @@ function EmptyState({
           {scene.intro}
         </p>
       </div>
+
+      {/* 使用说明 */}
+      {scene.id === "school" && (
+        <div className="mx-auto max-w-xl w-full mb-5 bg-indigo-50/70 border border-indigo-100 rounded-xl px-4 py-3 text-sm text-slate-700 leading-relaxed">
+          <div className="font-semibold text-indigo-800 mb-1">💡 使用说明</div>
+          <p>告诉我你的 GPA、学校、专业和目标国家，我会为你匹配真实案例，生成冲刺/主申/保底选校方案。也可以直接点击下方快捷问题开始 👇</p>
+        </div>
+      )}
 
       {/* 场景入口提示 */}
       <div className="text-center mb-5">

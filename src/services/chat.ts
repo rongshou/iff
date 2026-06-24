@@ -1,4 +1,4 @@
-const API_BASE = "http://47.93.149.29:8080/api";
+const API_BASE = "https://iz2ze93ogksv8bwaz3pk8hz.taildec4f9.ts.net/api";
 
 export interface ChatMessageInput {
   role: "user" | "assistant";

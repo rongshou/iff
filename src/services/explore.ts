@@ -1,6 +1,6 @@
 import type { MBTIType, MBTIMajorResult, TimelinePhase } from "../types";
 
-const API_BASE = "/tianquan-api";
+const API_BASE = "http://47.93.149.29:8080/api";
 const MBTI_QUESTIONS = [
   { id: 1, text: "在社交场合，你通常", options: [{ label: "与很多人交流让我精力充沛", value: "E" }, { label: "更喜欢与少数密友深入交谈", value: "I" }] },
   { id: 2, text: "做决定时，你更依赖", options: [{ label: "逻辑分析和客观事实", value: "T" }, { label: "个人价值观和他人感受", value: "F" }] },

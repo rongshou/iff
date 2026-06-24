@@ -4,7 +4,7 @@ import ExplorePage from "./pages/Explore";
 import NewsPage from "./pages/News";
 import ChatPage from "./pages/Chat";
 
-const BASE = "";
+const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
 export default function App() {
   return (

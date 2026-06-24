@@ -10,7 +10,8 @@ export default function App() {
   return (
     <BrowserRouter basename={BASE}>
       <Routes>
-        <Route path="/" element={<RecommendPage />} />
+        <Route path="/" element={<ChatPage />} />
+        <Route path="/recommend" element={<RecommendPage />} />
         <Route path="/news" element={<NewsPage />} />
         <Route path="/explore" element={<ExplorePage />} />
         <Route path="/chat" element={<ChatPage />} />

@@ -1,4 +1,4 @@
-const API_BASE = "/tianquan-api";
+const API_BASE = "http://47.93.149.29:8080/api";
 
 export interface ChatMessageInput {
   role: "user" | "assistant";

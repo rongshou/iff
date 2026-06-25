@@ -560,7 +560,7 @@ function renderStep5() {
         ${renderFullReport(state.student, state.results)}
         <div class="step-actions">
           <button class="btn-secondary" onclick="goBack()">← 上一步</button>
-          <button class="btn-primary" onclick="window.print()">🖨️ 打印 / 保存 PDF</button>
+          <button class="btn-primary" onclick="doPrint()">🖨️ 打印 / 保存 PDF</button>
           <button class="btn-primary" onclick="downloadReport()">💾 下载 HTML</button>
         </div>
       </div>
@@ -768,6 +768,14 @@ function downloadReport() {
   a.download = `天枢报告_${state.student.name}_${new Date().toISOString().slice(0,10)}.html`;
   a.click();
   URL.revokeObjectURL(url);
+}
+
+function doPrint() {
+  if (typeof window.print === "function") {
+    window.print();
+  } else {
+    alert("当前环境不支持自动打印,请使用浏览器菜单(打印)或截图保存。");
+  }
 }
 
 function goBack() {

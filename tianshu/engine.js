@@ -138,10 +138,10 @@ function recommendMajors(cross, bazi, mbti, holland) {
       reasons.push(`MBTI 类型部分匹配`);
     }
 
-    // 2) 霍兰德代码精确匹配(每个字母独立)
+    // 2) 霍兰德代码精确匹配(至少2字母匹配才计分,避免单字母误匹配)
     const hMatched = hollandCodes.filter(c => info.tags.includes(c));
-    score += hMatched.length * 4;
-    if (hMatched.length > 0) {
+    if (hMatched.length >= 2) {
+      score += hMatched.length * 3;
       reasons.push(`霍兰德代码 ${hMatched.join("")} 匹配`);
     }
 

@@ -29,7 +29,7 @@ load("engine.js");
 load("beidou.js");
 
 const {
-  TianShuData: { MBTI_DATA, getMbtiInfo, HOLLAND_DIMS, getHollandInfo, getZiweiSummary, MAJOR_LIBRARY, TOP_EMPLOYERS },
+  TianShuData: { MBTI_DATA, getMbtiInfo, MBTI_QUESTIONS, calcMbtiFromTest, HOLLAND_DIMS, getHollandInfo, HOLLAND_QUESTIONS, calcHollandFromTest, getZiweiSummary, MAJOR_LIBRARY, TOP_EMPLOYERS },
   TianShuBazi: { getFourPillars, solarToLunar },
   TianShuEngine: { crossValidate, recommendMajors, generateCareerPath },
   TianShuBeidou: { renderBeidouSvg }
@@ -292,7 +292,95 @@ const svgDark = renderBeidouSvg({ theme: "dark" });
 assert("renderBeidouSvg(theme=dark) → valid", svgDark.includes("<svg"));
 
 // ============================
-section("engine.js — 边缘情况:极端输入");
+section("data.js — MBTI 测试题");
+// ============================
+assert("MBTI_QUESTIONS has 16 questions", MBTI_QUESTIONS.length === 16);
+const dims = MBTI_QUESTIONS.reduce((acc, q) => { acc[q.dim] = (acc[q.dim] || 0) + 1; return acc; }, {});
+assert("4 E/I questions", dims.E === 4);
+assert("4 S/N questions (dim=N)", dims.N === 4);
+assert("4 T/F questions (dim=F)", dims.F === 4);
+assert("4 J/P questions (dim=P)", dims.P === 4);
+for (let i = 0; i < MBTI_QUESTIONS.length; i++) {
+  assert(`MBTI Q${i+1} has optionA`, typeof MBTI_QUESTIONS[i].optionA === "string" && MBTI_QUESTIONS[i].optionA.length > 0);
+  assert(`MBTI Q${i+1} has optionB`, typeof MBTI_QUESTIONS[i].optionB === "string" && MBTI_QUESTIONS[i].optionB.length > 0);
+}
+
+// ============================
+section("data.js — calcMbtiFromTest");
+// ============================
+// 所有选 A → 全选 optionA 倾向: E N F P → 计算
+const allA = MBTI_QUESTIONS.map((q, i) => ({ qIdx: i, score: 1 }));
+const rAllA = calcMbtiFromTest(allA);
+assert("全选A → type length = 4", rAllA.type.length === 4);
+// 全选 B → 全选 optionB 倾向: I S T J
+const allB = MBTI_QUESTIONS.map((q, i) => ({ qIdx: i, score: 2 }));
+const rAllB = calcMbtiFromTest(allB);
+assert("全选B → type length = 4", rAllB.type.length === 4);
+assert("全选B → has scores object", typeof rAllB.scores === "object");
+assert("全选B → scores has 8 keys", Object.keys(rAllB.scores).length === 8);
+assert("全选A → scores E=4 S=4 T=4 J=4", rAllA.scores.E === 4 && rAllA.scores.S === 4 && rAllA.scores.T === 4 && rAllA.scores.J === 4);
+assert("全选B → scores I=4 N=4 F=4 P=4", rAllB.scores.I === 4 && rAllB.scores.N === 4 && rAllB.scores.F === 4 && rAllB.scores.P === 4);
+const mixed = [
+  { qIdx: 0, score: 2 },  // I
+  { qIdx: 1, score: 2 },  // I
+  { qIdx: 2, score: 2 },  // I
+  { qIdx: 3, score: 1 },  // E
+  { qIdx: 4, score: 2 },  // N
+  { qIdx: 5, score: 2 },  // N
+  { qIdx: 6, score: 2 },  // N
+  { qIdx: 7, score: 1 },  // S
+  { qIdx: 8, score: 1 },  // T
+  { qIdx: 9, score: 1 },  // T
+  { qIdx: 10, score: 1 }, // T
+  { qIdx: 11, score: 2 }, // F
+  { qIdx: 12, score: 1 }, // J
+  { qIdx: 13, score: 1 }, // J
+  { qIdx: 14, score: 1 }, // J
+  { qIdx: 15, score: 2 }, // P
+];
+const rMix = calcMbtiFromTest(mixed);
+assert("混合答案 → valid type", rMix.type.length === 4);
+assert("混合 → E/I → I", rMix.type[0] === "I");
+
+// ============================
+section("data.js — 霍兰德测试题");
+// ============================
+assert("HOLLAND_QUESTIONS has 18 items", HOLLAND_QUESTIONS.length === 18);
+const hDims = HOLLAND_QUESTIONS.reduce((acc, q) => { acc[q.dim] = (acc[q.dim] || 0) + 1; return acc; }, {});
+assert("3 R questions", hDims.R === 3);
+assert("3 I questions", hDims.I === 3);
+assert("3 A questions", hDims.A === 3);
+assert("3 S questions", hDims.S === 3);
+assert("3 E questions", hDims.E === 3);
+assert("3 C questions", hDims.C === 3);
+for (let i = 0; i < HOLLAND_QUESTIONS.length; i++) {
+  assert(`Holland Q${i+1} has text`, typeof HOLLAND_QUESTIONS[i].text === "string" && HOLLAND_QUESTIONS[i].text.length > 0);
+  assert(`Holland Q${i+1} has dim`, "RIAESC".includes(HOLLAND_QUESTIONS[i].dim));
+}
+
+// ============================
+section("data.js — calcHollandFromTest");
+// ============================
+// 全 5 分
+const all5 = HOLLAND_QUESTIONS.map(q => ({ dim: q.dim, score: 5 }));
+const rAll5 = calcHollandFromTest(all5);
+assert("全5分 → returns object", typeof rAll5 === "object");
+assert("全5分 → has 6 keys", Object.keys(rAll5).length === 6);
+assert("全5分 → R=I=A=S=E=C=100", Object.values(rAll5).every(v => v === 100));
+
+// 全 1 分
+const all1 = HOLLAND_QUESTIONS.map(q => ({ dim: q.dim, score: 1 }));
+const rAll1 = calcHollandFromTest(all1);
+assert("全1分 → all = 20", Object.values(rAll1).every(v => v === 20));
+
+// 混合
+const mixedH = HOLLAND_QUESTIONS.map(q => ({ dim: q.dim, score: q.dim === "I" || q.dim === "A" ? 5 : 1 }));
+const rMixH = calcHollandFromTest(mixedH);
+assert("混合 → I ≥ 80", rMixH.I >= 80);
+assert("混合 → A ≥ 80", rMixH.A >= 80);
+assert("混合 → R ≤ 50", rMixH.R <= 50);
+
+// ============================
 // ============================
 // 极低分数
 const hExtreme = getHollandInfo({R: 0, I: 0, A: 0, S: 0, E: 0, C: 0});

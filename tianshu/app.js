@@ -195,9 +195,8 @@ function nextStep2() {
 
 // ===== Step 3: MBTI =====
 function renderStep3() {
+  const mode = state._mbtiMode || "known";
   const app = document.getElementById("app");
-  const types = Object.keys(window.TianShuData.MBTI_DATA);
-  const options = types.map(t => `<option value="${t}" ${t === state.mbtiType.split("-")[0] ? "selected" : ""}>${t}</option>`).join("");
 
   app.innerHTML = `
     <div class="step-card">
@@ -206,22 +205,14 @@ function renderStep3() {
         <h2>🧠 MBTI 人格类型</h2>
       </div>
 
-      <p class="hint">如果你测过 MBTI,选择对应类型并指定 A/T 倾向。如果没有,可以选一个大致接近的:</p>
-
-      <div class="form-grid">
-        <label>MBTI 类型
-          <select id="f-mbti-base">${options}</select>
-        </label>
-        <label>A / T 倾向
-          <select id="f-mbti-at">
-            <option value="">不指定</option>
-            <option value="A">A(Assertive 自信型)</option>
-            <option value="T">T(Turbulent 动荡型)</option>
-          </select>
-        </label>
+      <div class="mode-tabs">
+        <button class="mode-tab ${mode === "known" ? "active" : ""}" onclick="switchMbtiMode('known')">✅ 我知道我的类型</button>
+        <button class="mode-tab ${mode === "test" ? "active" : ""}" onclick="switchMbtiMode('test')">📝 做 MBTI 测试</button>
       </div>
 
-      <div id="mbti-preview"></div>
+      <div id="mbti-body">
+        ${mode === "known" ? renderMbtiKnown() : renderMbtiTest()}
+      </div>
 
       <div class="step-actions">
         <button class="btn-secondary" onclick="goBack()">← 上一步</button>
@@ -230,9 +221,110 @@ function renderStep3() {
     </div>
   `;
 
-  document.getElementById("f-mbti-base").addEventListener("change", updateMbtiPreview);
-  document.getElementById("f-mbti-at").addEventListener("change", updateMbtiPreview);
-  updateMbtiPreview();
+  if (mode === "known") {
+    document.getElementById("f-mbti-base").addEventListener("change", updateMbtiPreview);
+    document.getElementById("f-mbti-at").addEventListener("change", updateMbtiPreview);
+    updateMbtiPreview();
+  }
+}
+
+function switchMbtiMode(mode) {
+  state._mbtiMode = mode;
+  renderStep3();
+}
+
+function renderMbtiKnown() {
+  const types = Object.keys(window.TianShuData.MBTI_DATA);
+  const options = types.map(t => `<option value="${t}" ${t === state.mbtiType.split("-")[0] ? "selected" : ""}>${t}</option>`).join("");
+  return `
+    <p class="hint">如果你测过 MBTI,选择对应类型并指定 A/T 倾向。如果没有,可以选一个大致接近的:</p>
+    <div class="form-grid">
+      <label>MBTI 类型
+        <select id="f-mbti-base">${options}</select>
+      </label>
+      <label>A / T 倾向
+        <select id="f-mbti-at">
+          <option value="">不指定</option>
+          <option value="A">A(Assertive 自信型)</option>
+          <option value="T">T(Turbulent 动荡型)</option>
+        </select>
+      </label>
+    </div>
+    <div id="mbti-preview"></div>
+  `;
+}
+
+function renderMbtiTest() {
+  const qs = window.TianShuData.MBTI_QUESTIONS;
+  return `
+    <p class="hint">每题选择更接近你的选项,完成后点击下方按钮计算类型:</p>
+    <div class="test-questions">
+      ${qs.map((q, i) => `
+        <div class="test-q" data-q="${i}">
+          <div class="test-q-num">第 ${i+1} 题</div>
+          <label class="test-q-opt ${state._mbtiAnswers?.[i] === 1 ? "selected" : ""}">
+            <input type="radio" name="mbti-q${i}" value="1" ${state._mbtiAnswers?.[i] === 1 ? "checked" : ""} onchange="setMbtiAnswer(${i}, 1)">
+            ${q.optionA}
+          </label>
+          <label class="test-q-opt ${state._mbtiAnswers?.[i] === 2 ? "selected" : ""}">
+            <input type="radio" name="mbti-q${i}" value="2" ${state._mbtiAnswers?.[i] === 2 ? "checked" : ""} onchange="setMbtiAnswer(${i}, 2)">
+            ${q.optionB}
+          </label>
+        </div>
+      `).join("")}
+    </div>
+    <button class="btn-primary" onclick="calcMbtiResult()" style="margin-top:16px;width:100%">🧮 计算我的 MBTI 类型</button>
+    <div id="mbti-test-result" style="margin-top:16px;"></div>
+  `;
+}
+
+function setMbtiAnswer(idx, score) {
+  if (!state._mbtiAnswers) state._mbtiAnswers = [];
+  state._mbtiAnswers[idx] = score;
+  // 更新选中样式
+  const parent = document.querySelector(`.test-q[data-q="${idx}"]`);
+  if (parent) {
+    parent.querySelectorAll(".test-q-opt").forEach(el => el.classList.remove("selected"));
+    parent.querySelector(`input[value="${score}"]`).closest(".test-q-opt").classList.add("selected");
+  }
+}
+
+function calcMbtiResult() {
+  const answers = state._mbtiAnswers || [];
+  const unanswered = [];
+  for (let i = 0; i < window.TianShuData.MBTI_QUESTIONS.length; i++) {
+    if (!answers[i]) unanswered.push(i + 1);
+  }
+  if (unanswered.length > 0) {
+    document.getElementById("mbti-test-result").innerHTML = `<div class="error">❌ 还有 ${unanswered.length} 题未作答(第 ${unanswered.join(", ")} 题),请完成所有题目</div>`;
+    return;
+  }
+
+  const full = answers.map((s, i) => ({ qIdx: i, score: s }));
+  const result = window.TianShuData.calcMbtiFromTest(full);
+  state.mbtiType = result.type;
+  state._mbtiAnswers = answers;
+
+  const info = window.TianShuData.getMbtiInfo(result.type);
+  const pct = (dim) => {
+    const total = result.scores[dim] + result.scores[dim === "E" ? "I" : dim === "I" ? "E" : dim === "S" ? "N" : dim === "N" ? "S" : dim === "T" ? "F" : dim === "F" ? "T" : dim === "J" ? "P" : "J"];
+    return total > 0 ? Math.round(result.scores[dim] / total * 100) : 50;
+  };
+
+  document.getElementById("mbti-test-result").innerHTML = `
+    <div class="mbti-card" style="border:2px solid #4f7cff;">
+      <div class="mbti-title">🎉 你的 MBTI 类型: ${info.fullType} · ${info.nick}</div>
+      <div class="test-dim-bars">
+        <div class="dim-bar"><span>E ${result.scores.E}</span><div class="bar-track"><div class="bar-fill" style="width:${pct("E")}%"></div></div><span>${result.scores.I} I</span></div>
+        <div class="dim-bar"><span>S ${result.scores.S}</span><div class="bar-track"><div class="bar-fill" style="width:${pct("S")}%"></div></div><span>${result.scores.N} N</span></div>
+        <div class="dim-bar"><span>T ${result.scores.T}</span><div class="bar-track"><div class="bar-fill" style="width:${pct("T")}%"></div></div><span>${result.scores.F} F</span></div>
+        <div class="dim-bar"><span>J ${result.scores.J}</span><div class="bar-track"><div class="bar-fill" style="width:${pct("J")}%"></div></div><span>${result.scores.P} P</span></div>
+      </div>
+      <div style="margin-top:12px"><strong>核心:</strong>${info.core}</div>
+      <div><strong>优势:</strong>${info.strength}</div>
+      <div><strong>短板:</strong><span style="color:#c53030;">${info.weakness}</span></div>
+    </div>
+  `;
 }
 
 function updateMbtiPreview() {
@@ -262,8 +354,45 @@ function nextStep3() {
 
 // ===== Step 4: 霍兰德 =====
 function renderStep4() {
+  const mode = state._hollandMode || "known";
   const app = document.getElementById("app");
 
+  app.innerHTML = `
+    <div class="step-card">
+      <div class="step-header">
+        <span class="step-num">4/5</span>
+        <h2>🎯 霍兰德职业兴趣</h2>
+      </div>
+
+      <div class="mode-tabs">
+        <button class="mode-tab ${mode === "known" ? "active" : ""}" onclick="switchHollandMode('known')">✅ 我知道我的分数</button>
+        <button class="mode-tab ${mode === "test" ? "active" : ""}" onclick="switchHollandMode('test')">📝 做霍兰德测试</button>
+      </div>
+
+      <div id="holland-body">
+        ${mode === "known" ? renderHollandKnown() : renderHollandTest()}
+      </div>
+
+      <div id="holland-preview-outer" style="margin-top:16px;"></div>
+
+      <div class="step-actions">
+        <button class="btn-secondary" onclick="goBack()">← 上一步</button>
+        <button class="btn-primary" onclick="nextStep4()">下一步 →</button>
+      </div>
+    </div>
+  `;
+
+  if (mode === "known") {
+    updateHollandPreview();
+  }
+}
+
+function switchHollandMode(mode) {
+  state._hollandMode = mode;
+  renderStep4();
+}
+
+function renderHollandKnown() {
   const sliders = ["R","I","A","S","E","C"].map(code => `
     <div class="slider-row">
       <label class="slider-label">
@@ -275,30 +404,98 @@ function renderStep4() {
     </div>
   `).join("");
 
-  app.innerHTML = `
-    <div class="step-card">
-      <div class="step-header">
-        <span class="step-num">4/5</span>
-        <h2>🎯 霍兰德职业兴趣</h2>
+  return `
+    <p class="hint">调整每个维度的得分(0-100),不知道就保留默认。</p>
+    <div class="sliders">${sliders}</div>
+    <button class="btn-text" onclick="resetHolland()">↺ 重置为示例默认值</button>
+    <div id="holland-preview"></div>
+  `;
+}
+
+function renderHollandTest() {
+  const qs = window.TianShuData.HOLLAND_QUESTIONS;
+  const ratingLabels = ["非常不喜欢", "不喜欢", "一般", "喜欢", "非常喜欢"];
+
+  return `
+    <p class="hint">评价每个活动的喜欢程度(1-5分),完成后计算你的霍兰德分数:</p>
+    <div class="test-questions holland-test">
+      ${qs.map((q, i) => `
+        <div class="test-q test-q-holland" data-q="${i}">
+          <div class="test-q-num">${i+1}</div>
+          <div class="test-q-text">${q.text}</div>
+          <div class="test-q-rating">
+            ${ratingLabels.map((label, ri) => `
+              <label class="rating-opt ${state._hollandAnswers?.[i] === ri + 1 ? "selected" : ""}">
+                <input type="radio" name="holland-q${i}" value="${ri + 1}"
+                  ${state._hollandAnswers?.[i] === ri + 1 ? "checked" : ""}
+                  onchange="setHollandAnswer(${i}, ${ri + 1}, '${q.dim}')">
+                <span class="rating-num">${ri + 1}</span>
+                <span class="rating-label">${label}</span>
+              </label>
+            `).join("")}
+          </div>
+        </div>
+      `).join("")}
+    </div>
+    <button class="btn-primary" onclick="calcHollandResult()" style="margin-top:16px;width:100%">🧮 计算我的霍兰德分数</button>
+    <div id="holland-test-result" style="margin-top:16px;"></div>
+  `;
+}
+
+function setHollandAnswer(idx, score, dim) {
+  if (!state._hollandAnswers) state._hollandAnswers = [];
+  if (!state._hollandAnswerDims) state._hollandAnswerDims = [];
+  state._hollandAnswers[idx] = score;
+  state._hollandAnswerDims[idx] = dim;
+  const parent = document.querySelector(`.test-q-holland[data-q="${idx}"]`);
+  if (parent) {
+    parent.querySelectorAll(".rating-opt").forEach(el => el.classList.remove("selected"));
+    parent.querySelector(`input[value="${score}"]`).closest(".rating-opt").classList.add("selected");
+  }
+}
+
+function calcHollandResult() {
+  const answers = state._hollandAnswers || [];
+  const unanswered = [];
+  for (let i = 0; i < window.TianShuData.HOLLAND_QUESTIONS.length; i++) {
+    if (!answers[i]) unanswered.push(i + 1);
+  }
+  if (unanswered.length > 0) {
+    document.getElementById("holland-test-result").innerHTML = `<div class="error">❌ 还有 ${unanswered.length} 题未作答(第 ${unanswered.join(", ")} 题),请完成所有题目</div>`;
+    return;
+  }
+
+  const full = window.TianShuData.HOLLAND_QUESTIONS.map((q, i) => ({
+    dim: q.dim,
+    score: answers[i]
+  }));
+  const scores = window.TianShuData.calcHollandFromTest(full);
+  state.hollandScores = scores;
+
+  const info = window.TianShuData.getHollandInfo(scores);
+  document.getElementById("holland-test-result").innerHTML = `
+    <div class="holland-card" style="border:2px solid #4f7cff;">
+      <div class="holland-title">🎉 你的霍兰德代码: <span class="tag tag-primary">${info.top3}</span></div>
+      <div>${info.codeExplain}</div>
+      <div class="holland-fits">
+        <strong>主适配方向:</strong>
+        <ul>${info.mainFit.map(f => `<li>${f}</li>`).join("")}</ul>
       </div>
-
-      <p class="hint">调整每个维度的得分(0-100),不知道就保留默认。<br>
-      <strong>R</strong> 现实型 / <strong>I</strong> 研究型 / <strong>A</strong> 艺术型 / <strong>S</strong> 社会型 / <strong>E</strong> 企业型 / <strong>C</strong> 常规型</p>
-
-      <div class="sliders">${sliders}</div>
-
-      <button class="btn-text" onclick="resetHolland()">↺ 重置为示例默认值</button>
-
-      <div id="holland-preview"></div>
-
-      <div class="step-actions">
-        <button class="btn-secondary" onclick="goBack()">← 上一步</button>
-        <button class="btn-primary" onclick="nextStep4()">下一步 →</button>
+      ${info.riskWarning !== "无明显短板维度" ? `<div class="risk-warning">⚠️ ${info.riskWarning}</div>` : ""}
+      <div style="margin-top:12px">
+        <strong>各维度得分:</strong>
+        <div class="test-dim-bars">
+          ${["R","I","A","S","E","C"].map(code => `
+            <div class="dim-bar">
+              <span>${code}</span>
+              <div class="bar-track"><div class="bar-fill" style="width:${scores[code]}%"></div></div>
+              <span>${scores[code]}</span>
+            </div>
+          `).join("")}
+        </div>
       </div>
     </div>
   `;
-
-  updateHollandPreview();
 }
 
 function updateHollandScore(code, val) {
@@ -318,7 +515,9 @@ function resetHolland() {
 
 function updateHollandPreview() {
   const info = window.TianShuData.getHollandInfo(state.hollandScores);
-  document.getElementById("holland-preview").innerHTML = `
+  const el = document.getElementById("holland-preview") || document.getElementById("holland-preview-outer");
+  if (!el) return;
+  el.innerHTML = `
     <div class="holland-card">
       <div class="holland-title">核心 3 位代码:<span class="tag tag-primary">${info.top3}</span></div>
       <div>${info.codeExplain}</div>

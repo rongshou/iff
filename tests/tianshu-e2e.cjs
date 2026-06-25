@@ -106,6 +106,19 @@ const section = (title) => console.log(`\n📍 ${title}`);
   const mbtiPreview = await page.$eval("#mbti-preview", el => el.textContent);
   assert("MBTI 预览已更新", mbtiPreview.includes("建筑师") || mbtiPreview.includes("INTJ"));
 
+  // 测试 MBTI 做题模式切换
+  const hasModeTabs = (await page.$$(".mode-tab")).length === 2;
+  assert("MBTI 有2个模式切换按钮", hasModeTabs);
+  await page.evaluate(() => switchMbtiMode("test"));
+  await new Promise(r => setTimeout(r, 200));
+  const testModeVisible = await page.$(".test-questions") !== null;
+  assert("MBTI 测试模式渲染成功", testModeVisible);
+  const testQCount = (await page.$$(".test-q")).length;
+  assert("MBTI 测试题 16 题", testQCount === 16);
+  // 切回已知模式
+  await page.evaluate(() => switchMbtiMode("known"));
+  await new Promise(r => setTimeout(r, 200));
+
   // ==========================================
   section("Step 4: 霍兰德调整");
   // ==========================================
@@ -127,6 +140,19 @@ const section = (title) => console.log(`\n📍 ${title}`);
   // 检查预览
   const hollandPreview = await page.$eval("#holland-preview", el => el.textContent);
   assert("霍兰德预览已更新", hollandPreview.length > 10);
+
+  // 测试霍兰德做题模式
+  const hasHollandTabs = (await page.$$(".mode-tab")).length === 2;
+  assert("霍兰德有2个模式切换按钮", hasHollandTabs);
+  await page.evaluate(() => switchHollandMode("test"));
+  await new Promise(r => setTimeout(r, 200));
+  const hollandTestVisible = await page.$(".holland-test") !== null;
+  assert("霍兰德测试模式渲染成功", hollandTestVisible);
+  const hollandQCount = (await page.$$(".holland-test .test-q")).length;
+  assert("霍兰德测试题 18 题", hollandQCount === 18);
+  // 切回已知模式
+  await page.evaluate(() => switchHollandMode("known"));
+  await new Promise(r => setTimeout(r, 200));
 
   // ==========================================
   section("Step 5: 生成报告");

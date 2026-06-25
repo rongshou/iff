@@ -286,10 +286,87 @@ const TOP_EMPLOYERS = {
   "临床医学": ["三甲医院","专科医院","医疗科研机构"]
 };
 
+// ===== MBTI 测试题 =====
+const MBTI_QUESTIONS = [
+  // E/I (1-4)
+  { dim: "E", optionA: "和朋友出去聚会", optionB: "一个人在家看书追剧" },
+  { dim: "E", optionA: "发言活跃带动气氛", optionB: "安静倾听后再发言" },
+  { dim: "E", optionA: "和别人互动交流获得能量", optionB: "独处思考恢复精力" },
+  { dim: "E", optionA: "边想边说", optionB: "想好再说" },
+  // S/N (5-8)
+  { dim: "N", optionA: "关注具体的事实和细节", optionB: "关注整体的概念和可能性" },
+  { dim: "N", optionA: "按步骤一步步来", optionB: "先理解大框架" },
+  { dim: "N", optionA: "记住发生过的事情细节", optionB: "记住事情背后的含义" },
+  { dim: "N", optionA: "相信亲眼所见", optionB: "相信直觉和灵感" },
+  // T/F (9-12)
+  { dim: "F", optionA: "用逻辑和分析做决定", optionB: "根据感受和价值观做决定" },
+  { dim: "F", optionA: "帮朋友分析问题", optionB: "先安抚朋友情绪" },
+  { dim: "F", optionA: "在意事情的对错", optionB: "在意人们的感受" },
+  { dim: "F", optionA: "看方案是否合理高效", optionB: "看方案是否大家都能接受" },
+  // J/P (13-16)
+  { dim: "P", optionA: "按计划行事", optionB: "灵活随性" },
+  { dim: "P", optionA: "桌面整洁有序", optionB: "看似乱但自己找得到" },
+  { dim: "P", optionA: "早点做完再玩", optionB: "边玩边做" },
+  { dim: "P", optionA: "做好详细攻略", optionB: "到了再说" }
+];
+
+function calcMbtiFromTest(answers) {
+  // answers: [{ qIdx, score }]  score: 1=A(optionA), 2=B(optionB)
+  let e = 0, i = 0, s = 0, n = 0, t = 0, f = 0, j = 0, p_ = 0;
+  for (const a of answers) {
+    const q = MBTI_QUESTIONS[a.qIdx];
+    const choseB = a.score === 2;
+    if (q.dim === "E") { if (choseB) i++; else e++; }
+    if (q.dim === "N") { if (choseB) n++; else s++; }
+    if (q.dim === "F") { if (choseB) f++; else t++; }
+    if (q.dim === "P") { if (choseB) p_++; else j++; }
+  }
+  const type = (e >= i ? "E" : "I") + (n >= s ? "N" : "S") + (f >= t ? "F" : "T") + (p_ >= j ? "P" : "J");
+  const scores = { E: e, I: i, S: s, N: n, T: t, F: f, J: j, P: p_ };
+  return { type, scores };
+}
+
+// ===== 霍兰德测试题 =====
+const HOLLAND_QUESTIONS = [
+  { dim: "R", text: "修理或组装电器 / 家具" },
+  { dim: "R", text: "户外运动或手工制作" },
+  { dim: "R", text: "操作工具或机械设备" },
+  { dim: "I", text: "做科学实验或研究分析" },
+  { dim: "I", text: "解决数学或逻辑难题" },
+  { dim: "I", text: "探索新理论或新知识" },
+  { dim: "A", text: "画画、写作、音乐等创作" },
+  { dim: "A", text: "欣赏艺术、设计或表演" },
+  { dim: "A", text: "发挥想象力创造新东西" },
+  { dim: "S", text: "帮助别人解决问题" },
+  { dim: "S", text: "教别人新知识或技能" },
+  { dim: "S", text: "参加志愿者或社团活动" },
+  { dim: "E", text: "组织和领导团队活动" },
+  { dim: "E", text: "说服别人接受你的观点" },
+  { dim: "E", text: "参与竞赛或商业模拟" },
+  { dim: "C", text: "整理数据或制作表格" },
+  { dim: "C", text: "按流程和规则完成工作" },
+  { dim: "C", text: "做详细的计划和记录" }
+];
+
+function calcHollandFromTest(answers) {
+  const scores = { R: 0, I: 0, A: 0, S: 0, E: 0, C: 0 };
+  for (const a of answers) {
+    scores[a.dim] += a.score;
+  }
+  // 归一化到 0-100
+  const maxPerDim = 5 * 3; // 每题最多5分,每个维度3题
+  for (const k of Object.keys(scores)) {
+    scores[k] = Math.round((scores[k] / maxPerDim) * 100);
+  }
+  return scores;
+}
+
 if (typeof window !== "undefined") {
   window.TianShuData = {
     MBTI_DATA, getMbtiInfo,
+    MBTI_QUESTIONS, calcMbtiFromTest,
     HOLLAND_DIMS, getHollandInfo,
+    HOLLAND_QUESTIONS, calcHollandFromTest,
     ZIWEI_STARS, getZiweiSummary,
     MAJOR_LIBRARY, TOP_EMPLOYERS
   };

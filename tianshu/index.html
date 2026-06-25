@@ -742,6 +742,35 @@ header.banner .compass svg {
   color: #c53030;
 }
 
+/* ===== 测试题 ===== */
+.mode-tabs { display: flex; gap: 8px; margin-bottom: 20px; }
+.mode-tab { flex: 1; padding: 10px; border: 2px solid #e2e8f0; border-radius: 8px; background: #fff; cursor: pointer; font-size: 14px; font-family: inherit; transition: all 0.2s; color: #4a5568; }
+.mode-tab.active { border-color: #4f7cff; background: #ebf8ff; color: #2c5282; font-weight: 600; }
+.mode-tab:hover { border-color: #c084fc; }
+
+.test-questions { display: flex; flex-direction: column; gap: 12px; }
+.test-q { background: #f7fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px 18px; }
+.test-q-num { font-size: 12px; color: #4f7cff; font-weight: 600; margin-bottom: 6px; }
+.test-q-text { font-size: 15px; color: #2d3748; margin-bottom: 10px; font-weight: 500; }
+.test-q-opt { display: block; padding: 8px 12px; margin: 4px 0; border-radius: 6px; cursor: pointer; transition: all 0.15s; border: 1.5px solid transparent; font-size: 14px; }
+.test-q-opt:hover { background: #edf2f7; }
+.test-q-opt.selected { background: #ebf8ff; border-color: #4f7cff; color: #2c5282; font-weight: 500; }
+.test-q-opt input { display: none; }
+
+.test-q-rating { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+.rating-opt { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 12px; border: 1.5px solid #e2e8f0; border-radius: 8px; cursor: pointer; transition: all 0.15s; min-width: 56px; background: #fff; }
+.rating-opt:hover { border-color: #c084fc; background: #faf5ff; }
+.rating-opt.selected { border-color: #4f7cff; background: #ebf8ff; }
+.rating-opt input { display: none; }
+.rating-num { font-size: 18px; font-weight: 700; color: #2c5282; }
+.rating-label { font-size: 10px; color: #718096; white-space: nowrap; }
+
+.test-dim-bars { margin-top: 8px; }
+.dim-bar { display: flex; align-items: center; gap: 8px; margin: 6px 0; font-size: 13px; }
+.dim-bar span { min-width: 24px; font-weight: 600; color: #4a5568; }
+.bar-track { flex: 1; height: 10px; background: #edf2f7; border-radius: 5px; overflow: hidden; }
+.bar-fill { height: 100%; background: linear-gradient(90deg, #4f7cff, #c084fc); border-radius: 5px; transition: width 0.3s; }
+
 @media (max-width: 768px) {
   body { padding: 10px; }
   .step-card { padding: 25px 18px; }

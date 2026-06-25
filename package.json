@@ -5,9 +5,13 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build && mkdir -p dist/tianshu && cp tianshu/index.html tianshu/*.js dist/tianshu/",
+    "build": "tsc -b && vite build && mkdir -p dist/tianshu && cp tianshu/index.html tianshu/*.js tianshu/VERSION dist/tianshu/",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:unit": "node tests/tianshu-unit.cjs",
+    "test:smoke": "bash tests/smoke-test.sh",
+    "test:e2e": "XDG_RUNTIME_DIR=/tmp/chrome-runtime node tests/tianshu-e2e.cjs",
+    "test": "node tests/tianshu-unit.cjs && bash tests/smoke-test.sh && XDG_RUNTIME_DIR=/tmp/chrome-runtime node tests/tianshu-e2e.cjs"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.3.0",

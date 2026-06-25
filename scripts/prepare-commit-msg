@@ -1,0 +1,18 @@
+#!/bin/bash
+# Git prepare-commit-msg hook: 自动预填 VERSION 到 commit message
+# 安装: ln -sf ../../scripts/prepare-commit-msg .git/hooks/prepare-commit-msg
+
+COMMIT_MSG_FILE="$1"
+COMMIT_SOURCE="$2"
+
+# 仅在非 merge / squash 等场景下插入
+if [ "$COMMIT_SOURCE" = "message" ] || [ "$COMMIT_SOURCE" = "template" ] || [ -z "$COMMIT_SOURCE" ]; then
+  VERSION_FILE="tianshu/VERSION"
+  if [ -f "$VERSION_FILE" ]; then
+    VER=$(head -1 "$VERSION_FILE" | tr -d ' \n')
+    # 避免重复插入
+    if ! grep -q "^$VER" "$COMMIT_MSG_FILE" 2>/dev/null; then
+      echo "[tianshu $VER] $(head -1 "$COMMIT_MSG_FILE" 2>/dev/null)" > "$COMMIT_MSG_FILE"
+    fi
+  fi
+fi

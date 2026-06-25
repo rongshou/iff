@@ -27,6 +27,9 @@ function init() {
   if (beidouEl && window.TianShuBeidou) {
     beidouEl.innerHTML = window.TianShuBeidou.renderBeidouSvg({ size: 150, theme: "purple" });
   }
+  // 设置版本号
+  const vEl = document.getElementById("version-display");
+  if (vEl) vEl.textContent = (window.TIANSHU_VERSION || "v0.2") + " (Web 版)";
   updateProgress(1);
   renderStep1();
 }
@@ -551,7 +554,7 @@ function renderFullReport(s, r) {
       </div>
 
       <div class="footer">
-        天枢 · 综合特质测评与生涯规划系统 v0.1 (Web 版) · 生成于 ${new Date().toLocaleString("zh-CN")}
+        天枢 · 综合特质测评与生涯规划系统 ${window.TIANSHU_VERSION || "v?"} (Web 版) · 生成于 ${new Date().toLocaleString("zh-CN")}
       </div>
     </div>
   `;

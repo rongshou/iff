@@ -289,25 +289,25 @@ const TOP_EMPLOYERS = {
 // ===== MBTI 测试题 =====
 const MBTI_QUESTIONS = [
   // E/I (1-4)
-  { dim: "E", optionA: "和朋友出去聚会", optionB: "一个人在家看书追剧" },
-  { dim: "E", optionA: "发言活跃带动气氛", optionB: "安静倾听后再发言" },
-  { dim: "E", optionA: "和别人互动交流获得能量", optionB: "独处思考恢复精力" },
-  { dim: "E", optionA: "边想边说", optionB: "想好再说" },
+  { stem: "周末你更喜欢?", dim: "E", optionA: "和朋友出去聚会", optionB: "一个人在家看书追剧" },
+  { stem: "在团队中你通常是?", dim: "E", optionA: "发言活跃带动气氛", optionB: "安静倾听后再发言" },
+  { stem: "你更容易从哪种方式获得能量?", dim: "E", optionA: "和别人互动交流", optionB: "独处思考恢复精力" },
+  { stem: "你更倾向于哪种表达方式?", dim: "E", optionA: "边想边说", optionB: "想好再说" },
   // S/N (5-8)
-  { dim: "N", optionA: "关注具体的事实和细节", optionB: "关注整体的概念和可能性" },
-  { dim: "N", optionA: "按步骤一步步来", optionB: "先理解大框架" },
-  { dim: "N", optionA: "记住发生过的事情细节", optionB: "记住事情背后的含义" },
-  { dim: "N", optionA: "相信亲眼所见", optionB: "相信直觉和灵感" },
+  { stem: "你更关注信息的哪一面?", dim: "N", optionA: "具体的事实和细节", optionB: "整体的概念和可能性" },
+  { stem: "学习新知识时你更喜欢?", dim: "N", optionA: "按步骤一步步来", optionB: "先理解大框架" },
+  { stem: "你更容易记住什么?", dim: "N", optionA: "发生过的事情细节", optionB: "事情背后的含义" },
+  { stem: "你更倾向于相信?", dim: "N", optionA: "亲眼所见的事实", optionB: "自己的直觉和灵感" },
   // T/F (9-12)
-  { dim: "F", optionA: "用逻辑和分析做决定", optionB: "根据感受和价值观做决定" },
-  { dim: "F", optionA: "帮朋友分析问题", optionB: "先安抚朋友情绪" },
-  { dim: "F", optionA: "在意事情的对错", optionB: "在意人们的感受" },
-  { dim: "F", optionA: "看方案是否合理高效", optionB: "看方案是否大家都能接受" },
+  { stem: "做决定时你更依赖?", dim: "F", optionA: "逻辑和分析", optionB: "感受和价值观" },
+  { stem: "朋友向你倾诉烦恼,你通常会?", dim: "F", optionA: "帮 ta 分析问题", optionB: "先安抚 ta 的情绪" },
+  { stem: "你更在意什么?", dim: "F", optionA: "事情的对错", optionB: "人们的感受" },
+  { stem: "评价方案时你更看重?", dim: "F", optionA: "是否合理高效", optionB: "是否大家都能接受" },
   // J/P (13-16)
-  { dim: "P", optionA: "按计划行事", optionB: "灵活随性" },
-  { dim: "P", optionA: "桌面整洁有序", optionB: "看似乱但自己找得到" },
-  { dim: "P", optionA: "早点做完再玩", optionB: "边玩边做" },
-  { dim: "P", optionA: "做好详细攻略", optionB: "到了再说" }
+  { stem: "你更喜欢哪种生活方式?", dim: "P", optionA: "按计划行事", optionB: "灵活随性" },
+  { stem: "你的桌面/空间通常是?", dim: "P", optionA: "整洁有序", optionB: "看似乱但自己找得到" },
+  { stem: "面对任务你通常是?", dim: "P", optionA: "早点做完再玩", optionB: "边玩边做" },
+  { stem: "旅行前你通常会?", dim: "P", optionA: "做好详细攻略", optionB: "到了再说" }
 ];
 
 function calcMbtiFromTest(answers) {

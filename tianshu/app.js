@@ -262,6 +262,7 @@ function renderMbtiTest() {
       ${qs.map((q, i) => `
         <div class="test-q" data-q="${i}">
           <div class="test-q-num">第 ${i+1} 题</div>
+          <div class="test-q-stem">${q.stem}</div>
           <label class="test-q-opt ${state._mbtiAnswers?.[i] === 1 ? "selected" : ""}">
             <input type="radio" name="mbti-q${i}" value="1" ${state._mbtiAnswers?.[i] === 1 ? "checked" : ""} onchange="setMbtiAnswer(${i}, 1)">
             ${q.optionA}

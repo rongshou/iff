@@ -301,6 +301,7 @@ assert("4 S/N questions (dim=N)", dims.N === 4);
 assert("4 T/F questions (dim=F)", dims.F === 4);
 assert("4 J/P questions (dim=P)", dims.P === 4);
 for (let i = 0; i < MBTI_QUESTIONS.length; i++) {
+  assert(`MBTI Q${i+1} has stem`, typeof MBTI_QUESTIONS[i].stem === "string" && MBTI_QUESTIONS[i].stem.length > 0);
   assert(`MBTI Q${i+1} has optionA`, typeof MBTI_QUESTIONS[i].optionA === "string" && MBTI_QUESTIONS[i].optionA.length > 0);
   assert(`MBTI Q${i+1} has optionB`, typeof MBTI_QUESTIONS[i].optionB === "string" && MBTI_QUESTIONS[i].optionB.length > 0);
 }

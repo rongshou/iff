@@ -328,24 +328,48 @@ function calcMbtiFromTest(answers) {
 
 // ===== 霍兰德测试题 =====
 const HOLLAND_QUESTIONS = [
+  // R — Realistic 现实型
   { dim: "R", text: "修理或组装电器 / 家具" },
-  { dim: "R", text: "户外运动或手工制作" },
+  { dim: "R", text: "户外运动或野外探险" },
   { dim: "R", text: "操作工具或机械设备" },
+  { dim: "R", text: "做木工、模型或手工艺品" },
+  { dim: "R", text: "饲养动植物或园艺种植" },
+  { dim: "R", text: "驾驶或操作交通工具" },
+  // I — Investigative 研究型
   { dim: "I", text: "做科学实验或研究分析" },
   { dim: "I", text: "解决数学或逻辑难题" },
   { dim: "I", text: "探索新理论或新知识" },
+  { dim: "I", text: "阅读科普文章或学术论文" },
+  { dim: "I", text: "研究数据、找规律、做推断" },
+  { dim: "I", text: "学一门新编程语言或技术" },
+  // A — Artistic 艺术型
   { dim: "A", text: "画画、写作、音乐等创作" },
   { dim: "A", text: "欣赏艺术、设计或表演" },
   { dim: "A", text: "发挥想象力创造新东西" },
+  { dim: "A", text: "摄影、拍视频或剪辑" },
+  { dim: "A", text: "设计服装、海报或空间" },
+  { dim: "A", text: "参加文艺演出或展览" },
+  // S — Social 社会型
   { dim: "S", text: "帮助别人解决问题" },
   { dim: "S", text: "教别人新知识或技能" },
   { dim: "S", text: "参加志愿者或社团活动" },
+  { dim: "S", text: "倾听他人倾诉并给予安慰" },
+  { dim: "S", text: "组织集体活动或团队建设" },
+  { dim: "S", text: "照顾老人、儿童或病患" },
+  // E — Enterprising 企业型
   { dim: "E", text: "组织和领导团队活动" },
   { dim: "E", text: "说服别人接受你的观点" },
   { dim: "E", text: "参与竞赛或商业模拟" },
+  { dim: "E", text: "制定目标并推动执行" },
+  { dim: "E", text: "谈判、推销或公开演讲" },
+  { dim: "E", text: "承担风险、尝试新项目" },
+  // C — Conventional 常规型
   { dim: "C", text: "整理数据或制作表格" },
   { dim: "C", text: "按流程和规则完成工作" },
-  { dim: "C", text: "做详细的计划和记录" }
+  { dim: "C", text: "做详细的计划和记录" },
+  { dim: "C", text: "核对清单、确保零差错" },
+  { dim: "C", text: "管理文档、分类归档" },
+  { dim: "C", text: "使用办公软件高效处理事务" }
 ];
 
 function calcHollandFromTest(answers) {
@@ -354,7 +378,7 @@ function calcHollandFromTest(answers) {
     scores[a.dim] += a.score;
   }
   // 归一化到 0-100
-  const maxPerDim = 5 * 3; // 每题最多5分,每个维度3题
+  const maxPerDim = 5 * 6; // 每题最多5分,每个维度6题
   for (const k of Object.keys(scores)) {
     scores[k] = Math.round((scores[k] / maxPerDim) * 100);
   }

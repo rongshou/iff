@@ -149,7 +149,7 @@ const section = (title) => console.log(`\n📍 ${title}`);
   const hollandTestVisible = await page.$(".holland-test") !== null;
   assert("霍兰德测试模式渲染成功", hollandTestVisible);
   const hollandQCount = (await page.$$(".holland-test .test-q")).length;
-  assert("霍兰德测试题 18 题", hollandQCount === 18);
+  assert("霍兰德测试题 36 题", hollandQCount === 36);
   // 切回已知模式
   await page.evaluate(() => switchHollandMode("known"));
   await new Promise(r => setTimeout(r, 200));

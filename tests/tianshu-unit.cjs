@@ -346,14 +346,14 @@ assert("混合 → E/I → I", rMix.type[0] === "I");
 // ============================
 section("data.js — 霍兰德测试题");
 // ============================
-assert("HOLLAND_QUESTIONS has 18 items", HOLLAND_QUESTIONS.length === 18);
+assert("HOLLAND_QUESTIONS has 36 items", HOLLAND_QUESTIONS.length === 36);
 const hDims = HOLLAND_QUESTIONS.reduce((acc, q) => { acc[q.dim] = (acc[q.dim] || 0) + 1; return acc; }, {});
-assert("3 R questions", hDims.R === 3);
-assert("3 I questions", hDims.I === 3);
-assert("3 A questions", hDims.A === 3);
-assert("3 S questions", hDims.S === 3);
-assert("3 E questions", hDims.E === 3);
-assert("3 C questions", hDims.C === 3);
+assert("6 R questions", hDims.R === 6);
+assert("6 I questions", hDims.I === 6);
+assert("6 A questions", hDims.A === 6);
+assert("6 S questions", hDims.S === 6);
+assert("6 E questions", hDims.E === 6);
+assert("6 C questions", hDims.C === 6);
 for (let i = 0; i < HOLLAND_QUESTIONS.length; i++) {
   assert(`Holland Q${i+1} has text`, typeof HOLLAND_QUESTIONS[i].text === "string" && HOLLAND_QUESTIONS[i].text.length > 0);
   assert(`Holland Q${i+1} has dim`, "RIAESC".includes(HOLLAND_QUESTIONS[i].dim));

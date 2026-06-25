@@ -10,9 +10,8 @@ if [ "$COMMIT_SOURCE" = "message" ] || [ "$COMMIT_SOURCE" = "template" ] || [ -z
   VERSION_FILE="tianshu/VERSION"
   if [ -f "$VERSION_FILE" ]; then
     VER=$(head -1 "$VERSION_FILE" | tr -d ' \n')
-    # 避免重复插入
-    if ! grep -q "^$VER" "$COMMIT_MSG_FILE" 2>/dev/null; then
-      echo "[tianshu $VER] $(head -1 "$COMMIT_MSG_FILE" 2>/dev/null)" > "$COMMIT_MSG_FILE"
+    if ! grep -q "^\[$VER\]" "$COMMIT_MSG_FILE" 2>/dev/null; then
+      echo "[$VER] $(head -1 "$COMMIT_MSG_FILE" 2>/dev/null)" > "$COMMIT_MSG_FILE"
     fi
   fi
 fi

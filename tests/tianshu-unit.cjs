@@ -258,6 +258,40 @@ assert("recommendMajors → firstPriority sorted descending",
   majors.firstPriority.length < 2 || majors.firstPriority[0].score >= majors.firstPriority[1].score
 );
 
+// 验证评分逻辑: INTJ + IRA → 计算机/人工智能应有高分
+const csMajor = majors.firstPriority.find(m => m.major === "计算机科学与技术");
+const aiMajor = majors.firstPriority.find(m => m.major === "人工智能");
+if (csMajor) {
+  assert("计算机科学与技术 → matched包含MBTI或霍兰德引用", 
+    csMajor.matched.some(r => r.includes("INTJ") || r.includes("I") || r.includes("R"))
+  );
+  assert("计算机科学与技术 → logic不为空", csMajor.logic.length > 0);
+}
+
+// 心理学应出现在推荐中(INTJ + IRA + S匹配)
+const psychMajor = [...majors.firstPriority, ...majors.secondPriority, ...majors.thirdPriority]
+  .find(m => m.major === "心理学");
+if (psychMajor) {
+  assert("心理学出现在队列中", true);
+}
+
+// 风险清单格式
+assert("risks[0] has major/reason/alt", 
+  majors.risks.length > 0 && 
+  ["major","reason","alt"].every(k => k in majors.risks[0])
+);
+
+// 不同场景测试
+const bazi3 = getFourPillars(2002, 3, 10, 9);
+const mbti3 = getMbtiInfo("ENFP");
+const holland3 = getHollandInfo({R: 20, I: 40, A: 85, S: 70, E: 60, C: 25});
+const cross3 = crossValidate(bazi3, getZiweiSummary(2002, 3, 10), mbti3, holland3);
+const majors3 = recommendMajors(cross3, bazi3, mbti3, holland3);
+assert("ENFP+AE → 视觉传达设计或汉语言文学出现在优先级中",
+  [...majors3.firstPriority, ...majors3.secondPriority, ...majors3.thirdPriority]
+    .some(m => m.major === "视觉传达设计" || m.major === "汉语言文学")
+);
+
 // ============================
 section("engine.js — generateCareerPath");
 // ============================

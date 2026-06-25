@@ -80,6 +80,7 @@ function renderStep1() {
             <option ${state.student.grade === "高三" ? "selected" : ""}>高三</option>
             <option ${state.student.grade === "本科" ? "selected" : ""}>本科</option>
             <option ${state.student.grade === "研究生" ? "selected" : ""}>研究生</option>
+            <option ${state.student.grade === "已毕业" ? "selected" : ""}>已毕业</option>
           </select>
         </label>
       </div>

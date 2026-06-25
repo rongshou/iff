@@ -105,53 +105,75 @@ function generatePositionLabel(theme, bazi, mbti, holland) {
 
 // ===== 专业推荐 =====
 function recommendMajors(cross, bazi, mbti, holland) {
-  const studentTags = [];
-  studentTags.push(bazi.dayMasterWx);
-  studentTags.push(bazi.minWx);
-  studentTags.push(...bazi.xiZhong);
-  studentTags.push(...bazi.careerFit.split("、"));
-  studentTags.push(mbti.baseType);
-  studentTags.push(...mbti.fitMajors.split("、"));
-  studentTags.push(...holland.top3.split(""));
-
   const primaryTheme = cross.positionLabel.theme;
 
-  // 主题 → 专业映射
   const themeToMajors = {
     "研究/学术": ["计算机科学与技术","数学与应用数学","人工智能","数据科学与大数据技术","心理学"],
     "技术/工程": ["计算机科学与技术","软件工程","电子信息工程","人工智能"],
-    "逻辑/系统": ["计算机科学与技术","软件工程","数据科学与大数据技术"],
+    "逻辑/系统": ["计算机科学与技术","软件工程","数据科学与大数据技术","数学与应用数学"],
     "创造/艺术": ["视觉传达设计","汉语言文学"],
-    "教育/服务": ["教育学","心理学"],
-    "管理/领导": ["金融学"],
-    "商业/销售": ["金融学"],
-    "动手/实践": ["软件工程","电子信息工程"]
+    "教育/服务": ["教育学","心理学","汉语言文学"],
+    "管理/领导": ["金融学","会计学"],
+    "商业/销售": ["金融学","会计学"],
+    "动手/实践": ["软件工程","电子信息工程","临床医学"]
   };
+
+  // 构建精准画像
+  const mbtiType = mbti.baseType;
+  const hollandCodes = holland.top3.split("");
+  const careerFit = bazi.careerFit.split("、");
+  const dayWx = bazi.dayMasterWx;
 
   const scored = [];
   for (const [major, info] of Object.entries(window.TianShuData.MAJOR_LIBRARY)) {
     let score = 0;
-    const matched = [];
-    for (const tag of studentTags) {
-      for (const kw of info.tags) {
-        if (String(tag).includes(kw) || kw.includes(String(tag))) {
-          score += 2;
-          matched.push(kw);
-        }
-      }
+    const reasons = [];
+
+    // 1) MBTI 类型精确匹配(权重最高)
+    if (info.tags.includes(mbtiType)) {
+      score += 10;
+      reasons.push(`MBTI 类型「${mbtiType}」完全匹配`);
+    } else if (info.tags.some(t => t.length >= 3 && (t.includes(mbtiType) || mbtiType.includes(t)))) {
+      score += 5;
+      reasons.push(`MBTI 类型部分匹配`);
     }
-    if ((themeToMajors[primaryTheme] || []).includes(major)) score += 5;
+
+    // 2) 霍兰德代码精确匹配(每个字母独立)
+    const hMatched = hollandCodes.filter(c => info.tags.includes(c));
+    score += hMatched.length * 4;
+    if (hMatched.length > 0) {
+      reasons.push(`霍兰德代码 ${hMatched.join("")} 匹配`);
+    }
+
+    // 3) 职业适配关键词
+    const cMatched = careerFit.filter(k => info.tags.some(t => t.includes(k)));
+    score += cMatched.length * 2;
+    if (cMatched.length > 0) reasons.push(`职业方向关键词匹配`);
+
+    // 4) 五行元素
+    if (info.tags.includes(dayWx)) {
+      score += 2;
+      reasons.push(`五行「${dayWx}」匹配`);
+    }
+
+    // 5) 主题推荐(硬加成)
+    if ((themeToMajors[primaryTheme] || []).includes(major)) {
+      score += 8;
+      reasons.push(`核心主题「${primaryTheme}」推荐`);
+    }
+
     if (score > 0) {
-      scored.push({ major, info, score, matched: [...new Set(matched)] });
+      scored.push({ major, info, score, reasons: [...new Set(reasons)] });
     }
   }
   scored.sort((a, b) => b.score - a.score);
 
-  const first = scored.slice(0, 2);
-  const second = scored.slice(2, 4);
-  const third = scored.slice(4, 6);
+  // 按分数自然分层
+  const first = scored.filter(s => s.score >= 12).slice(0, 3);
+  const second = scored.filter(s => s.score >= 6 && !first.includes(s)).slice(0, 3);
+  const third = scored.filter(s => !first.includes(s) && !second.includes(s)).slice(0, 4);
 
-  // 风险规避
+  // 风险规避(保持不变)
   const risks = [];
   if (mbti.weakness.includes("社交") || mbti.weakness.includes("敏感")) {
     risks.push({
@@ -177,31 +199,27 @@ function recommendMajors(cross, bazi, mbti, holland) {
 
   return {
     firstPriority: first.map(s => ({
-      major: s.major,
-      subs: s.info.subs,
+      major: s.major, subs: s.info.subs,
       score: s.score,
-      tags: s.info.tags,
-      matched: s.matched,
+      matched: s.reasons,
       courses: s.info.courses,
       abilities: s.info.abilities,
       schools: s.info.schools,
-      logic: `与学生「${primaryTheme}」主题高度契合 + 与${mbti.baseType}+${holland.top3}特征匹配`
+      logic: s.reasons.join("; ")
     })),
     secondPriority: second.map(s => ({
-      major: s.major,
-      subs: s.info.subs,
+      major: s.major, subs: s.info.subs,
       score: s.score,
-      tags: s.info.tags,
+      matched: s.reasons,
       courses: s.info.courses,
       schools: s.info.schools,
-      logic: `匹配学生${mbti.baseType}优势 + 可作为备选长期发展`
+      logic: s.reasons.join("; ")
     })),
     thirdPriority: third.map(s => ({
-      major: s.major,
-      subs: s.info.subs,
+      major: s.major, subs: s.info.subs,
       score: s.score,
-      tags: s.info.tags,
-      logic: "具备一定匹配度,可作为补充选择或交叉学科方向"
+      matched: s.reasons,
+      logic: s.reasons.join("; ")
     })),
     risks: risks.length > 0 ? risks : [{
       major: "(无特别高风险专业)",

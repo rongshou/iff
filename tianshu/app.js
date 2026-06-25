@@ -12,7 +12,6 @@ const state = {
     birthMonth: 5,
     birthDay: 15,
     birthHour: 14,
-    birthPlace: "北京",
     grade: "高一"
   },
   mbtiType: "INTJ-A",
@@ -73,7 +72,6 @@ function renderStep1() {
         <label>出生月 <input type="number" id="f-month" value="${state.student.birthMonth}" min="1" max="12"></label>
         <label>出生日 <input type="number" id="f-day" value="${state.student.birthDay}" min="1" max="31"></label>
         <label>出生时辰(0-23) <input type="number" id="f-hour" value="${state.student.birthHour}" min="0" max="23"></label>
-        <label>出生地 <input type="text" id="f-place" value="${state.student.birthPlace}"></label>
         <label>当前学段
           <select id="f-grade">
             <option ${state.student.grade === "初中" ? "selected" : ""}>初中</option>
@@ -99,7 +97,6 @@ function nextStep1() {
   state.student.birthMonth = parseInt(document.getElementById("f-month").value);
   state.student.birthDay = parseInt(document.getElementById("f-day").value);
   state.student.birthHour = parseInt(document.getElementById("f-hour").value);
-  state.student.birthPlace = document.getElementById("f-place").value;
   state.student.grade = document.getElementById("f-grade").value;
   state.step = 2;
   updateProgress(2);

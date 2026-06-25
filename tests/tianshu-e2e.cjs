@@ -65,7 +65,6 @@ const section = (title) => console.log(`\n📍 ${title}`);
   await page.$eval("#f-month", el => { el.value = "8"; el.dispatchEvent(new Event("input")); });
   await page.$eval("#f-day", el => { el.value = "20"; el.dispatchEvent(new Event("input")); });
   await page.$eval("#f-hour", el => { el.value = "6"; el.dispatchEvent(new Event("input")); });
-  await page.type("#f-place", "上海");
   await page.select("#f-grade", "高三");
 
   await page.click(".btn-primary");

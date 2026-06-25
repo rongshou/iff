@@ -64,6 +64,30 @@ function renderInline(raw: string, keyPrefix: string): React.ReactNode[] {
   return nodes;
 }
 
+/** 拆分一行表格为单元格：去掉首尾 | 后按 | 切分并 trim */
+function splitTableRow(line: string): string[] {
+  let s = line.trim();
+  if (s.startsWith("|")) s = s.slice(1);
+  if (s.endsWith("|")) s = s.slice(0, -1);
+  return s.split("|").map((c) => c.trim());
+}
+
+/** 表格分隔行：| --- | :---: | ---: | 形式 */
+const TABLE_SEP =
+  /^\s*\|?\s*:?-+:?\s*(\|\s*:?-+:?\s*)*\|?\s*$/;
+
+/** 从分隔行解析每列对齐方式：left | center | right | undefined(默认) */
+function parseAligns(sepRow: string): ("left" | "center" | "right" | undefined)[] {
+  return splitTableRow(sepRow).map((cell) => {
+    const left = cell.startsWith(":");
+    const right = cell.endsWith(":");
+    if (left && right) return "center";
+    if (right) return "right";
+    if (left) return "left";
+    return undefined;
+  });
+}
+
 export function renderMarkdown(src: string): React.ReactNode {
   const text = (src ?? "").replace(/\r\n?/g, "\n");
   const lines = text.split("\n");
@@ -159,9 +183,54 @@ export function renderMarkdown(src: string): React.ReactNode {
       continue;
     }
 
+    // 表格：表头行 + 分隔行 + 数据行（至少三行）
+    if (/^\s*\|.*\|\s*$/.test(line) && i + 1 < lines.length && TABLE_SEP.test(lines[i + 1])) {
+      const header = splitTableRow(line);
+      const aligns = parseAligns(lines[i + 1]);
+      i += 2;
+      const rows: string[][] = [];
+      while (i < lines.length && /^\s*\|.*\|\s*$/.test(lines[i])) {
+        rows.push(splitTableRow(lines[i]));
+        i++;
+      }
+      blocks.push(
+        <div key={`b-${key++}`} className="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                {header.map((c, idx) => (
+                  <th
+                    key={`th-${key}-${idx}`}
+                    style={aligns[idx] ? { textAlign: aligns[idx] as "left" | "center" | "right" } : undefined}
+                  >
+                    {renderInline(escapeHtml(c), `th-${key}-${idx}`)}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((r, ri) => (
+                <tr key={`tr-${key}-${ri}`}>
+                  {r.map((c, ci) => (
+                    <td
+                      key={`td-${key}-${ri}-${ci}`}
+                      style={aligns[ci] ? { textAlign: aligns[ci] as "left" | "center" | "right" } : undefined}
+                    >
+                      {renderInline(escapeHtml(c), `td-${key}-${ri}-${ci}`)}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      );
+      continue;
+    }
+
     // 段落：连续非空行合并
     const buf: string[] = [];
-    while (i < lines.length && !/^\s*$/.test(lines[i]) && !/^(#{1,3}\s|>\s?|[-*]\s+|\d+\.\s+|```)/.test(lines[i])) {
+    while (i < lines.length && !/^\s*$/.test(lines[i]) && !/^(#{1,3}\s|>\s?|[-*]\s+|\d+\.\s+|```|\|.*\|\s*$)/.test(lines[i])) {
       buf.push(lines[i]);
       i++;
     }

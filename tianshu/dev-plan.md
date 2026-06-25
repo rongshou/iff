@@ -104,3 +104,8 @@
 | 日期 | 变更 | 备注 |
 |---|---|---|
 | 2026-06-25 | 项目启动,建目录 + 起草骨架 | 待 Jet 补充目标 |
+| 2026-06-25 | Jet 明确形态 = 工具 | 更新计划 |
+| 2026-06-25 | 写 Python MVP v0.1 (1922 行) | bazi + ziwei + mbti + holland + cross + majors + career + report + demo |
+| 2026-06-25 | 转 JS 静态网页版 (1999 行) | bazi.js + data.js + engine.js + app.js + index.html |
+| 2026-06-25 | Jet 推送到 GitHub | URL: https://rongshou.github.io/iff/tianshu/ |
+| 2026-06-25 | 美化 v2 (本地完成，Jet 需 push) | 进度条 + 玻璃拟态 + 渐变标题 + 卡片悬浮 + 移动端适配 |

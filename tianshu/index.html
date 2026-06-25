@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>天枢 · 学生综合特质测评与生涯规划工具</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="bazi.js"></script>
+<script src="data.js"></script>
+<script src="engine.js"></script>
+<script src="beidou.js"></script>
+<script src="app.js"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: "PingFang SC", "Noto Serif SC", "Microsoft YaHei", "Inter", "Helvetica Neue", Arial, sans-serif;
+  line-height: 1.6;
+  color: #1a202c;
+  background:
+    radial-gradient(ellipse at top left, rgba(79, 124, 255, 0.08) 0%, transparent 50%),
+    radial-gradient(ellipse at top right, rgba(192, 132, 252, 0.08) 0%, transparent 50%),
+    radial-gradient(ellipse at bottom, rgba(251, 191, 36, 0.05) 0%, transparent 60%),
+    linear-gradient(180deg, #f8fafc 0%, #eef2f7 100%);
+  background-attachment: fixed;
+  min-height: 100vh;
+  padding: 20px;
+}
+
+.container {
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+header.banner {
+  text-align: center;
+  padding: 30px 20px;
+  margin-bottom: 30px;
+}
+
+header.banner h1 {
+  color: #2c5282;
+  font-size: 38px;
+  font-weight: 700;
+  letter-spacing: 8px;
+  margin-bottom: 8px;
+  background: linear-gradient(135deg, #2c5282 0%, #6b46c1 50%, #b7791f 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+header.banner .subtitle {
+  color: #718096;
+  font-size: 13px;
+  letter-spacing: 1px;
+}
+
+header.banner .compass {
+  margin-bottom: 8px;
+  display: flex;
+  justify-content: center;
+}
+
+header.banner .compass svg {
+  filter: drop-shadow(0 0 20px rgba(192, 132, 252, 0.4));
+}
+
+/* ===== 进度条 ===== */
+.progress-bar {
+  background: #fff;
+  border-radius: 14px;
+  padding: 24px 30px 22px;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+  position: relative;
+  overflow: hidden;
+}
+
+.progress-bar::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0; height: 3px;
+  background: linear-gradient(90deg, #4f7cff 0%, #c084fc 50%, #fbbf24 100%);
+  opacity: 0.6;
+}
+
+.progress-track {
+  position: absolute;
+  top: 38px;
+  left: 60px;
+  right: 60px;
+  height: 3px;
+  background: #edf2f7;
+  border-radius: 2px;
+  z-index: 0;
+}
+
+.progress-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #4f7cff 0%, #c084fc 50%, #fbbf24 100%);
+  border-radius: 2px;
+  transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+}
+
+.progress-fill::after {
+  content: "";
+  position: absolute;
+  right: -2px;
+  top: -3px;
+  width: 9px;
+  height: 9px;
+  background: #fbbf24;
+  border-radius: 50%;
+  box-shadow: 0 0 8px rgba(251, 191, 36, 0.6);
+}
+
+.progress-steps {
+  list-style: none;
+  display: flex;
+  justify-content: space-between;
+  position: relative;
+  z-index: 1;
+  margin: 0;
+  padding: 0;
+}
+
+.progress-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  background: #fff;
+  padding: 0 4px;
+  min-width: 60px;
+}
+
+.step-dot {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #fff;
+  border: 2px solid #cbd5e0;
+  color: #a0aec0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 14px;
+  transition: all 0.3s ease;
+}
+
+.step-label {
+  font-size: 12px;
+  color: #a0aec0;
+  font-weight: 500;
+  transition: color 0.3s;
+}
+
+.progress-step.active .step-dot {
+  background: linear-gradient(135deg, #4f7cff 0%, #c084fc 100%);
+  border-color: transparent;
+  color: #fff;
+  box-shadow: 0 0 0 4px rgba(79, 124, 255, 0.15);
+  transform: scale(1.05);
+}
+
+.progress-step.active .step-label {
+  color: #2c5282;
+  font-weight: 600;
+}
+
+.progress-step.completed .step-dot {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  border-color: transparent;
+  color: #fff;
+}
+
+.progress-step.completed .step-label {
+  color: #10b981;
+}
+
+/* Step Card */
+.step-card {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  border-radius: 16px;
+  box-shadow:
+    0 4px 24px rgba(44, 82, 130, 0.08),
+    0 1px 2px rgba(44, 82, 130, 0.04);
+  padding: 40px 50px;
+  margin-bottom: 20px;
+  transition: box-shadow 0.3s ease;
+}
+
+.step-card:hover {
+  box-shadow:
+    0 8px 32px rgba(44, 82, 130, 0.12),
+    0 2px 4px rgba(44, 82, 130, 0.06);
+}
+
+.step-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 2px solid #e2e8f0;
+}
+
+.step-num {
+  display: inline-block;
+  background: #2c5282;
+  color: #fff;
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: 20px;
+  margin-right: 14px;
+  font-size: 14px;
+}
+
+.step-header h2 {
+  color: #2c5282;
+  font-size: 22px;
+}
+
+/* Forms */
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.form-grid label {
+  display: flex;
+  flex-direction: column;
+  font-size: 14px;
+  color: #4a5568;
+  font-weight: 500;
+}
+
+.form-grid input,
+.form-grid select {
+  margin-top: 6px;
+  padding: 11px 14px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  transition: all 0.2s;
+  background: #fff;
+}
+
+.form-grid input:focus,
+.form-grid select:focus {
+  outline: none;
+  border-color: #4f7cff;
+  box-shadow: 0 0 0 4px rgba(79, 124, 255, 0.12);
+  background: #fff;
+}
+
+.form-grid input:hover,
+.form-grid select:hover {
+  border-color: #cbd5e0;
+}
+
+.hint {
+  color: #718096;
+  font-size: 14px;
+  margin-bottom: 16px;
+  padding: 10px 14px;
+  background: #f7fafc;
+  border-radius: 6px;
+}
+
+/* Buttons */
+.step-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  margin-top: 28px;
+  padding-top: 20px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.btn-primary,
+.btn-secondary,
+.btn-text {
+  padding: 12px 24px;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: inherit;
+  border: none;
+  transition: all 0.2s ease;
+  letter-spacing: 0.5px;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #4f7cff 0%, #6b46c1 100%);
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(79, 124, 255, 0.3);
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(79, 124, 255, 0.45);
+  background: linear-gradient(135deg, #6090ff 0%, #7c52d1 100%);
+}
+
+.btn-primary:active {
+  transform: translateY(0);
+}
+
+.btn-secondary {
+  background: #fff;
+  color: #4a5568;
+  border: 1px solid #cbd5e0;
+}
+
+.btn-secondary:hover {
+  background: #f7fafc;
+  border-color: #a0aec0;
+  transform: translateY(-1px);
+}
+
+.btn-text {
+  background: transparent;
+  color: #4f7cff;
+  font-size: 14px;
+  padding: 6px 10px;
+}
+
+.btn-text:hover {
+  background: #ebf8ff;
+}
+
+/* Tables */
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 14px 0;
+  font-size: 14px;
+}
+
+.data-table th,
+.data-table td {
+  border: 1px solid #e2e8f0;
+  padding: 10px 14px;
+  text-align: left;
+}
+
+.data-table th {
+  background: #2c5282;
+  color: #fff;
+  font-weight: 600;
+}
+
+.data-table tr:nth-child(even) {
+  background: #f7fafc;
+}
+
+/* Tags */
+.tag {
+  display: inline-block;
+  background: #edf2f7;
+  color: #2d3748;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 13px;
+  margin: 0 4px;
+}
+
+.tag-primary {
+  background: #2c5282;
+  color: #fff;
+}
+
+.tag-warning {
+  background: #fef5e7;
+  color: #c05621;
+}
+
+.tag-danger {
+  background: #fed7d7;
+  color: #c53030;
+}
+
+/* Info blocks */
+.info-block {
+  background: #ebf8ff;
+  border-left: 4px solid #3182ce;
+  padding: 14px 18px;
+  margin: 14px 0;
+  border-radius: 4px;
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.callout {
+  background: linear-gradient(135deg, #ebf8ff 0%, #f3e8ff 100%);
+  border-left: 4px solid #4f7cff;
+  padding: 20px 24px;
+  margin: 18px 0;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(79, 124, 255, 0.08);
+}
+
+.callout-title {
+  color: #2c5282;
+  font-weight: 600;
+  margin-bottom: 8px;
+  font-size: 17px;
+}
+
+.note {
+  color: #718096;
+  font-size: 13px;
+  margin-top: 10px;
+  font-style: italic;
+}
+
+/* 紫微宫位 */
+.gong-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 14px;
+  margin: 14px 0;
+}
+
+.gong-card {
+  background: #fafbfc;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 14px 16px;
+}
+
+.gong-title {
+  font-weight: 600;
+  color: #2c5282;
+  margin-bottom: 8px;
+  font-size: 15px;
+}
+
+.hour-effect {
+  margin-top: 6px;
+  font-size: 12px;
+  color: #c05621;
+}
+
+/* MBTI card */
+.mbti-card {
+  background: linear-gradient(135deg, #f7fafc 0%, #ebf8ff 100%);
+  border: 1px solid #cbd5e0;
+  border-radius: 8px;
+  padding: 18px 22px;
+  margin: 16px 0;
+}
+
+.mbti-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #2c5282;
+  margin-bottom: 10px;
+}
+
+/* 滑块 */
+.sliders {
+  margin: 14px 0;
+}
+
+.slider-row {
+  display: grid;
+  grid-template-columns: 1fr 2fr auto;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 0;
+  border-bottom: 1px solid #edf2f7;
+}
+
+.slider-label {
+  font-size: 13px;
+  color: #4a5568;
+}
+
+.slider-value {
+  display: inline-block;
+  background: #2c5282;
+  color: #fff;
+  font-weight: 600;
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-size: 13px;
+  margin-left: 8px;
+  min-width: 36px;
+  text-align: center;
+}
+
+.slider-row input[type="range"] {
+  width: 100%;
+}
+
+/* Holland card */
+.holland-card {
+  background: linear-gradient(135deg, #f0fff4 0%, #ebf8ff 100%);
+  border: 1px solid #9ae6b4;
+  border-radius: 8px;
+  padding: 18px 22px;
+  margin: 16px 0;
+}
+
+.holland-title {
+  font-size: 17px;
+  font-weight: 600;
+  color: #2c5282;
+  margin-bottom: 8px;
+}
+
+.holland-fits {
+  margin-top: 10px;
+  font-size: 14px;
+}
+
+.holland-fits ul {
+  margin-left: 22px;
+  margin-top: 4px;
+}
+
+.risk-warning {
+  margin-top: 10px;
+  padding: 8px 12px;
+  background: #fef5e7;
+  border-left: 3px solid #ed8936;
+  border-radius: 4px;
+  font-size: 13px;
+  color: #c05621;
+}
+
+/* Report */
+.report h2 {
+  color: #fff;
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  margin: 40px 0 18px 0;
+  padding: 14px 22px;
+  background: linear-gradient(135deg, #4f7cff 0%, #6b46c1 60%, #b7791f 100%);
+  border-radius: 10px;
+  box-shadow: 0 4px 16px rgba(79, 124, 255, 0.2);
+  position: relative;
+  overflow: hidden;
+}
+
+.report h2::before {
+  content: "";
+  position: absolute;
+  top: 0; right: 0; bottom: 0;
+  width: 40%;
+  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.15) 100%);
+  pointer-events: none;
+}
+
+.report h2:first-of-type {
+  background: linear-gradient(135deg, #1a365d 0%, #2c5282 50%, #4f7cff 100%);
+  font-size: 26px;
+  padding: 18px 26px;
+}
+
+.report h3 {
+  color: #2c5282;
+  font-size: 17px;
+  margin: 22px 0 12px 0;
+  font-weight: 600;
+  padding-left: 14px;
+  border-left: 4px solid #4f7cff;
+}
+
+.report h4 {
+  color: #4a5568;
+  font-size: 14px;
+  margin: 14px 0 8px 0;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.report ul,
+.report ol {
+  margin: 8px 0 8px 24px;
+}
+
+.report li {
+  margin: 5px 0;
+  font-size: 14px;
+}
+
+.major-card {
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 18px 22px;
+  margin: 14px 0;
+  background: linear-gradient(135deg, #fff 0%, #f7fafc 100%);
+  box-shadow: 0 2px 8px rgba(44, 82, 130, 0.06);
+  transition: all 0.25s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.major-card::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0;
+  width: 4px;
+  height: 100%;
+  background: linear-gradient(180deg, #4f7cff 0%, #c084fc 100%);
+}
+
+.major-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(79, 124, 255, 0.12);
+  border-color: #c084fc;
+}
+
+.major-title {
+  color: #2c5282;
+  font-weight: 600;
+  font-size: 18px;
+  margin-bottom: 6px;
+}
+
+.major-meta {
+  color: #718096;
+  font-size: 13px;
+  margin-bottom: 10px;
+}
+
+.major-card-mini {
+  background: #f7fafc;
+  padding: 10px 14px;
+  border-radius: 4px;
+  margin: 6px 0;
+  font-size: 14px;
+}
+
+.risk-card {
+  background: #fff5f5;
+  border-left: 4px solid #e53e3e;
+  padding: 12px 18px;
+  margin: 10px 0;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.career-stage {
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 22px 26px;
+  margin: 16px 0;
+  background: linear-gradient(135deg, #fff 0%, #fafbff 100%);
+  box-shadow: 0 3px 12px rgba(44, 82, 130, 0.06);
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.career-stage:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(79, 124, 255, 0.1);
+}
+
+.career-stage::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0; height: 4px;
+  background: linear-gradient(90deg, #4f7cff 0%, #c084fc 50%, #fbbf24 100%);
+}
+
+.stage-title {
+  color: #2c5282;
+  font-weight: 600;
+  font-size: 18px;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.path-item {
+  background: #f7fafc;
+  padding: 10px 14px;
+  border-radius: 4px;
+  margin: 8px 0;
+  font-size: 14px;
+}
+
+.risk-list li {
+  color: #c53030;
+}
+
+.disclaimer {
+  margin-top: 40px;
+  padding: 20px 24px;
+  background: linear-gradient(135deg, #fffaf0 0%, #fef5e7 100%);
+  border: 1px solid #fbd38d;
+  border-left: 4px solid #ed8936;
+  border-radius: 10px;
+  font-size: 13px;
+  color: #744210;
+  line-height: 1.8;
+  box-shadow: 0 2px 8px rgba(237, 137, 54, 0.08);
+}
+
+.footer {
+  margin-top: 30px;
+  padding-top: 20px;
+  border-top: 1px solid #e2e8f0;
+  color: #a0aec0;
+  font-size: 12px;
+  text-align: center;
+  letter-spacing: 0.5px;
+}
+
+.loading {
+  text-align: center;
+  padding: 60px 20px;
+  color: #2c5282;
+  font-size: 18px;
+}
+
+.error {
+  background: #fff5f5;
+  border-left: 4px solid #e53e3e;
+  padding: 16px 20px;
+  border-radius: 4px;
+  color: #c53030;
+}
+
+@media (max-width: 768px) {
+  body { padding: 10px; }
+  .step-card { padding: 25px 18px; }
+  .progress-bar { padding: 18px 14px 16px; }
+  .progress-track { left: 40px; right: 40px; }
+  .step-label { font-size: 10px; }
+  .step-dot { width: 26px; height: 26px; font-size: 12px; }
+  .progress-step { min-width: 44px; }
+  .slider-row { grid-template-columns: 1fr; }
+  header.banner { padding: 20px 10px; }
+  header.banner h1 { font-size: 28px; letter-spacing: 5px; }
+  .step-actions { flex-direction: column-reverse; }
+  .step-actions button { width: 100%; }
+  .report h2 { font-size: 18px; padding: 12px 16px; }
+  .report h2:first-of-type { font-size: 20px; }
+  .major-card, .career-stage { padding: 14px 16px; }
+}
+
+@media (max-width: 480px) {
+  .progress-track { display: none; }
+  .progress-step .step-label { display: none; }
+}
+
+@media print {
+  body { background: #fff; padding: 0; }
+  header.banner, .step-header, .step-actions, .form-grid, .hint, .sliders, .btn-text { display: none; }
+  .step-card { box-shadow: none; padding: 0; }
+  .report h2 { page-break-before: always; }
+  .report h2:first-child { page-break-before: avoid; }
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+
+<header class="banner">
+  <div class="compass" id="beidou-container"></div>
+  <h1>天枢</h1>
+  <div class="subtitle">学生综合特质测评与生涯规划工具 · v0.1 (Web 版)</div>
+  <div class="subtitle" style="margin-top:6px;">基于八字 + 紫微 + MBTI + 霍兰德四维交叉</div>
+</header>
+
+<nav class="progress-bar" id="progress-bar">
+  <div class="progress-track">
+    <div class="progress-fill" id="progress-fill"></div>
+  </div>
+  <ol class="progress-steps" id="progress-steps">
+    <li class="progress-step active" data-step="1">
+      <span class="step-dot">1</span>
+      <span class="step-label">基础信息</span>
+    </li>
+    <li class="progress-step" data-step="2">
+      <span class="step-dot">2</span>
+      <span class="step-label">排盘</span>
+    </li>
+    <li class="progress-step" data-step="3">
+      <span class="step-dot">3</span>
+      <span class="step-label">MBTI</span>
+    </li>
+    <li class="progress-step" data-step="4">
+      <span class="step-dot">4</span>
+      <span class="step-label">霍兰德</span>
+    </li>
+    <li class="progress-step" data-step="5">
+      <span class="step-dot">5</span>
+      <span class="step-label">报告</span>
+    </li>
+  </ol>
+</nav>
+
+<div id="app">
+  <div class="loading">加载中...</div>
+</div>
+
+</div>
+
+</body>
+</html>

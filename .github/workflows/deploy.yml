@@ -28,9 +28,6 @@ jobs:
           BASE_URL: /iff/
           VITE_API_BASE: https://iz2ze93ogksv8bwaz3pk8hz.taildec4f9.ts.net/api
 
-      - name: Copy tianshu web to dist
-        run: cp -r tianshu/src/web dist/tianshu
-
       - uses: actions/configure-pages@v4
 
       - uses: actions/upload-pages-artifact@v3

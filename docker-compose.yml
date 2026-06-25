@@ -13,6 +13,7 @@ services:
     restart: unless-stopped
 
   tianquan-backend:
+    build: ./backend
     image: tianquan-backend:latest
     container_name: tianquan-backend
     ports:

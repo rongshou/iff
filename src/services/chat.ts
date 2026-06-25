@@ -1,4 +1,4 @@
-const API_BASE = "https://iz2ze93ogksv8bwaz3pk8hz.taildec4f9.ts.net/api";
+const API_BASE = import.meta.env.VITE_API_BASE || "/api";
 
 export interface ChatMessageInput {
   role: "user" | "assistant";

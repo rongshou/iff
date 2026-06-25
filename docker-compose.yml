@@ -1,0 +1,45 @@
+services:
+  tianquan-nginx:
+    build: .
+    image: tianquan-nginx:latest
+    container_name: tianquan-nginx
+    ports:
+      - "8080:80"
+    depends_on:
+      tianquan-backend:
+        condition: service_healthy
+    networks:
+      - tianquan_default
+    restart: unless-stopped
+
+  tianquan-backend:
+    image: tianquan-backend:latest
+    container_name: tianquan-backend
+    ports:
+      - "127.0.0.1:3470:3470"
+    environment:
+      TIANQUAN_HOST: "0.0.0.0"
+      TIANQUAN_PORT: "3470"
+      TIANQUAN_DATA_DIR: "/app/data"
+      TIANQUAN_DB_PATH: "/app/data/advisor.db"
+      TIANQUAN_WERS_DB_PATH: "/app/data/werss.db"
+      TIANQUAN_LLM_PROVIDER: "opencode"
+      TIANQUAN_LLM_BASE_URL: "https://opencode.ai/zen/v1"
+      TIANQUAN_LLM_MODEL: "deepseek-v4-flash-free"
+      TIANQUAN_LLM_API_KEY: "${TIANQUAN_LLM_API_KEY:?set TIANQUAN_LLM_API_KEY in .env}"
+    volumes:
+      - "${ADVISOR_DATA_DIR:-/home/admin/.openclaw/workspace-study-abroad/study-abroad-advisor/data}:/app/data"
+      - "${WERSS_DB_PATH:-/home/admin/werss/data/db.db}:/app/data/werss.db"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:3470/api/health')"]
+      interval: 15s
+      timeout: 5s
+      start_period: 10s
+      retries: 5
+    networks:
+      - tianquan_default
+    restart: unless-stopped
+
+networks:
+  tianquan_default:
+    driver: bridge

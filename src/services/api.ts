@@ -1,6 +1,6 @@
 import type { RecommendRequest, RecommendResult } from "../types";
 
-const API_BASE = "/tianquan-api";
+const API_BASE = import.meta.env.VITE_API_BASE || "/api";
 
 export async function fetchRecommend(
   data: RecommendRequest

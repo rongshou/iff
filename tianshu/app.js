@@ -817,17 +817,21 @@ function renderFullReport(s, r) {
       `}).join("")}
 
       <h3>关键节点行动指引</h3>
-      <table class="data-table">
-        <tr><th>节点</th><th>时间</th><th>核心行动</th><th>注意事项</th></tr>
-        ${r.career.keyNodes.map(n => `
-          <tr>
-            <td><strong>${n.name}</strong></td>
-            <td>${n.time}</td>
-            <td>${n.actions}</td>
-            <td>${n.note}</td>
-          </tr>
+      <div class="timeline">
+        ${r.career.keyNodes.map((n, i) => `
+          <div class="timeline-item">
+            <div class="tl-marker">${i + 1}</div>
+            <div class="tl-body">
+              <div class="tl-header">
+                <span class="tl-name">${n.name}</span>
+                <span class="tl-time">${n.time}</span>
+              </div>
+              <div class="tl-actions"><strong>行动:</strong>${n.actions}</div>
+              <div class="tl-note">${n.note}</div>
+            </div>
+          </div>
         `).join("")}
-      </table>
+      </div>
 
       <!-- ========== 四、未来挑战与破局点 ========== -->
       <h2>四、未来挑战与破局点</h2>
@@ -855,25 +859,30 @@ function renderFullReport(s, r) {
 
       <!-- ========== 六、健康与状态管理 ========== -->
       <h2>六、健康与状态管理</h2>
-      <ul>${r.career.health.map(h => `<li>${h}</li>`).join("")}</ul>
+      <p class="report-desc">基于八字五行和MBTI特质,设计适配的身心管理方案：</p>
+      <div class="health-grid">
+        ${r.career.health.map(h => `
+          <div class="health-card">${h}</div>
+        `).join("")}
+      </div>
 
       <!-- ========== 七、核心建议与避坑提醒 ========== -->
       <h2>七、核心建议与避坑提醒</h2>
-      <h3>核心发展建议</h3>
-      <ol>
-        <li><strong>充分发挥 ${r.mbti.nick} + ${r.holland.top3} 的核心优势</strong>:在${r.majors.firstPriority[0] ? r.majors.firstPriority[0].major : "适配方向"}等方向深耕,前 5 年打造扎实核心能力。</li>
-        <li><strong>针对性补足短板</strong>:${r.mbti.weakness.split("、")[0]}是显著风险,需刻意练习。</li>
-        <li><strong>长期主义 + 动态调整</strong>:每 2-3 年做一次复盘,根据行业变化调整方向。</li>
-        <li><strong>平衡身心</strong>:建立规律运动 + 兴趣释放的稳定机制。</li>
+      <h3>📌 核心发展建议</h3>
+      <ol class="advice-list">
+        <li><strong>充分发挥 ${r.mbti.nick} + ${r.holland.top3} 的核心优势</strong> — 在${r.majors.firstPriority[0] ? r.majors.firstPriority[0].major : "适配方向"}等方向深耕，前 5 年打造扎实核心能力。</li>
+        <li><strong>针对性补足短板</strong> — ${r.mbti.weakness.split("、")[0]}是显著风险，需刻意练习。</li>
+        <li><strong>长期主义 + 动态调整</strong> — 每 2-3 年做一次复盘，根据行业变化调整方向。</li>
+        <li><strong>平衡身心</strong> — 建立规律运动 + 兴趣释放的稳定机制。</li>
       </ol>
 
-      <h3>核心避坑提醒</h3>
+      <h3>🚫 核心避坑提醒</h3>
       <ol class="risk-list">
-        <li>🚫 避免盲目追求院校排名而忽视专业适配度</li>
-        <li>🚫 避免进入高社交强度赛道（纯销售、商务 BD）</li>
-        <li>🚫 避免只看短期薪资选择岗位</li>
-        <li>🚫 避免孤立学习,需主动建立导师 + 同伴网络</li>
-        <li>🚫 避免被行业热点裹挟,持续学习核心能力</li>
+        <li>避免盲目追求院校排名而忽视专业适配度</li>
+        <li>避免进入高社交强度赛道（纯销售、商务 BD）</li>
+        <li>避免只看短期薪资选择岗位</li>
+        <li>避免孤立学习，需主动建立导师 + 同伴网络</li>
+        <li>避免被行业热点裹挟，持续学习核心能力</li>
       </ol>
 
       <div class="disclaimer">

@@ -599,6 +599,25 @@ function renderStep5() {
 function renderFullReport(s, r) {
   const currentYear = new Date().getFullYear() || 2026;
 
+  // ===== 学段判断 =====
+  const grade = s.grade || "本科";
+  const isPreUniv = ["初中","高一","高二","高三"].includes(grade);
+  const isUnderGrad = grade === "本科";
+  const isPostGrad = grade === "研究生";
+  const isGradOrWorking = isPostGrad || grade === "已毕业";
+  const gradeLabel = grade;
+
+  // 学段适配标题
+  let sec2Title = "专业与发展方向建议";
+  let sec2Desc = "";
+  if (isPreUniv) {
+    sec2Desc = `当前学段：${gradeLabel} — 重点推荐本科专业方向，细分领域可作为未来深造参考。`;
+  } else if (isUnderGrad) {
+    sec2Desc = `当前学段：${gradeLabel} — 同时推荐本科主修确认方向及研究生细分赛道。`;
+  } else if (isGradOrWorking) {
+    sec2Desc = `当前学段：${gradeLabel} — 重点推荐细分/深造方向及职业深耕赛道。`;
+  }
+
   return `
     <div class="report">
 
@@ -606,6 +625,7 @@ function renderFullReport(s, r) {
       <div class="report-header">
         <div class="report-title">${s.name || "学生"} · 综合特质测评与生涯规划报告</div>
         <div class="report-tags">
+          <span class="tag tag-primary">${gradeLabel}</span>
           ${r.summary.tags.map(t => `<span class="tag tag-primary">${t}</span>`).join("")}
         </div>
         <div class="report-quote">${r.summary.summary}</div>
@@ -684,11 +704,12 @@ function renderFullReport(s, r) {
       </div>
 
       <!-- ========== 二、专业与发展方向建议 ========== -->
-      <h2>二、专业与发展方向建议</h2>
-      <p class="report-desc">综合东方命理与西方测评，按匹配度排序推荐本科/研究生专业及细分方向：</p>
+      <h2>二、${sec2Title}</h2>
+      <p class="report-desc">${sec2Desc}</p>
 
-      <!-- 本科专业推荐 -->
-      <h3>🎓 本科专业推荐</h3>
+      <!-- ===== 本科/主修专业推荐（初高中/本科展示，研究生/已毕业隐藏） ===== -->
+      ${!isGradOrWorking ? `
+      <h3>🎓 本科/主修专业推荐</h3>
 
       <h4>第一优先级（核心适配）</h4>
       ${r.majors.firstPriority.map(m => `
@@ -721,12 +742,14 @@ function renderFullReport(s, r) {
           </div>
         `).join("")}
       ` : ""}
+      ` : ""}
 
-      <!-- 细分/研究生方向 -->
+      <!-- ===== 细分/研究生方向（初高中显示"未来参考"，本科显示完整，研究生/已毕业重点展示） ===== -->
       ${r.gradRecs.firstPriority.length > 0 ? `
-      <h3>🔬 细分/研究生方向推荐</h3>
+      <h3>🔬 ${isPreUniv ? "未来深造方向参考" : "细分/研究生方向推荐"} ${isPreUniv ? `<span class="tag tag-warning" style="font-size:12px;">未来参考</span>` : ""}</h3>
+      ${isPreUniv ? `<p class="hint">以下方向基于核心特质分析，作为未来选择研究生/细分赛道时的参考：</p>` : ""}
 
-      <h4>🥇 第一优先级（核心适配）</h4>
+      <h4>${isGradOrWorking ? "🥇 " : ""}第一优先级（核心适配）</h4>
       ${r.gradRecs.firstPriority.map(g => `
         <div class="major-card">
           <div class="major-title">${g.program} <span class="tag tag-primary">匹配分 ${g.score}</span></div>
@@ -739,7 +762,7 @@ function renderFullReport(s, r) {
       `).join("")}
 
       ${r.gradRecs.secondPriority.length > 0 ? `
-        <h4>🥈 第二优先级（次优适配）</h4>
+        <h4>${isGradOrWorking ? "🥈 " : ""}第二优先级（次优适配）</h4>
         ${r.gradRecs.secondPriority.map(g => `
           <div class="major-card">
             <div class="major-title">${g.program} <span class="tag">匹配分 ${g.score}</span></div>
@@ -751,7 +774,7 @@ function renderFullReport(s, r) {
       ` : ""}
 
       ${r.gradRecs.thirdPriority.length > 0 ? `
-        <h4>🥉 第三优先级（潜力适配）</h4>
+        <h4>${isGradOrWorking ? "🥉 " : ""}第三优先级（潜力适配）</h4>
         ${r.gradRecs.thirdPriority.map(g => `
           <div class="major-card-mini">
             <strong>${g.program}</strong> · ${g.reasons.join("; ")}
@@ -760,7 +783,7 @@ function renderFullReport(s, r) {
       ` : ""}
       ` : ""}
 
-      <!-- 风险规避清单 -->
+      <!-- ===== 风险规避清单（所有学段展示） ===== -->
       <h3>⚠️ 风险规避清单</h3>
       ${r.majors.risks.map(rk => `
         <div class="risk-card">

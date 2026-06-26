@@ -746,7 +746,7 @@ function renderFullReport(s, r) {
 
       <!-- ===== 细分/研究生方向（初高中显示"未来参考"，本科显示完整，研究生/已毕业重点展示） ===== -->
       ${r.gradRecs.firstPriority.length > 0 ? `
-      <h3>🔬 ${isPreUniv ? "未来深造方向参考" : "细分/研究生方向推荐"} ${isPreUniv ? `<span class="tag tag-warning" style="font-size:13px;">未来参考</span>` : ""}</h3>
+      <h3>🔬 ${isPreUniv ? "未来深造方向参考" : "细分/研究生方向推荐"} ${isPreUniv ? `<span class="tag tag-warning" style="font-size:12px;">未来参考</span>` : ""}</h3>
       ${isPreUniv ? `<p class="hint">以下方向基于核心特质分析，作为未来选择研究生/细分赛道时的参考：</p>` : ""}
 
       <h4>${isGradOrWorking ? "🥇 " : ""}第一优先级（核心适配）</h4>

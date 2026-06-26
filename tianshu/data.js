@@ -286,6 +286,104 @@ const TOP_EMPLOYERS = {
   "临床医学": ["三甲医院","专科医院","医疗科研机构"]
 };
 
+// ===== 星座数据(太阳星座) =====
+const ZODIAC_SIGNS = [
+  { name:"摩羯座", nameCN:"摩羯座", eng:"Capricorn", symbol:"♑", startMonth:12, startDay:22, endMonth:1, endDay:19, element:"土", quality:"开创", ruler:"土星", trait:"目标感强、自律、重视职业声誉、务实", strength:"坚韧、负责、条理清晰", weakness:"过于严肃、固执、不善变通", career:"管理、金融、工程、建筑" },
+  { name:"水瓶座", nameCN:"水瓶座", eng:"Aquarius", symbol:"♒", startMonth:1, startDay:20, endMonth:2, endDay:18, element:"风", quality:"固定", ruler:"天王星", trait:"独立、创新、人道主义、理性", strength:"创新思维、独立、包容", weakness:"叛逆、疏离、不切实际", career:"科技、研究、社会改革、航空" },
+  { name:"双鱼座", nameCN:"双鱼座", eng:"Pisces", symbol:"♓", startMonth:2, endDay:19, endMonth:3, endDay:20, element:"水", quality:"变动", ruler:"海王星", trait:"敏感、梦幻、共情力强、艺术天赋", strength:"共情力强、有创造力、直觉敏锐", weakness:"过于敏感、逃避现实、缺乏边界", career:"艺术、医疗、公益、心理学" },
+  { name:"白羊座", nameCN:"白羊座", eng:"Aries", symbol:"♈", startMonth:3, startDay:21, endMonth:4, endDay:19, element:"火", quality:"开创", ruler:"火星", trait:"勇敢、直接、行动力强、热情", strength:"勇敢果断、行动力强、充满热情", weakness:"冲动、缺乏耐心、自我中心", career:"创业、军警、体育、销售" },
+  { name:"金牛座", nameCN:"金牛座", eng:"Taurus", symbol:"♉", startMonth:4, startDay:20, endMonth:5, endDay:20, element:"土", quality:"固定", ruler:"金星", trait:"稳重、务实、享受生活、坚韧", strength:"踏实可靠、有耐心、审美佳", weakness:"固执、懒惰、抗拒变化", career:"金融、艺术、餐饮、地产" },
+  { name:"双子座", nameCN:"双子座", eng:"Gemini", symbol:"♊", startMonth:5, startDay:21, endMonth:6, endDay:21, element:"风", quality:"变动", ruler:"水星", trait:"聪明、好奇、多变、沟通力强", strength:"口才好、学习快、适应力强", weakness:"三心二意、不够深入、善变", career:"传媒、教育、销售、IT" },
+  { name:"巨蟹座", nameCN:"巨蟹座", eng:"Cancer", symbol:"♋", startMonth:6, startDay:22, endMonth:7, endDay:22, element:"水", quality:"开创", ruler:"月亮", trait:"敏感、顾家、保护欲强、念旧", strength:"体贴、有耐心、直觉强", weakness:"情绪化、防御心强、依赖", career:"护理、教育、心理咨询、餐饮" },
+  { name:"狮子座", nameCN:"狮子座", eng:"Leo", symbol:"♌", startMonth:7, startDay:23, endMonth:8, endDay:22, element:"火", quality:"固定", ruler:"太阳", trait:"自信、热情、领导力强、慷慨", strength:"领导力强、自信、大方", weakness:"自负、固执、爱面子", career:"管理、演艺、教育、政治" },
+  { name:"处女座", nameCN:"处女座", eng:"Virgo", symbol:"♍", startMonth:8, startDay:23, endMonth:9, endDay:22, element:"土", quality:"变动", ruler:"水星", trait:"细致、完美主义、有条理、分析力强", strength:"细心、有条理、追求完美", weakness:"挑剔、焦虑、过于批判", career:"医疗、审计、科研、编辑" },
+  { name:"天秤座", nameCN:"天秤座", eng:"Libra", symbol:"♎", startMonth:9, startDay:23, endMonth:10, endDay:23, element:"风", quality:"开创", ruler:"金星", trait:"优雅、公正、社交能力强、追求和谐", strength:"协调力强、公正、有魅力", weakness:"优柔寡断、怕冲突、表面化", career:"法律、外交、设计、公关" },
+  { name:"天蝎座", nameCN:"天蝎座", eng:"Scorpio", symbol:"♏", startMonth:10, startDay:24, endMonth:11, endDay:22, element:"水", quality:"固定", ruler:"冥王星", trait:"深沉、执着、洞察力强、有魅力", strength:"洞察力强、专注、有魄力", weakness:"多疑、控制欲强、记仇", career:"研究、侦查、金融、心理咨询" },
+  { name:"射手座", nameCN:"射手座", eng:"Sagittarius", symbol:"♐", startMonth:11, startDay:23, endMonth:12, endDay:21, element:"火", quality:"变动", ruler:"木星", trait:"乐观、自由、热爱冒险、哲学思维", strength:"乐观开朗、见识广、独立", weakness:"粗心、过于直率、不安分", career:"旅游、教育、出版、国际贸易" }
+];
+
+function getSunSign(month, day) {
+  for (const s of ZODIAC_SIGNS) {
+    if (s.startMonth > s.endMonth) {
+      // 跨年星座(摩羯座)
+      if ((month === s.startMonth && day >= s.startDay) || (month === s.endMonth && day <= s.endDay) || (month > s.startMonth || month < s.endMonth)) {
+        // simplified cross-year check
+        if (month === s.startMonth && day >= s.startDay) return s;
+        if (month === s.endMonth && day <= s.endDay) return s;
+        if (month > s.startMonth || month < s.endMonth) {
+          if (month > s.startMonth && month <= 12) return s;
+          if (month >= 1 && month < s.endMonth) return s;
+        }
+      }
+    } else {
+      if (month === s.startMonth && day >= s.startDay) return s;
+      if (month === s.endMonth && day <= s.endDay) return s;
+      if (month > s.startMonth && month < s.endMonth) return s;
+    }
+  }
+  return ZODIAC_SIGNS[0]; // default Capricorn
+}
+
+// ===== 研究生专业推荐库 =====
+const GRAD_PROGRAMS = {
+  "分布式系统/云原生": {
+    subs: ["分布式计算","云原生架构","高性能计算","边缘计算","容器化与编排"],
+    skills: ["分布式算法","系统设计","Kubernetes","Cloud Native","高并发"],
+    matchTags: ["I","R","T","INTJ","火","土","技术","系统"],
+    careers: ["云架构工程师","SRE","数据库内核开发","量化系统开发"],
+    schools: ["剑桥 Advanced CS","爱丁堡 HPC","UCL DS & ML","IC Computing"],
+    jobCompanies: ["AWS","Azure","GCP","阿里云","华为云","ByteDance"]
+  },
+  "网络与信息安全": {
+    subs: ["二进制安全","逆向工程","密码学","渗透测试","安全架构"],
+    skills: ["逆向分析","漏洞挖掘","密码学","安全协议","汇编"],
+    matchTags: ["I","R","C","INTJ","金","技术","系统","分析"],
+    careers: ["安全研究员","红队工具开发","安全产品架构师","APT分析师"],
+    schools: ["IC Security & Reliability","NUS Computing(Infrastructure & Security)","牛津 Advanced CS"],
+    jobCompanies: ["NCSC","Darktrace","Rapid7","Microsoft MSRC","Google Project Zero"]
+  },
+  "数据工程/数据库系统": {
+    subs: ["数据仓库","数据湖","SQL优化","ETL","实时计算"],
+    skills: ["SQL","数据库原理","数据建模","大数据技术","ETL"],
+    matchTags: ["I","C","土","常规","分析","数据"],
+    careers: ["数据平台工程师","数据库内核研发","数据治理专家"],
+    schools: ["Stanford DB Group","CMU Database","MIT Data Systems"],
+    jobCompanies: ["Snowflake","Databricks","ClickHouse","MongoDB","PingCAP"]
+  },
+  "AI/机器学习": {
+    subs: ["深度学习","自然语言处理","计算机视觉","强化学习","AI系统"],
+    skills: ["机器学习","深度学习","数学基础","算法","Python"],
+    matchTags: ["I","A","火","分析","研究"],
+    careers: ["算法工程师","AI研究员","ML工程师","AI产品经理"],
+    schools: ["Stanford AI","MIT CSAIL","CMU LTI","Oxford AI"],
+    jobCompanies: ["Google DeepMind","OpenAI","Meta AI","ByteDance AI Lab"]
+  },
+  "高性能计算(HPC)": {
+    subs: ["并行计算","GPU编程","编译器优化","体系结构"],
+    skills: ["C/C++","CUDA","MPI","并行算法","体系结构"],
+    matchTags: ["I","R","火","金","系统","技术"],
+    careers: ["HPC工程师","编译器工程师","量化开发","芯片设计"],
+    schools: ["爱丁堡 HPC","ETH Zurich","UIUC","MIT"],
+    jobCompanies: ["NVIDIA","Intel","ARM","Jane Street","Citadel"]
+  }
+};
+
+// ===== 增强的交叉分析模板 =====
+const GRAD_YEARS = ["大三","大四","已毕业"];
+const CURRENT_YEAR = 2026;
+
+// 从 bazi.js 引用的常量(需在 window 下可用)
+const TG_WUXING_DATA = {
+  "甲":"木","乙":"木","丙":"火","丁":"火","戊":"土","己":"土",
+  "庚":"金","辛":"金","壬":"水","癸":"水"
+};
+const DZ_WUXING_DATA = {
+  "子":"水","亥":"水","寅":"木","卯":"木","巳":"火","午":"火",
+  "申":"金","酉":"金","辰":"土","丑":"土","未":"土","戌":"土"
+};
+const DIZHI_LIUCHONG_DATA = {"子":"午","午":"子","丑":"未","未":"丑","寅":"申","申":"寅","卯":"酉","酉":"卯","辰":"戌","戌":"辰","巳":"亥","亥":"巳"};
+const DIZHI_LIUHE_DATA = {"子":"丑","丑":"子","寅":"亥","亥":"寅","卯":"戌","戌":"卯","辰":"酉","酉":"辰","巳":"申","申":"巳","午":"未","未":"午"};
+
 // ===== MBTI 测试题 =====
 const MBTI_QUESTIONS = [
   // E/I (1-4)
@@ -392,6 +490,11 @@ if (typeof window !== "undefined") {
     HOLLAND_DIMS, getHollandInfo,
     HOLLAND_QUESTIONS, calcHollandFromTest,
     ZIWEI_STARS, getZiweiSummary,
-    MAJOR_LIBRARY, TOP_EMPLOYERS
+    MAJOR_LIBRARY, TOP_EMPLOYERS,
+    GRAD_PROGRAMS, getSunSign, ZODIAC_SIGNS,
+    TG_WUXING: TG_WUXING_DATA,
+    DZ_WUXING: DZ_WUXING_DATA,
+    DIZHI_LIUCHONG: DIZHI_LIUCHONG_DATA,
+    DIZHI_LIUHE: DIZHI_LIUHE_DATA
   };
 }

@@ -717,6 +717,209 @@ header.banner .compass svg {
   box-shadow: 0 2px 8px rgba(237, 137, 54, 0.08);
 }
 
+/* Report Header */
+.report-header {
+  text-align: center;
+  padding: 30px 20px;
+  margin-bottom: 20px;
+  background: linear-gradient(135deg, #1a365d 0%, #2c5282 50%, #4f7cff 100%);
+  border-radius: 16px;
+  color: #fff;
+}
+
+.report-title {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  margin-bottom: 12px;
+}
+
+.report-tags {
+  margin: 12px 0;
+}
+
+.report-tags .tag {
+  font-size: 14px;
+  padding: 4px 14px;
+  margin: 0 4px;
+}
+
+.report-quote {
+  font-size: 15px;
+  font-style: italic;
+  opacity: 0.9;
+  padding: 12px 20px;
+  border-top: 1px solid rgba(255,255,255,0.2);
+  margin-top: 12px;
+  line-height: 1.7;
+}
+
+.report-desc {
+  color: #4a5568;
+  font-size: 14px;
+  margin: -10px 0 18px 0;
+  padding: 8px 14px;
+  background: #f7fafc;
+  border-radius: 6px;
+  border-left: 3px solid #4f7cff;
+}
+
+/* Cross Grid for MBTI + Holland */
+.cross-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin: 16px 0;
+}
+
+.cross-card {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 18px 20px;
+  box-shadow: 0 2px 8px rgba(44, 82, 130, 0.06);
+}
+
+.cross-card-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #2c5282;
+  margin-bottom: 4px;
+}
+
+.cross-card-sub {
+  color: #4f7cff;
+  font-size: 14px;
+  margin-bottom: 10px;
+}
+
+.cross-card-detail {
+  font-size: 13px;
+  color: #4a5568;
+  margin-top: 6px;
+}
+
+/* Astro Card */
+.astro-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: linear-gradient(135deg, #f7fafc 0%, #ebf8ff 100%);
+  border: 1px solid #cbd5e0;
+  border-radius: 12px;
+  padding: 18px 22px;
+  margin: 14px 0;
+}
+
+.astro-symbol {
+  font-size: 42px;
+  line-height: 1;
+  min-width: 50px;
+  text-align: center;
+}
+
+.astro-name {
+  font-size: 18px;
+  font-weight: 600;
+  color: #2c5282;
+}
+
+.astro-meta {
+  font-size: 13px;
+  color: #718096;
+  margin-top: 4px;
+}
+
+/* Challenge Card */
+.challenge-card {
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 18px 22px;
+  margin: 14px 0;
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(44, 82, 130, 0.06);
+  position: relative;
+  overflow: hidden;
+}
+
+.challenge-card::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0;
+  width: 4px;
+  height: 100%;
+  background: linear-gradient(180deg, #ed8936 0%, #e53e3e 100%);
+}
+
+.challenge-num {
+  font-size: 12px;
+  color: #ed8936;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.challenge-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #2d3748;
+  margin: 6px 0;
+}
+
+.challenge-desc {
+  font-size: 14px;
+  color: #4a5568;
+  margin: 6px 0;
+}
+
+.challenge-solution {
+  font-size: 14px;
+  color: #2c5282;
+  background: #ebf8ff;
+  padding: 8px 12px;
+  border-radius: 6px;
+  margin-top: 8px;
+}
+
+/* Forecast Card */
+.forecast-card {
+  background: linear-gradient(135deg, #fef5e7 0%, #fffaf0 100%);
+  border: 1px solid #fbd38d;
+  border-left: 4px solid #ed8936;
+  border-radius: 10px;
+  padding: 18px 22px;
+  margin: 14px 0;
+}
+
+.forecast-year {
+  font-size: 16px;
+  font-weight: 600;
+  color: #c05621;
+  margin-bottom: 8px;
+}
+
+.forecast-impact {
+  font-size: 14px;
+  color: #744210;
+  margin-bottom: 8px;
+  line-height: 1.7;
+}
+
+.forecast-advice {
+  font-size: 14px;
+  color: #2c5282;
+  background: #ebf8ff;
+  padding: 8px 12px;
+  border-radius: 6px;
+  line-height: 1.6;
+}
+
+@media (max-width: 768px) {
+  .cross-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .footer {
   margin-top: 30px;
   padding-top: 20px;

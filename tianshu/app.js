@@ -535,7 +535,27 @@ function nextStep4() {
   renderStep5();
 }
 
-// ===== Step 5: 综合报告 =====
+// ===== 星座渲染 =====
+function renderZodiac(s) {
+  if (!s) return `<div class="note">无法计算星座(需要出生月日)</div>`;
+  return `
+    <div class="astro-card">
+      <div class="astro-symbol">${s.symbol || ""}</div>
+      <div class="astro-info">
+        <div class="astro-name">${s.nameCN} (${s.eng})</div>
+        <div class="astro-meta">元素:${s.element} · 特质:${s.quality} · 守护星:${s.ruler}</div>
+      </div>
+    </div>
+    <div class="info-block">
+      <strong>性格特质:</strong>${s.trait}<br>
+      <strong>核心优势:</strong>${s.strength}<br>
+      <strong>潜在短板:</strong>${s.weakness}<br>
+      <strong>职业适配:</strong>${s.career}
+    </div>
+  `;
+}
+
+// ===== Step 5: 综合报告(增强版) =====
 function renderStep5() {
   const app = document.getElementById("app");
   app.innerHTML = `<div class="step-card"><div class="loading">🔗 交叉验证中,生成完整报告...</div></div>`;
@@ -547,15 +567,22 @@ function renderStep5() {
     const holland = window.TianShuData.getHollandInfo(state.hollandScores);
     const cross = window.TianShuEngine.crossValidate(bazi, ziwei, mbti, holland);
     const majors = window.TianShuEngine.recommendMajors(cross, bazi, mbti, holland);
-    const career = window.TianShuEngine.generateCareerPath(state.student, cross, majors);
+    const gradRecs = window.TianShuEngine.recommendGradPrograms(cross, bazi, mbti, holland);
+    const career = window.TianShuEngine.generateCareerPath(state.student, cross, majors, gradRecs);
+    const challenges = window.TianShuEngine.generateChallenges(bazi, mbti, holland, cross);
+    const yearlyForecast = window.TianShuEngine.generateYearlyForecast(2026, bazi, mbti);
+    const summary = window.TianShuEngine.generateReportSummary(bazi, ziwei, mbti, holland, cross);
 
-    state.results = { bazi, ziwei, mbti, holland, cross, majors, career };
+    // 星座
+    const sunSign = window.TianShuData.getSunSign(state.student.birthMonth, state.student.birthDay);
+
+    state.results = { bazi, ziwei, mbti, holland, cross, majors, gradRecs, career, challenges, yearlyForecast, summary, sunSign };
 
     app.innerHTML = `
       <div class="step-card">
         <div class="step-header">
           <span class="step-num">5/5</span>
-          <h2>📊 综合定位</h2>
+          <h2>📊 综合测评报告</h2>
         </div>
         ${renderFullReport(state.student, state.results)}
         <div class="step-actions">
@@ -570,129 +597,138 @@ function renderStep5() {
 }
 
 function renderFullReport(s, r) {
+  const currentYear = new Date().getFullYear() || 2026;
+
   return `
     <div class="report">
-      <!-- 综合定位 -->
-      <h2>🎯 一、综合定位</h2>
-      <div class="callout">
-        <div class="callout-title">${r.cross.positionLabel.label}</div>
-        <div><strong>主方向:</strong>${r.cross.positionLabel.mainDir}</div>
+
+      <!-- ========== 报告头部 ========== -->
+      <div class="report-header">
+        <div class="report-title">${s.name || "学生"} · 综合特质测评与生涯规划报告</div>
+        <div class="report-tags">
+          ${r.summary.tags.map(t => `<span class="tag tag-primary">${t}</span>`).join("")}
+        </div>
+        <div class="report-quote">${r.summary.summary}</div>
       </div>
 
-      <h3>核心竞争力组合</h3>
-      <ul>${r.cross.advantages.map(a => `<li>${a}</li>`).join("")}</ul>
+      <!-- ========== 一、核心命理与心理特质整合 ========== -->
+      <h2>一、核心命理与心理特质整合</h2>
+      <p class="report-desc">将东方命理（八字、紫微斗数）、西方占星、现代心理学（MBTI、霍兰德）交叉验证，勾勒出更立体的天赋图谱。</p>
 
-      <h3>核心短板</h3>
-      <ul>${r.cross.shortcomings.map(s => `<li>${s}</li>`).join("")}</ul>
-
-      <!-- 八字 -->
-      <h2>🔮 二、八字命理分析</h2>
+      <!-- 1.1 八字排盘 -->
+      <h3>1. 八字排盘</h3>
       <table class="data-table">
         <tr><th>项目</th><th>结果</th></tr>
         <tr><td>公历</td><td>${r.bazi.solar}</td></tr>
         <tr><td>农历</td><td>${r.bazi.lunar}</td></tr>
-        <tr><td>年柱</td><td><strong>${r.bazi.yearZhu}</strong></td></tr>
-        <tr><td>月柱</td><td><strong>${r.bazi.monthZhu}</strong></td></tr>
-        <tr><td>日柱</td><td><strong>${r.bazi.dayZhu}</strong></td></tr>
-        <tr><td>时柱</td><td><strong>${r.bazi.hourZhu}</strong></td></tr>
-        <tr><td>日主</td><td>${r.bazi.dayMaster}(${r.bazi.dayMasterWx})</td></tr>
+        <tr><td>四柱</td><td><strong>${r.bazi.fourPillars ? r.bazi.fourPillars.join(" · ") : (r.bazi.yearZhu + " · " + r.bazi.monthZhu + " · " + r.bazi.dayZhu + " · " + r.bazi.hourZhu)}</strong></td></tr>
+        <tr><td>日主</td><td>${r.bazi.dayMaster}（${r.bazi.dayMasterWx}）</td></tr>
         <tr><td>五行统计</td><td>${Object.entries(r.bazi.wuxingCount).map(([k,v]) => `${k}:${v}`).join(" · ")}</td></tr>
         <tr><td>喜用神</td><td><span class="tag tag-primary">${r.bazi.xiZhong.join(" + ")}</span></td></tr>
         <tr><td>忌神</td><td><span class="tag tag-warning">${r.bazi.jiZhong.join(" + ")}</span></td></tr>
       </table>
 
       <div class="info-block">
+        <strong>格局特点:</strong>${r.bazi.pattern ? r.bazi.pattern.summary : "日主" + r.bazi.dayMaster + "(" + r.bazi.dayMasterWx + ")"}<br>
+        ${r.bazi.dzRelations ? `<strong>地支关系:</strong>冲: ${r.bazi.dzRelations.chong.length ? r.bazi.dzRelations.chong.join("、") : "无冲"} · 合: ${r.bazi.dzRelations.he.length ? r.bazi.dzRelations.he.join("、") : "无合"} · 刑: ${r.bazi.dzRelations.xing.length ? r.bazi.dzRelations.xing.join("、") : "无刑"}<br>` : ""}
         <strong>核心性格:</strong>${r.bazi.personality}<br>
         <strong>学业事业适配:</strong>${r.bazi.careerFit}
       </div>
 
-      <!-- 紫微 -->
-      <h2>⭐ 三、紫微斗数简版</h2>
+      <!-- 1.2 紫微斗数 -->
+      <h3>2. 紫微斗数</h3>
       ${renderZiwei(r.ziwei)}
 
-      <!-- MBTI -->
-      <h2>🧠 四、MBTI 人格类型</h2>
+      <!-- 1.3 星座分析 -->
+      <h3>3. 星座分析（太阳星座）</h3>
+      ${renderZodiac(r.sunSign)}
+
+      <!-- 1.4 MBTI + 霍兰德交叉解读 -->
+      <h3>4. MBTI 人格类型 + 霍兰德职业兴趣 交叉解读</h3>
+      <div class="cross-grid">
+        <div class="cross-card">
+          <div class="cross-card-title">🧠 MBTI · ${r.mbti.fullType}</div>
+          <div class="cross-card-sub">${r.mbti.nick}</div>
+          <div>${r.mbti.core}</div>
+          <div class="cross-card-detail"><strong>认知:</strong>${r.mbti.cog}</div>
+          <div class="cross-card-detail"><strong>行为:</strong>${r.mbti.beh}</div>
+          <table class="data-table">
+            <tr><th>优势</th><td>${r.mbti.strength}</td></tr>
+            <tr><th>短板</th><td style="color:#c53030;">${r.mbti.weakness}</td></tr>
+          </table>
+        </div>
+        <div class="cross-card">
+          <div class="cross-card-title">🎯 霍兰德 · ${r.holland.top3}</div>
+          <div class="cross-card-sub">${r.holland.codeExplain}</div>
+          <table class="data-table">
+            <tr><th>维度</th><th>得分</th><th>适配</th></tr>
+            ${r.holland.sorted.map(([code, score]) => `
+              <tr><td><strong>${code}</strong></td><td>${score}</td><td>${r.holland.dimensions[code].fit.split("、").slice(0,2).join("、")}</td></tr>
+            `).join("")}
+          </table>
+          ${r.holland.riskWarning !== "无明显短板维度" ? `<div class="risk-warning">⚠️ ${r.holland.riskWarning}</div>` : ""}
+        </div>
+      </div>
+
+      <!-- 交叉定位 -->
       <div class="callout">
-        <div class="callout-title">${r.mbti.fullType} · ${r.mbti.nick}</div>
-        <div>${r.mbti.core}</div>
-        <div><strong>倾向:</strong>${r.mbti.tendency}</div>
+        <div class="callout-title">🎯 综合定位标签</div>
+        <div>${r.cross.positionLabel.label}</div>
+        <div><strong>主方向:</strong>${r.cross.positionLabel.mainDir}</div>
       </div>
       <div class="info-block">
-        <strong>认知模式:</strong>${r.mbti.cog}<br>
-        <strong>行为风格:</strong>${r.mbti.beh}
+        <strong>核心竞争力组合:</strong>
+        <ul>${r.cross.advantages.map(a => `<li>${a}</li>`).join("")}</ul>
+        <strong>需关注短板:</strong>
+        <ul>${r.cross.shortcomings.map(s => `<li>${s}</li>`).join("")}</ul>
       </div>
-      <table class="data-table">
-        <tr><th>优势</th><td>${r.mbti.strength}</td></tr>
-        <tr><th>短板</th><td style="color:#c53030;">${r.mbti.weakness}</td></tr>
-      </table>
 
-      <!-- 霍兰德 -->
-      <h2>🎯 五、霍兰德职业兴趣</h2>
-      <div class="callout">
-        <div class="callout-title">核心 3 位代码:<span class="tag tag-primary">${r.holland.top3}</span></div>
-        <div>${r.holland.codeExplain}</div>
-      </div>
-      <table class="data-table">
-        <tr><th>维度</th><th>名称</th><th>得分</th><th>适配方向</th></tr>
-        ${r.holland.sorted.map(([code, score]) => `
-          <tr>
-            <td><strong>${code}</strong></td>
-            <td>${r.holland.dimensions[code].name}</td>
-            <td>${score}</td>
-            <td>${r.holland.dimensions[code].fit}</td>
-          </tr>
-        `).join("")}
-      </table>
+      <!-- ========== 二、研究生方向建议 ========== -->
+      <h2>二、研究生方向建议（细分）</h2>
+      <p class="report-desc">综合东方命理与西方测评，推荐以下细分领域（按匹配度排序）：</p>
 
-      <!-- 专业推荐 -->
-      <h2>🎓 六、专业选择推荐</h2>
-
-      <h3>第一优先级(核心适配)</h3>
-      ${r.majors.firstPriority.map(m => `
+      <h3>🥇 第一优先级（核心适配）</h3>
+      ${r.gradRecs.firstPriority.map((g, gi) => `
         <div class="major-card">
-          <div class="major-title">${m.major} <span class="tag tag-primary">匹配分 ${m.score}</span></div>
-          <div class="major-meta">细分方向:${m.subs.join(" · ")}</div>
-          <div><strong>匹配逻辑:</strong>${m.logic}</div>
-          <div><strong>核心课程:</strong>${m.courses.join(" · ")}</div>
-          <div><strong>院校梯队:</strong>${m.schools.slice(0, 6).join(" / ")}</div>
+          <div class="major-title">${g.program} <span class="tag tag-primary">匹配分 ${g.score}</span></div>
+          <div class="major-meta">细分方向:${g.subs.join(" · ")}</div>
+          <div><strong>匹配逻辑:</strong>${g.reasons.join("; ")}</div>
+          <div><strong>核心技能:</strong>${g.skills.join(" · ")}</div>
+          <div><strong>职业出口:</strong>${g.careers.join("、")}</div>
+          <div><strong>推荐院校:</strong>${(g.schools || []).slice(0, 5).join(" / ")}</div>
         </div>
       `).join("")}
+      ${r.gradRecs.firstPriority.length === 0 ? `<div class="note">基于当前数据未生成第一优先级推荐，建议补充更多信息。</div>` : ""}
 
-      ${r.majors.secondPriority.length > 0 ? `
-        <h3>第二优先级(次优适配)</h3>
-        ${r.majors.secondPriority.map(m => `
+      ${r.gradRecs.secondPriority.length > 0 ? `
+        <h3>🥈 第二优先级（次优适配）</h3>
+        ${r.gradRecs.secondPriority.map(g => `
           <div class="major-card">
-            <div class="major-title">${m.major} <span class="tag">匹配分 ${m.score}</span></div>
-            <div class="major-meta">细分方向:${m.subs.join(" · ")}</div>
-            <div><strong>匹配逻辑:</strong>${m.logic}</div>
-            <div><strong>院校梯队:</strong>${m.schools.slice(0, 6).join(" / ")}</div>
+            <div class="major-title">${g.program} <span class="tag">匹配分 ${g.score}</span></div>
+            <div class="major-meta">细分方向:${(g.subs || []).join(" · ")}</div>
+            <div><strong>匹配逻辑:</strong>${g.reasons.join("; ")}</div>
+            <div><strong>职业出口:</strong>${(g.careers || []).join("、")}</div>
           </div>
         `).join("")}
       ` : ""}
 
-      ${r.majors.thirdPriority.length > 0 ? `
-        <h3>第三优先级(潜力适配)</h3>
-        ${r.majors.thirdPriority.map(m => `
+      ${r.gradRecs.thirdPriority.length > 0 ? `
+        <h3>🥉 第三优先级（潜力适配）</h3>
+        ${r.gradRecs.thirdPriority.map(g => `
           <div class="major-card-mini">
-            <strong>${m.major}</strong> · ${m.logic}
+            <strong>${g.program}</strong> · ${g.reasons.join("; ")}
           </div>
         `).join("")}
       ` : ""}
 
-      <h3>⚠️ 风险规避清单</h3>
-      ${r.majors.risks.map(rk => `
-        <div class="risk-card">
-          <strong>${rk.major}</strong><br>
-          风险:${rk.reason}<br>
-          ${rk.alt ? `<span style="color:#2c5282;">替代方案:</span>${rk.alt}` : ""}
-        </div>
-      `).join("")}
+      <!-- ========== 三、职业方向细分及长期路径 ========== -->
+      <h2>三、职业方向细分及长期路径</h2>
 
-      <!-- 生涯路径 -->
-      <h2>🛤️ 七、生涯发展全路径</h2>
-      ${r.career.stages.map((stage, i) => `
+      ${r.career.stages.map((stage, i) => {
+        const stageIcons = ["📚", "💼", "🚀", "🏆"];
+        return `
         <div class="career-stage">
-          <div class="stage-title">阶段 ${i+1}:${stage.name}</div>
+          <div class="stage-title">${stageIcons[i] || ""} ${stage.name}</div>
           <p><strong>核心目标:</strong>${stage.goal}</p>
           ${stage.actions ? `<h4>关键行动项</h4><ul>${stage.actions.map(a => `<li>${a}</li>`).join("")}</ul>` : ""}
           ${stage.jobs ? `<h4>岗位选择建议</h4><ul>${stage.jobs.map(j => `<li>${j}</li>`).join("")}</ul>` : ""}
@@ -706,7 +742,7 @@ function renderFullReport(s, r) {
           ${stage.competitive ? `<h4>核心竞争力打造</h4><ul>${stage.competitive.map(t => `<li>${t}</li>`).join("")}</ul>` : ""}
           ${stage.balance ? `<h4>工作生活平衡</h4><ul>${stage.balance.map(t => `<li>${t}</li>`).join("")}</ul>` : ""}
         </div>
-      `).join("")}
+      `}).join("")}
 
       <h3>关键节点行动指引</h3>
       <table class="data-table">
@@ -721,15 +757,40 @@ function renderFullReport(s, r) {
         `).join("")}
       </table>
 
-      <h3>健康与状态管理</h3>
+      <!-- ========== 四、未来挑战与破局点 ========== -->
+      <h2>四、未来挑战与破局点</h2>
+      <p class="report-desc">基于八字地支关系、MBTI短板、霍兰德盲区综合分析：</p>
+
+      ${r.challenges.map((ch, i) => `
+        <div class="challenge-card">
+          <div class="challenge-num">挑战 ${i+1}</div>
+          <div class="challenge-title">${ch.title}</div>
+          <div class="challenge-desc">${ch.desc}</div>
+          <div class="challenge-solution"><strong>破局: </strong>${ch.solution}</div>
+        </div>
+      `).join("")}
+      ${r.challenges.length === 0 ? `<div class="note">当前测评未发现显著挑战因素。</div>` : ""}
+
+      <!-- ========== 五、年度提醒 ========== -->
+      <h2>五、年度提醒（${currentYear}年）</h2>
+      ${r.yearlyForecast.map(f => `
+        <div class="forecast-card">
+          <div class="forecast-year">${f.year}年 · 流年 ${f.ganzhi}</div>
+          <div class="forecast-impact">${f.impact}</div>
+          <div class="forecast-advice"><strong>💡 建议:</strong>${f.advice}</div>
+        </div>
+      `).join("")}
+
+      <!-- ========== 六、健康与状态管理 ========== -->
+      <h2>六、健康与状态管理</h2>
       <ul>${r.career.health.map(h => `<li>${h}</li>`).join("")}</ul>
 
-      <!-- 总结建议 -->
-      <h2>💡 八、核心建议与避坑提醒</h2>
+      <!-- ========== 七、核心建议与避坑提醒 ========== -->
+      <h2>七、核心建议与避坑提醒</h2>
       <h3>核心发展建议</h3>
       <ol>
-        <li><strong>充分发挥 ${r.mbti.nick} + ${r.holland.top3} 的核心优势</strong>:在${r.majors.firstPriority[0] ? r.majors.firstPriority[0].major : ""}等适配方向深耕,前 5 年打造扎实核心能力。</li>
-        <li><strong>针对性补足短板</strong>:${r.mbti.weakness}是显著风险,需刻意练习。</li>
+        <li><strong>充分发挥 ${r.mbti.nick} + ${r.holland.top3} 的核心优势</strong>:在${r.majors.firstPriority[0] ? r.majors.firstPriority[0].major : "适配方向"}等方向深耕,前 5 年打造扎实核心能力。</li>
+        <li><strong>针对性补足短板</strong>:${r.mbti.weakness.split("、")[0]}是显著风险,需刻意练习。</li>
         <li><strong>长期主义 + 动态调整</strong>:每 2-3 年做一次复盘,根据行业变化调整方向。</li>
         <li><strong>平衡身心</strong>:建立规律运动 + 兴趣释放的稳定机制。</li>
       </ol>
@@ -737,7 +798,7 @@ function renderFullReport(s, r) {
       <h3>核心避坑提醒</h3>
       <ol class="risk-list">
         <li>🚫 避免盲目追求院校排名而忽视专业适配度</li>
-        <li>🚫 避免进入高社交强度赛道(纯销售、商务 BD)</li>
+        <li>🚫 避免进入高社交强度赛道（纯销售、商务 BD）</li>
         <li>🚫 避免只看短期薪资选择岗位</li>
         <li>🚫 避免孤立学习,需主动建立导师 + 同伴网络</li>
         <li>🚫 避免被行业热点裹挟,持续学习核心能力</li>
@@ -745,9 +806,9 @@ function renderFullReport(s, r) {
 
       <div class="disclaimer">
         <strong>⚠️ 重要声明</strong><br>
-        1. 本报告基于「东方命理(八字、紫微)+ 西方心理测评(MBTI、霍兰德)」交叉生成,命理部分无科学证据支持,仅作为文化参考。<br>
-        2. 紫微斗数为简版排盘(仅取核心三宫),完整分析建议使用专业排盘软件。<br>
-        3. 测评结果会随时间、经历变化,建议每 2-3 年做一次复盘调整。<br>
+        1. 本报告基于「东方命理（八字、紫微斗数）+ 西方占星 + 心理测评（MBTI、霍兰德）」交叉生成，命理与占星部分无科学证据支持，仅作为文化参考。<br>
+        2. 紫微斗数为简版排盘（仅取核心三宫），完整分析建议使用专业排盘软件。<br>
+        3. 测评结果会随时间、经历变化，建议每 2-3 年做一次复盘调整。<br>
         4. 重大人生决策请结合实际能力测试、行业调研、家庭情况综合判断。
       </div>
 

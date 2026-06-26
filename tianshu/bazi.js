@@ -200,7 +200,164 @@ const WUXING_CAREER = {
   "水": "物流、贸易、航运、水利、哲学研究"
 };
 
-// 主排盘函数
+// 五行生克关系
+const WUXING_SHENG = {"木":"火","火":"土","土":"金","金":"水","水":"木"};
+const WUXING_KE = {"木":"土","土":"水","水":"火","火":"金","金":"木"};
+
+// 地支六冲:子午冲、丑未冲、寅申冲、卯酉冲、辰戌冲、巳亥冲
+const DIZHI_LIUCHONG = {"子":"午","午":"子","丑":"未","未":"丑","寅":"申","申":"寅","卯":"酉","酉":"卯","辰":"戌","戌":"辰","巳":"亥","亥":"巳"};
+
+// 地支六合:子丑合、寅亥合、卯戌合、辰酉合、巳申合、午未合
+const DIZHI_LIUHE = {"子":"丑","丑":"子","寅":"亥","亥":"寅","卯":"戌","戌":"卯","辰":"酉","酉":"辰","巳":"申","申":"巳","午":"未","未":"午"};
+
+// 地支三合局
+const DIZHI_SANHE = {
+  "申子辰":["申","子","辰"],
+  "亥卯未":["亥","卯","未"],
+  "寅午戌":["寅","午","戌"],
+  "巳酉丑":["巳","酉","丑"]
+};
+
+// 地支相刑
+const DIZHI_XING = {
+  "寅":"巳","巳":"申","申":"寅", // 无恩之刑
+  "丑":"未","未":"戌","戌":"丑", // 恃势之刑
+  "子":"卯","卯":"子", // 无礼之刑
+  "辰":"辰","午":"午","酉":"酉","亥":"亥" // 自刑
+};
+
+// ===== 地支关系分析 =====
+function analyzeDizhiRelations(dizhiList) {
+  const dazhiArr = dizhiList; // [年支, 月支, 日支, 时支]
+  const results = { chong: [], he: [], xing: [] };
+
+  // 相冲(两两对冲)
+  for (let i = 0; i < dazhiArr.length; i++) {
+    for (let j = i + 1; j < dazhiArr.length; j++) {
+      if (DIZHI_LIUCHONG[dazhiArr[i]] === dazhiArr[j]) {
+        results.chong.push(`${dazhiArr[i]}${dazhiArr[j]}冲`);
+      }
+    }
+  }
+
+  // 六合(两两相合)
+  for (let i = 0; i < dazhiArr.length; i++) {
+    for (let j = i + 1; j < dazhiArr.length; j++) {
+      if (DIZHI_LIUHE[dazhiArr[i]] === dazhiArr[j]) {
+        results.he.push(`${dazhiArr[i]}${dazhiArr[j]}合`);
+      }
+    }
+  }
+
+  // 三合(三个一组)
+  for (const [sanheName, sanheSet] of Object.entries(DIZHI_SANHE)) {
+    const matched = sanheSet.filter(dz => dazhiArr.includes(dz));
+    if (matched.length >= 2) {
+      results.he.push(`${matched.join("")}三合(${sanheName})`);
+    }
+  }
+
+  // 相刑
+  for (let i = 0; i < dazhiArr.length; i++) {
+    for (let j = i + 1; j < dazhiArr.length; j++) {
+      if (DIZHI_XING[dazhiArr[i]] === dazhiArr[j]) {
+        results.xing.push(`${dazhiArr[i]}${dazhiArr[j]}刑`);
+      }
+    }
+  }
+  // 自刑
+  for (const dz of dazhiArr) {
+    if (DIZHI_XING[dz] === dz && dazhiArr.filter(d => d === dz).length >= 2) {
+      if (!results.xing.includes(`${dz}${dz}刑`)) {
+        results.xing.push(`${dz}${dz}刑(自刑)`);
+      }
+    }
+  }
+
+  return results;
+}
+
+// ===== 格局特点 =====
+function generatePatternAnalysis(dayMaster, dayMasterWx, monthZhu, dizhiRelations, wuxingCount) {
+  const monthDz = monthZhu.charAt(1);
+  const monthTg = monthZhu.charAt(0);
+
+  // 月令五行
+  const monthWx = DZ_WUXING[monthDz];
+
+  // 日主与月令关系(得令/失令)
+  const shengMonth = WUXING_SHENG[dayMasterWx];
+  const isDeLing = (monthWx === shengMonth || monthWx === dayMasterWx);
+
+  // 格局文本
+  const wxImages = {
+    "木": ["参天大树","松柏","乔木"],
+    "火": ["太阳之火","明灯","烈焰"],
+    "土": ["厚重土壤","山岳","大地"],
+    "金": ["精金","宝剑","金石"],
+    "水": ["江河之水","清泉","雨露"]
+  };
+  const image = wxImages[dayMasterWx][0];
+
+  const monthNames = {"寅":"孟春","卯":"仲春","辰":"季春","巳":"孟夏","午":"仲夏","未":"季夏","申":"孟秋","酉":"仲秋","戌":"季秋","亥":"孟冬","子":"仲冬","丑":"季冬"};
+  const monthName = monthNames[monthDz] || "";
+
+  let summary = `日主${dayMaster}(${dayMasterWx})为${image}，生于${monthName}（${monthWx}）`;
+  if (isDeLing) {
+    summary += `，得令而旺。`;
+  } else {
+    summary += `，不得令。`;
+  }
+
+  // 冲合影响
+  if (dizhiRelations.chong.length > 0) {
+    summary += ` 地支${dizhiRelations.chong.join("、")}，暗示内心矛盾或外部冲突。`;
+  }
+  if (dizhiRelations.he.length > 0) {
+    summary += ` 地支${dizhiRelations.he.join("、")}，代表资源整合与人际协调能力。`;
+  }
+
+  // 五行强度分析
+  const sortedWx = Object.entries(wuxingCount).sort((a,b) => b[1] - a[1]);
+  const strongest = sortedWx[0];
+  const weakest = sortedWx[sortedWx.length - 1];
+  summary += ` 五行以${strongest[0]}最旺(${strongest[1]})，${weakest[0]}最弱(${weakest[1]})。`;
+
+  return { summary, isDeLing, monthWx, strongestWx: strongest[0], weakestWx: weakest[0] };
+}
+
+// ===== 增强版性格分析 =====
+function generateDetailedPersonality(dayMasterWx, dizhiRelations, bazi) {
+  const base = WUXING_PERSONALITY[dayMasterWx];
+
+  let analysis = `【日主${bazi.dayMaster}(${dayMasterWx})】${base}`;
+
+  // 冲对性格的影响
+  if (dizhiRelations.chong.length > 0) {
+    analysis += ` 地支${dizhiRelations.chong.join("、")}，性格中存在内在矛盾`;
+    dizhiRelations.chong.forEach(c => {
+      if (c.includes("子午") || c.includes("午子")) analysis += "（叛逆与服从的双重倾向）";
+      else if (c.includes("丑未") || c.includes("未丑")) analysis += "（固执与包容的拉扯）";
+      else if (c.includes("寅申") || c.includes("申寅")) analysis += "（选择焦虑与行动力的冲突）";
+      else if (c.includes("卯酉") || c.includes("酉卯")) analysis += "（严谨与随性的矛盾）";
+    });
+  }
+
+  // 合对性格的影响
+  if (dizhiRelations.he.length > 0) {
+    analysis += `。地支${dizhiRelations.he.join("、")}，有优秀的协调与合作能力`;
+  }
+
+  let careerBase = WUXING_CAREER[dayMasterWx];
+  // 冲对职业的影响
+  if (dizhiRelations.chong.length > 0) {
+    careerBase += `。注意${dizhiRelations.chong[0]}可能带来职业方向的反复或跨界需求`;
+  }
+
+  return { personality: analysis, careerFit: careerBase };
+}
+
+// ===== 主排盘函数 =====
 function getFourPillars(year, month, day, hour) {
   const solarDate = new Date(year, month - 1, day);
   const lunar = solarToLunar(year, month, day);
@@ -235,6 +392,13 @@ function getFourPillars(year, month, day, hour) {
     if (wuxingCount[k] < minCount) { minCount = wuxingCount[k]; minWx = k; }
   }
 
+  // 地支关系
+  const dzRelations = analyzeDizhiRelations([yearDz, monthP.charAt(1), dayP.charAt(1), hourP.charAt(1)]);
+  // 格局特点
+  const pattern = generatePatternAnalysis(dayMaster, dayMasterWx, monthP, dzRelations, wuxingCount);
+  // 增强性格
+  const detailed = generateDetailedPersonality(dayMasterWx, dzRelations, { dayMaster, dayMasterWx });
+
   return {
     solar: `${year}-${String(month).padStart(2,"0")}-${String(day).padStart(2,"0")} ${String(hour).padStart(2,"0")}:00`,
     lunar: `${lunar.year}年${LUNAR_MONTH_NAMES[lunar.month-1]}月${LUNAR_DAY_NAMES[lunar.day-1]}`,
@@ -242,14 +406,17 @@ function getFourPillars(year, month, day, hour) {
     monthZhu: monthP,
     dayZhu: dayP,
     hourZhu: hourP,
+    fourPillars: [yearTg + yearDz, monthP, dayP, hourP],
     dayMaster: dayTg,
     dayMasterWx: dayMasterWx,
     wuxingCount: wuxingCount,
     minWx: minWx,
     xiZhong: xiZhong,
     jiZhong: jiZhong,
-    personality: WUXING_PERSONALITY[dayMasterWx],
-    careerFit: WUXING_CAREER[dayMasterWx]
+    personality: detailed.personality,
+    careerFit: detailed.careerFit,
+    dzRelations: dzRelations,
+    pattern: pattern
   };
 }
 

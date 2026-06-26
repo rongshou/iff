@@ -37,13 +37,6 @@ jobs:
       - id: deployment
         uses: actions/deploy-pages@v4
 
-      - name: Deploy to self-hosted server
-        uses: appleboy/ssh-action@v1
-        with:
-          host: 47.93.149.29
-          username: admin
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          script: |
-            cd /home/admin/tianquan
-            git pull origin master
-            npm run build --silent
+      - name: Trigger self-hosted server webhook
+        run: |
+          curl -s -X POST "http://47.93.149.29/webhook/tianshu?token=${{ secrets.WEBHOOK_SECRET }}" --max-time 120

@@ -683,12 +683,51 @@ function renderFullReport(s, r) {
         <ul>${r.cross.shortcomings.map(s => `<li>${s}</li>`).join("")}</ul>
       </div>
 
-      <!-- ========== 二、研究生方向建议 ========== -->
-      <h2>二、研究生方向建议（细分）</h2>
-      <p class="report-desc">综合东方命理与西方测评，推荐以下细分领域（按匹配度排序）：</p>
+      <!-- ========== 二、专业与发展方向建议 ========== -->
+      <h2>二、专业与发展方向建议</h2>
+      <p class="report-desc">综合东方命理与西方测评，按匹配度排序推荐本科/研究生专业及细分方向：</p>
 
-      <h3>🥇 第一优先级（核心适配）</h3>
-      ${r.gradRecs.firstPriority.map((g, gi) => `
+      <!-- 本科专业推荐 -->
+      <h3>🎓 本科专业推荐</h3>
+
+      <h4>第一优先级（核心适配）</h4>
+      ${r.majors.firstPriority.map(m => `
+        <div class="major-card">
+          <div class="major-title">${m.major} <span class="tag tag-primary">匹配分 ${m.score}</span></div>
+          <div class="major-meta">细分方向:${m.subs.join(" · ")}</div>
+          <div><strong>匹配逻辑:</strong>${m.logic}</div>
+          <div><strong>核心课程:</strong>${m.courses.join(" · ")}</div>
+          <div><strong>院校梯队:</strong>${m.schools.slice(0, 6).join(" / ")}</div>
+        </div>
+      `).join("")}
+
+      ${r.majors.secondPriority.length > 0 ? `
+        <h4>第二优先级（次优适配）</h4>
+        ${r.majors.secondPriority.map(m => `
+          <div class="major-card">
+            <div class="major-title">${m.major} <span class="tag">匹配分 ${m.score}</span></div>
+            <div class="major-meta">细分方向:${m.subs.join(" · ")}</div>
+            <div><strong>匹配逻辑:</strong>${m.logic}</div>
+            <div><strong>院校梯队:</strong>${m.schools.slice(0, 6).join(" / ")}</div>
+          </div>
+        `).join("")}
+      ` : ""}
+
+      ${r.majors.thirdPriority.length > 0 ? `
+        <h4>第三优先级（潜力适配）</h4>
+        ${r.majors.thirdPriority.map(m => `
+          <div class="major-card-mini">
+            <strong>${m.major}</strong> · ${m.logic}
+          </div>
+        `).join("")}
+      ` : ""}
+
+      <!-- 细分/研究生方向 -->
+      ${r.gradRecs.firstPriority.length > 0 ? `
+      <h3>🔬 细分/研究生方向推荐</h3>
+
+      <h4>🥇 第一优先级（核心适配）</h4>
+      ${r.gradRecs.firstPriority.map(g => `
         <div class="major-card">
           <div class="major-title">${g.program} <span class="tag tag-primary">匹配分 ${g.score}</span></div>
           <div class="major-meta">细分方向:${g.subs.join(" · ")}</div>
@@ -698,10 +737,9 @@ function renderFullReport(s, r) {
           <div><strong>推荐院校:</strong>${(g.schools || []).slice(0, 5).join(" / ")}</div>
         </div>
       `).join("")}
-      ${r.gradRecs.firstPriority.length === 0 ? `<div class="note">基于当前数据未生成第一优先级推荐，建议补充更多信息。</div>` : ""}
 
       ${r.gradRecs.secondPriority.length > 0 ? `
-        <h3>🥈 第二优先级（次优适配）</h3>
+        <h4>🥈 第二优先级（次优适配）</h4>
         ${r.gradRecs.secondPriority.map(g => `
           <div class="major-card">
             <div class="major-title">${g.program} <span class="tag">匹配分 ${g.score}</span></div>
@@ -713,13 +751,24 @@ function renderFullReport(s, r) {
       ` : ""}
 
       ${r.gradRecs.thirdPriority.length > 0 ? `
-        <h3>🥉 第三优先级（潜力适配）</h3>
+        <h4>🥉 第三优先级（潜力适配）</h4>
         ${r.gradRecs.thirdPriority.map(g => `
           <div class="major-card-mini">
             <strong>${g.program}</strong> · ${g.reasons.join("; ")}
           </div>
         `).join("")}
       ` : ""}
+      ` : ""}
+
+      <!-- 风险规避清单 -->
+      <h3>⚠️ 风险规避清单</h3>
+      ${r.majors.risks.map(rk => `
+        <div class="risk-card">
+          <strong>${rk.major}</strong><br>
+          风险:${rk.reason}<br>
+          ${rk.alt ? `<span style="color:#2c5282;">替代方案:</span>${rk.alt}` : ""}
+        </div>
+      `).join("")}
 
       <!-- ========== 三、职业方向细分及长期路径 ========== -->
       <h2>三、职业方向细分及长期路径</h2>

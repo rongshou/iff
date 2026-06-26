@@ -1,4 +1,4 @@
-name: Deploy to GitHub Pages
+name: Deploy to GitHub Pages + Self-hosted
 
 on:
   push:
@@ -36,3 +36,14 @@ jobs:
 
       - id: deployment
         uses: actions/deploy-pages@v4
+
+      - name: Deploy to self-hosted server
+        uses: appleboy/ssh-action@v1
+        with:
+          host: 47.93.149.29
+          username: admin
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd /home/admin/tianquan
+            git pull origin master
+            npm run build --silent

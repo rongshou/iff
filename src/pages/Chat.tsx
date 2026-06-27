@@ -401,7 +401,7 @@ export default function ChatPage() {
                 isEmpty ? "text-xl sm:text-2xl" : "text-base sm:text-lg"
               }`}
             >
-AI 智能问答
+AI 留学智能问答
             </h1>
             <span className="hidden sm:inline text-slate-300">·</span>
             <span className="hidden sm:inline text-slate-500 text-sm truncate">

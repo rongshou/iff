@@ -174,6 +174,31 @@ const SCENE_INFO: Record<SceneId, InfoField[]> = {
   ],
 };
 
+/** 判断用户消息是否像选校推荐请求（而不是通用问答） */
+function looksLikeSchoolRequest(text: string): boolean {
+  // 选校关键词
+  const recommendKeywords = [
+    "选校", "推荐", "匹配", "能申", "冲刺", "保底", "主申",
+    "定位", "案例", "录取概率", "录取几率", "成功几率",
+    "什么学校", "哪些学校", "哪所", "求推荐",
+  ];
+  if (recommendKeywords.some((k) => text.includes(k))) return true;
+
+  // 包含 GPA/GRE/TOEFL/IELTS 分数模式（学生正在提供背景信息）
+  if (/[Gg][Pp][Aa]|均分|绩点|GRE|托福|TOEFL|雅思|IELTS/.test(text)) return true;
+
+  // 包含 "X/Y" 分数格式（如 82/100, 3.5/4.0）
+  if (/\d+\.?\d*\s*\/\s*\d+/.test(text)) return true;
+
+  // 包含学校+专业信息组合（如 "北邮 通信工程 GPA 82"）
+  if (/(大学|学院)\s*.{1,20}(专业|GPA|均分)/.test(text)) return true;
+
+  // 包含 "本科"+"硕士" 等学位关键词的组合
+  if (/(本科|硕士|博士)\s*.{1,20}(申请|留学|选校)/.test(text)) return true;
+
+  return false;
+}
+
 /** 从用户输入中提取已有信息 */
 function extractInfo(text: string): Record<string, string> {
   const info: Record<string, string> = {};
@@ -331,65 +356,68 @@ export default function ChatPage() {
     setLoading(true);
     atBottomRef.current = true;
 
-    // ---------- 信息收集检查 ----------
-    const currentInfo = collectedInfo[activeScene] || {};
-    const fields = SCENE_INFO[activeScene];
-    const newInfo = { ...currentInfo, ...extractInfo(content) };
-    const missing = getMissingFields(newInfo, fields);
+    // ---------- 信息收集检查（仅 school 场景且消息像是选校请求时才触发）----------
+    const isSchoolRequest = activeScene === "school" && looksLikeSchoolRequest(content);
+    if (isSchoolRequest) {
+      const currentInfo = collectedInfo[activeScene] || {};
+      const fields = SCENE_INFO[activeScene];
+      const newInfo = { ...currentInfo, ...extractInfo(content) };
+      const missing = getMissingFields(newInfo, fields);
 
-    // 首次且信息不全 → 逐个追问
-    if (!collectedInfo[activeScene] && missing.length > 0) {
-      const nextField = missing[0];
-      setCollectedInfo((prev) => ({ ...prev, [activeScene]: newInfo }));
-      updateSceneMessages((prev) => [
-        ...prev,
-        {
+      // 首次且信息不全 → 逐个追问
+      if (!collectedInfo[activeScene] && missing.length > 0) {
+        const nextField = missing[0];
+        setCollectedInfo((prev) => ({ ...prev, [activeScene]: newInfo }));
+        updateSceneMessages((prev) => [
+          ...prev,
+          {
+            id: generateId(),
+            role: "assistant",
+            content: `收到您提供的信息，但还有一些不清楚的地方，需要跟您进一步确认：\n\n**${nextField.prompt}**\n\n提示：${nextField.hint}`,
+            timestamp: ts(),
+          },
+        ]);
+        setLoading(false);
+        return;
+      }
+
+      // 追问后信息补充完整 → 整合发给 AI
+      if (missing.length === 0 && !collectedInfo[activeScene]) {
+        setCollectedInfo((prev) => ({ ...prev, [activeScene]: newInfo }));
+        mergeChatInfo(newInfo); // 自动保存到个人档案
+        const desc = infoToDescription(newInfo);
+        const infoMsg: ChatMessage = {
           id: generateId(),
-          role: "assistant",
-          content: `收到您提供的信息，但还有一些不清楚的地方，需要跟您进一步确认：\n\n**${nextField.prompt}**\n\n提示：${nextField.hint}`,
+          role: "user" as const,
+          content: `我提供的信息如下：\n${desc}\n\n请根据以上信息帮我分析。`,
           timestamp: ts(),
-        },
-      ]);
-      setLoading(false);
+        };
+        updateSceneMessages((prev) => [...prev.slice(0, -1), infoMsg]);
+        const finalMessages = [...updatedMessages.slice(0, -1), infoMsg];
+        await doSendToAI(finalMessages);
+        return;
+      }
+
+      // 已有信息或非首次 → 正常调 AI
+      if (collectedInfo[activeScene] && Object.keys(collectedInfo[activeScene]).length > 0) {
+        const desc = infoToDescription(collectedInfo[activeScene]);
+        const enrichedMsg: ChatMessage = {
+          id: userMsg.id,
+          role: "user",
+          content: `${content}\n\n（已知信息：${desc}）`,
+          timestamp: ts(),
+        };
+        updateSceneMessages((prev) => [...prev.slice(0, -1), enrichedMsg]);
+        await doSendToAI([...updatedMessages.slice(0, -1), enrichedMsg]);
+        return;
+      }
+
+      // School request but no collected info and no missing fields → directly to AI
+      await doSendToAI(updatedMessages);
       return;
     }
 
-    // 追问后信息补充完整 → 整合发给 AI
-    if (missing.length === 0 && !collectedInfo[activeScene]) {
-      setCollectedInfo((prev) => ({ ...prev, [activeScene]: newInfo }));
-      mergeChatInfo(newInfo); // 自动保存到个人档案
-      const desc = infoToDescription(newInfo);
-      // 把收集到的信息拼入消息历史，替换最后一条 assistant 消息（追问）
-      const infoMsg: ChatMessage = {
-        id: generateId(),
-        role: "user" as const,
-        content: `我提供的信息如下：\n${desc}\n\n请根据以上信息帮我分析。`,
-        timestamp: ts(),
-      };
-      // 用 infoMsg 替换最后一条 assistant 追问消息
-      updateSceneMessages((prev) => [...prev.slice(0, -1), infoMsg]);
-      // 继续往下走，用替换后的消息调 AI
-      const finalMessages = [...updatedMessages.slice(0, -1), infoMsg];
-      await doSendToAI(finalMessages);
-      return;
-    }
-
-    // ---------- 已有信息或非首次 → 正常调 AI ----------
-    // 如果之前已收集完信息，把已收集的信息附在当前消息后发给 AI
-    if (collectedInfo[activeScene] && Object.keys(collectedInfo[activeScene]).length > 0) {
-      const desc = infoToDescription(collectedInfo[activeScene]);
-      // 把已知信息注入到 user 消息中（不发额外消息，直接附在原文末尾）
-      const enrichedMsg: ChatMessage = {
-        id: userMsg.id,
-        role: "user",
-        content: `${content}\n\n（已知信息：${desc}）`,
-        timestamp: ts(),
-      };
-      updateSceneMessages((prev) => [...prev.slice(0, -1), enrichedMsg]);
-      await doSendToAI([...updatedMessages.slice(0, -1), enrichedMsg]);
-      return;
-    }
-
+    // ---------- 非选校请求 → 直接调 AI ----------
     await doSendToAI(updatedMessages);
   };
 

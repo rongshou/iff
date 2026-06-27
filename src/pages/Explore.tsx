@@ -53,7 +53,7 @@ export default function ExplorePage() {
           <div className="flex items-center justify-center gap-3 mb-2">
             <h1 className="text-3xl font-bold text-gray-900">留学工具箱</h1>
             <a
-              href="tianshu/"
+              href="/tianshu/"
               className="text-xs text-slate-400 hover:text-indigo-600 px-2.5 py-1 rounded-lg hover:bg-indigo-50 transition-colors"
               title="切换到天枢测评"
             >🧭 天枢</a>

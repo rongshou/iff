@@ -410,7 +410,7 @@ export default function ChatPage() {
           </div>
           <div className="flex items-center gap-1 shrink-0">
             <a
-              href="tianshu/"
+              href="/tianshu/"
               className="text-xs sm:text-sm text-slate-400 hover:text-indigo-600 px-2.5 py-1.5 rounded-lg hover:bg-indigo-50 transition-colors flex items-center gap-1"
               title="切换到天枢测评"
             >

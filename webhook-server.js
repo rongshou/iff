@@ -45,7 +45,10 @@ createServer((req, res) => {
     res.write(execSync('git pull origin master 2>&1', { cwd: CWD, timeout: 30_000, encoding: 'utf-8' }));
 
     res.write('> npm run build --silent 2>&1\n');
-    res.write(execSync('npm run build --silent 2>&1', { cwd: CWD, timeout: 60_000, encoding: 'utf-8' }));
+    res.write(execSync('npm run build --silent 2>&1', { cwd: CWD, timeout: 180_000, encoding: 'utf-8' }));
+
+    res.write('> docker restart tianquan-nginx\n');
+    execSync('docker restart tianquan-nginx 2>&1', { timeout: 15_000, encoding: 'utf-8' });
 
     res.write('[webhook] done\n');
   } catch (err) {

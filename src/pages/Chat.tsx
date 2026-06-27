@@ -343,7 +343,7 @@ export default function ChatPage() {
         {
           id: generateId(),
           role: "assistant",
-          content: `好的，我先收集一下信息。\n\n**${nextField.prompt}**\n\n提示：${nextField.hint}`,
+          content: `收到您提供的信息，但还有一些不清楚的地方，需要跟您进一步确认：\n\n**${nextField.prompt}**\n\n提示：${nextField.hint}`,
           timestamp: ts(),
         },
       ]);

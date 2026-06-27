@@ -66,7 +66,7 @@ const SCENES: Scene[] = [
     label: "签证与材料",
     shortLabel: "签证",
     icon: "🛂",
-    greeting: "签证材料 · 一次过签",
+    greeting: "签证疑问 · 帮你梳理",
     intro: "F-1 / Tier 4 / 资金证明 / 面签准备，材料清单和流程都帮你梳理清楚。",
     quickPrompts: [
       { icon: "🇺🇸", text: "F-1 签证需要准备哪些材料？" },

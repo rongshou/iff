@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import type { RecommendRequest, RecommendResult, ViewMode } from "../types";
 import { fetchRecommend } from "../services/api";
 import RecommendForm from "../components/RecommendForm";
@@ -60,11 +61,11 @@ export default function RecommendPage() {
         <header className="text-center mb-6">
           <div className="flex items-center justify-center gap-3">
             <h1 className="text-3xl font-bold text-gray-900">天权</h1>
-            <a
-              href="./profile"
+            <Link
+              to="/profile"
               className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium text-slate-400 border border-slate-200 hover:text-indigo-600 hover:border-indigo-300 hover:bg-indigo-50 transition-all"
               title="我的档案"
-            ><span>📁</span>档案</a>
+            ><span>📁</span>档案</Link>
           </div>
           <p className="text-gray-500 mt-1">
             基于 17 万+ 真实录取案例的相似背景匹配

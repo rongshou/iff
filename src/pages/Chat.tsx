@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { Link } from "react-router-dom";
 import type { ChatMessage } from "../types";
 import { sendChat, streamChat } from "../services/chat";
 import { renderMarkdown } from "../utils/markdown";
@@ -594,14 +595,14 @@ AI 留学智能问答
             </span>
           </div>
           <div className="flex items-center gap-1 shrink-0">
-            <a
-              href="./profile"
+            <Link
+              to="/profile"
               className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium text-slate-400 border border-slate-200 hover:text-indigo-600 hover:border-indigo-300 hover:bg-indigo-50 transition-all whitespace-nowrap"
               title="我的档案"
             >
               <span>📁</span>
               <span>档案</span>
-            </a>
+            </Link>
             <a
               href="../tianshu/"
               className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium text-slate-400 border border-slate-200 hover:text-indigo-600 hover:border-indigo-300 hover:bg-indigo-50 transition-all whitespace-nowrap"

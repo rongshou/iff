@@ -54,9 +54,9 @@ export default function ExplorePage() {
             <h1 className="text-3xl font-bold text-gray-900">留学工具箱</h1>
             <a
               href="../tianshu/"
-              className="text-xs text-slate-400 hover:text-indigo-600 px-2.5 py-1 rounded-lg hover:bg-indigo-50 transition-colors"
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium text-slate-400 border border-slate-200 hover:text-indigo-600 hover:border-indigo-300 hover:bg-indigo-50 transition-all"
               title="切换到天枢测评"
-            >🧭 天枢</a>
+            ><span>🧭</span>天枢</a>
           </div>
           <p className="text-gray-500 mt-1">MBTI性格选专业 · 申请时间线</p>
         </header>

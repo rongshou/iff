@@ -411,11 +411,11 @@ export default function ChatPage() {
           <div className="flex items-center gap-1 shrink-0">
             <a
               href="../tianshu/"
-              className="text-xs sm:text-sm text-slate-400 hover:text-indigo-600 px-2.5 py-1.5 rounded-lg hover:bg-indigo-50 transition-colors flex items-center gap-1"
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium text-slate-400 border border-slate-200 hover:text-indigo-600 hover:border-indigo-300 hover:bg-indigo-50 transition-all whitespace-nowrap"
               title="切换到天枢测评"
             >
-              <span className="text-sm leading-none">🧭</span>
-              <span className="hidden sm:inline">天枢</span>
+              <span>🧭</span>
+              <span>天枢</span>
             </a>
             {totalMessages > 0 && (
               <>

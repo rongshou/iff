@@ -50,12 +50,44 @@ export default function RecommendPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-4xl mx-auto px-4 py-8">
-        <header className="text-center mb-8">
+        <header className="text-center mb-6">
           <h1 className="text-3xl font-bold text-gray-900">天权</h1>
           <p className="text-gray-500 mt-1">
-            基于 18.9 万真实案例的留学选校匹配
+            基于 17 万+ 真实录取案例的相似背景匹配
           </p>
         </header>
+
+        {/* 推荐原理说明 */}
+        <details className="group mb-6 bg-white rounded-xl shadow-sm border border-indigo-100 overflow-hidden">
+          <summary className="flex items-center gap-2 px-5 py-3 cursor-pointer text-sm font-medium text-indigo-700 hover:bg-indigo-50/50 transition-colors select-none">
+            <span className="text-indigo-500 text-base">ⓘ</span>
+            <span>推荐原理：系统是如何匹配学校的？</span>
+            <span className="ml-auto text-xs text-gray-400 group-open:rotate-180 transition-transform">▾</span>
+          </summary>
+          <div className="px-5 pb-4 pt-1 text-sm text-gray-600 border-t border-indigo-100 leading-relaxed space-y-2">
+            <p>
+              <strong>第一步 — 案例筛选</strong>：从 17.6 万条真实录取案例中，按目标国家/地区、学位层级、专业方向筛选出相关案例。
+            </p>
+            <p>
+              <strong>第二步 — 背景匹配</strong>：基于你的 GPA（±0.45 容差）、本科学校层次（C9/985/211/双非）、专业方向进行相似度过滤，找到与你背景最接近的往届申请者。
+            </p>
+            <p>
+              <strong>第三步 — 概率估算</strong>：对匹配到的每所学校，提取该校同层次申请者的 GPA 百分位数据（p25/p50/p75），对比你的 GPA 位置，判断录取概率：
+            </p>
+            <div className="flex flex-wrap gap-2 ml-2 my-1">
+              <span className="px-2.5 py-1 bg-green-50 text-green-700 rounded-full text-xs font-medium">你的 GPA &gt; p75 → 安全</span>
+              <span className="px-2.5 py-1 bg-blue-50 text-blue-700 rounded-full text-xs font-medium">p50 &lt; 你的 GPA &lt; p75 → 主申</span>
+              <span className="px-2.5 py-1 bg-amber-50 text-amber-700 rounded-full text-xs font-medium">p25 &lt; 你的 GPA &lt; p50 → 冲刺</span>
+              <span className="px-2.5 py-1 bg-red-50 text-red-700 rounded-full text-xs font-medium">你的 GPA &lt; p25 → 彩票</span>
+            </div>
+            <p>
+              <strong>第四步 — 综合排序</strong>：结合匹配案例数、概率分数、达标情况、跨层匹配衰减进行综合评分，每档选 ≤10 所学校，按 冲刺→主申→保底 + QS 排名输出。
+            </p>
+            <p className="text-xs text-gray-400 mt-1">
+              💡 每所学校都标注了"同背景匹配案例 N 例"和"录取 GPA 中位数"，数据均来自真实录取案例，不是黑箱估算。
+            </p>
+          </div>
+        </details>
 
         <RecommendForm onSubmit={handleSubmit} loading={loading} />
 

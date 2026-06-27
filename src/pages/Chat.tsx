@@ -145,6 +145,82 @@ function TypingDots() {
 }
 
 /* =========================================================================
+ * 信息收集（首次消息的字段完整性检查）
+ * ========================================================================= */
+
+interface InfoField {
+  key: string;
+  label: string;
+  prompt: string;
+  hint: string;
+}
+
+const SCENE_INFO: Record<SceneId, InfoField[]> = {
+  school: [
+    { key: "school", label: "本科学校", prompt: "你的本科学校是哪所？", hint: "例如 北京邮电大学 / 985" },
+    { key: "major", label: "目前专业", prompt: "你目前读什么专业？", hint: "例如 通信工程 / 计算机" },
+    { key: "gpa", label: "GPA/均分", prompt: "你的 GPA 或均分是多少？", hint: "例如 82/100 或 3.4/4.0" },
+    { key: "targetCountry", label: "目标国家", prompt: "你想去哪个国家留学？", hint: "例如 英国 / 美国 / 澳洲" },
+    { key: "targetMajor", label: "目标专业", prompt: "你想申请什么专业？", hint: "例如 本专业相关 / 跨专业" },
+  ],
+  essay: [
+    { key: "docType", label: "文书类型", prompt: "你需要写什么类型的文书？", hint: "个人陈述 PS / 简历 CV / 推荐信" },
+    { key: "target", label: "目标院校", prompt: "目标院校和专业是？", hint: "例如 帝国理工 CS" },
+  ],
+  visa: [
+    { key: "targetCountry", label: "目标国家", prompt: "你要去哪个国家留学？", hint: "例如 美国 / 英国 / 澳洲" },
+    { key: "visaType", label: "签证类型", prompt: "需要什么类型的签证？", hint: "例如 F-1 / Tier 4" },
+  ],
+};
+
+/** 从用户输入中提取已有信息 */
+function extractInfo(text: string): Record<string, string> {
+  const info: Record<string, string> = {};
+  const mGpa = text.match(/(?:GPA|均分)[：:]\s*([\d.]+(?:\s*\/\s*[\d.]+)?)/i);
+  if (mGpa) info.gpa = mGpa[1];
+  const mSchool = text.match(/(?:大学|学院)/);
+  if (mSchool) {
+    const parts = text.split(/[\s\n\r]+/);
+    for (const p of parts) {
+      if (/大学|学院/.test(p)) {
+        // grab preceding word too
+        const idx = parts.indexOf(p);
+        info.school = (idx > 0 ? parts[idx - 1] + " " : "") + p;
+        break;
+      }
+    }
+  }
+  const mCountry = text.match(/(?:英国|美国|澳洲|加拿大|香港|新加坡|欧洲|日本|韩国)/);
+  if (mCountry) info.targetCountry = mCountry[0];
+  const mTargetMajor = text.match(/目标专业[：:]\s*([^\s\n\r]+)/);
+  if (mTargetMajor) info.targetMajor = mTargetMajor[1];
+  const mMajor = text.match(/专业[：:]\s*([^\s\n\r]+)/);
+  if (mMajor && !info.targetMajor) info.major = mMajor[1];
+  const mDoc = text.match(/PS|个人陈述|CV|简历|推荐信/);
+  if (mDoc) info.docType = mDoc[0];
+  const mVisa = text.match(/F-1|Tier 4|学生签/);
+  if (mVisa) info.visaType = mVisa[0];
+  return info;
+}
+
+function getMissingFields(info: Record<string, string>, fields: InfoField[]): InfoField[] {
+  return fields.filter((f) => !info[f.key]);
+}
+
+/** 把已有信息转为一段描述文字 */
+function infoToDescription(info: Record<string, string>): string {
+  const parts: string[] = [];
+  if (info.school) parts.push(`学校：${info.school}`);
+  if (info.major) parts.push(`专业：${info.major}`);
+  if (info.gpa) parts.push(`GPA：${info.gpa}`);
+  if (info.targetCountry) parts.push(`目标国家：${info.targetCountry}`);
+  if (info.targetMajor) parts.push(`目标专业：${info.targetMajor}`);
+  if (info.docType) parts.push(`文书类型：${info.docType}`);
+  if (info.visaType) parts.push(`签证类型：${info.visaType}`);
+  return parts.join("，");
+}
+
+/* =========================================================================
  * 主组件
  * ========================================================================= */
 
@@ -162,6 +238,8 @@ export default function ChatPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showScrollBottom, setShowScrollBottom] = useState(false);
+  /** 已收集的信息（每个场景） */
+  const [collectedInfo, setCollectedInfo] = useState<Record<string, Record<string, string>>>({});
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -250,6 +328,69 @@ export default function ChatPage() {
     setLoading(true);
     atBottomRef.current = true;
 
+    // ---------- 信息收集检查 ----------
+    const currentInfo = collectedInfo[activeScene] || {};
+    const fields = SCENE_INFO[activeScene];
+    const newInfo = { ...currentInfo, ...extractInfo(content) };
+    const missing = getMissingFields(newInfo, fields);
+
+    // 首次且信息不全 → 逐个追问
+    if (!collectedInfo[activeScene] && missing.length > 0) {
+      const nextField = missing[0];
+      setCollectedInfo((prev) => ({ ...prev, [activeScene]: newInfo }));
+      updateSceneMessages((prev) => [
+        ...prev,
+        {
+          id: generateId(),
+          role: "assistant",
+          content: `好的，我先收集一下信息。\n\n**${nextField.prompt}**\n\n提示：${nextField.hint}`,
+          timestamp: ts(),
+        },
+      ]);
+      setLoading(false);
+      return;
+    }
+
+    // 追问后信息补充完整 → 整合发给 AI
+    if (missing.length === 0 && !collectedInfo[activeScene]) {
+      setCollectedInfo((prev) => ({ ...prev, [activeScene]: newInfo }));
+      const desc = infoToDescription(newInfo);
+      // 把收集到的信息拼入消息历史，替换最后一条 assistant 消息（追问）
+      const infoMsg: ChatMessage = {
+        id: generateId(),
+        role: "user" as const,
+        content: `我提供的信息如下：\n${desc}\n\n请根据以上信息帮我分析。`,
+        timestamp: ts(),
+      };
+      // 用 infoMsg 替换最后一条 assistant 追问消息
+      updateSceneMessages((prev) => [...prev.slice(0, -1), infoMsg]);
+      // 继续往下走，用替换后的消息调 AI
+      const finalMessages = [...updatedMessages.slice(0, -1), infoMsg];
+      await doSendToAI(finalMessages);
+      return;
+    }
+
+    // ---------- 已有信息或非首次 → 正常调 AI ----------
+    // 如果之前已收集完信息，把已收集的信息附在当前消息后发给 AI
+    if (collectedInfo[activeScene] && Object.keys(collectedInfo[activeScene]).length > 0) {
+      const desc = infoToDescription(collectedInfo[activeScene]);
+      // 把已知信息注入到 user 消息中（不发额外消息，直接附在原文末尾）
+      const enrichedMsg: ChatMessage = {
+        id: userMsg.id,
+        role: "user",
+        content: `${content}\n\n（已知信息：${desc}）`,
+        timestamp: ts(),
+      };
+      updateSceneMessages((prev) => [...prev.slice(0, -1), enrichedMsg]);
+      await doSendToAI([...updatedMessages.slice(0, -1), enrichedMsg]);
+      return;
+    }
+
+    await doSendToAI(updatedMessages);
+  };
+
+  /** 调 AI（流式 + fallback） */
+  const doSendToAI = async (msgs: ChatMessage[]) => {
     const assistantId = generateId();
     updateSceneMessages((prev) => [
       ...prev,
@@ -260,7 +401,7 @@ export default function ChatPage() {
     abortRef.current = controller;
 
     try {
-      const apiMessages = updatedMessages.map((m) => ({
+      const apiMessages = msgs.map((m) => ({
         role: m.role as "user" | "assistant",
         content: m.content,
       }));
@@ -303,7 +444,7 @@ export default function ChatPage() {
         }));
       } else {
         try {
-          const apiMessages = updatedMessages.map((m) => ({
+          const apiMessages = msgs.map((m) => ({
             role: m.role as "user" | "assistant",
             content: m.content,
           }));
@@ -356,6 +497,7 @@ export default function ChatPage() {
   const handleClear = () => {
     if (loading) handleStop();
     setScenes((prev) => ({ ...prev, [activeScene]: [] }));
+    setCollectedInfo((prev) => ({ ...prev, [activeScene]: {} }));
     setError(null);
     setInput("");
     setTimeout(() => inputRef.current?.focus(), 0);
@@ -365,6 +507,7 @@ export default function ChatPage() {
     if (loading) handleStop();
     if (!window.confirm("清空所有对话历史？此操作不可恢复。")) return;
     setScenes({ school: [], essay: [], visa: [] });
+    setCollectedInfo({});
     setError(null);
     setInput("");
   };
@@ -617,8 +760,14 @@ function EmptyState({
       {/* 使用说明 */}
       {scene.id === "school" && (
         <div className="mx-auto max-w-xl w-full mb-5 bg-indigo-50/70 border border-indigo-100 rounded-xl px-4 py-3 text-sm text-slate-700 leading-relaxed">
-          <div className="font-semibold text-indigo-800 mb-1">💡 使用说明</div>
-          <p>告诉我你的 GPA、学校、专业和目标国家，我会为你匹配真实案例，生成冲刺/主申/保底选校方案。也可以直接点击下方快捷问题开始 👇</p>
+          <div className="font-semibold text-indigo-800 mb-1">🎯 推荐原理</div>
+          <ul className="space-y-1 list-disc list-inside marker:text-indigo-400">
+            <li><strong>基于 17 万+ 真实录取案例</strong>的相似背景匹配引擎，不靠 AI 猜</li>
+            <li>按 <strong>GPA容差 + 学校层次 + 专业方向</strong> 三层过滤，找到和你最像的往届申请者</li>
+            <li>用真实 GPA 百分位（p25/p50/p75）估算录取概率，分 <strong>冲刺 / 主申 / 保底</strong> 三档</li>
+            <li>每所学校都显示匹配案例数和录取 GPA 中位数，数据透明可验证</li>
+          </ul>
+          <p className="mt-2 text-indigo-600/80 text-xs">告诉我你的 GPA、学校、专业和目标国家即可开始。也可以直接点击下方快捷问题 👇</p>
         </div>
       )}
 

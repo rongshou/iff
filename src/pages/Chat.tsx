@@ -9,7 +9,7 @@ import { renderMarkdown } from "../utils/markdown";
  * 避免 AI 在不同主题间串台（比如聊完选校去问签证，AI 还在选校语境里）。
  * ========================================================================= */
 
-type SceneId = "school" | "essay" | "visa" | "career";
+type SceneId = "school" | "essay" | "visa";
 
 interface Scene {
   id: SceneId;
@@ -78,25 +78,6 @@ const SCENES: Scene[] = [
       "签证最早什么时候办？",
       "面签被拒了还能再签吗？",
       "I-20 是什么？怎么用？",
-    ],
-  },
-  {
-    id: "career",
-    label: "求职与生活",
-    shortLabel: "求职",
-    icon: "💼",
-    greeting: "求职生活 · 早做规划",
-    intro: "OPT / PSW / 实习 / 校招 / 租房，提前布局，毕业才不会手忙脚乱。",
-    quickPrompts: [
-      { icon: "🇺🇸", text: "OPT 怎么申请？什么时候开始准备？" },
-      { icon: "🇬🇧", text: "英国 PSW 签证能工作多久？" },
-      { icon: "🏠", text: "伦敦/纽约租房大概多少钱？哪里性价比高？" },
-      { icon: "📅", text: "留学生校招时间线是怎样的？" },
-    ],
-    followups: [
-      "OPT 和 CPT 有什么区别？",
-      "留学生怎么找第一份实习？",
-      "毕业后留美难度大吗？",
     ],
   },
 ];
@@ -176,7 +157,6 @@ export default function ChatPage() {
     school: [],
     essay: [],
     visa: [],
-    career: [],
   }));
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -383,8 +363,8 @@ export default function ChatPage() {
 
   const handleClearAll = () => {
     if (loading) handleStop();
-    if (!window.confirm("清空所有 4 个场景的对话历史？此操作不可恢复。")) return;
-    setScenes({ school: [], essay: [], visa: [], career: [] });
+    if (!window.confirm("清空所有对话历史？此操作不可恢复。")) return;
+    setScenes({ school: [], essay: [], visa: [] });
     setError(null);
     setInput("");
   };

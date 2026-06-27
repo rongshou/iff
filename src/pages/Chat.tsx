@@ -28,8 +28,8 @@ const SCENES: Scene[] = [
     label: "选校定位",
     shortLabel: "选校",
     icon: "🎓",
-    greeting: "选校定位 · 我来帮你定校",
-    intro: "告诉我你的 GPA、学校、专业和目标，我会给你冲刺 / 主申 / 保底三档方案。",
+    greeting: "选校定位 · 我来帮你参谋",
+    intro: "",
     quickPrompts: [
       { icon: "🇬🇧", text: "英国硕士选校：北京邮电大学 通信工程 82/100 大三" },
       { icon: "🇺🇸", text: "美国 CS 硕士：985 计算机 GPA 3.4/4.0 已毕业" },

@@ -408,26 +408,36 @@ export default function ChatPage() {
               {scene.label}
             </span>
           </div>
-          {totalMessages > 0 && (
-            <div className="flex items-center gap-1 shrink-0">
-              <button
-                onClick={handleClear}
-                className="text-xs sm:text-sm text-slate-500 hover:text-red-600 px-2.5 py-1.5 rounded-lg hover:bg-red-50 transition-colors flex items-center gap-1"
-                title="只清空当前场景的对话"
-              >
-                <span className="text-sm leading-none">🗑</span>
-                <span className="hidden sm:inline">清空本场景</span>
-                <span className="sm:hidden">清空</span>
-              </button>
-              <button
-                onClick={handleClearAll}
-                className="text-xs sm:text-sm text-slate-400 hover:text-red-600 px-2.5 py-1.5 rounded-lg hover:bg-red-50 transition-colors"
-                title="清空所有 4 个场景的对话"
-              >
-                全部清空
-              </button>
-            </div>
-          )}
+          <div className="flex items-center gap-1 shrink-0">
+            <a
+              href="tianshu/"
+              className="text-xs sm:text-sm text-slate-400 hover:text-indigo-600 px-2.5 py-1.5 rounded-lg hover:bg-indigo-50 transition-colors flex items-center gap-1"
+              title="切换到天枢测评"
+            >
+              <span className="text-sm leading-none">🧭</span>
+              <span className="hidden sm:inline">天枢</span>
+            </a>
+            {totalMessages > 0 && (
+              <>
+                <button
+                  onClick={handleClear}
+                  className="text-xs sm:text-sm text-slate-500 hover:text-red-600 px-2.5 py-1.5 rounded-lg hover:bg-red-50 transition-colors flex items-center gap-1"
+                  title="只清空当前场景的对话"
+                >
+                  <span className="text-sm leading-none">🗑</span>
+                  <span className="hidden sm:inline">清空本场景</span>
+                  <span className="sm:hidden">清空</span>
+                </button>
+                <button
+                  onClick={handleClearAll}
+                  className="text-xs sm:text-sm text-slate-400 hover:text-red-600 px-2.5 py-1.5 rounded-lg hover:bg-red-50 transition-colors"
+                  title="清空所有对话"
+                >
+                  全部清空
+                </button>
+              </>
+            )}
+          </div>
         </header>
 
         {/* ---------- 场景 Tab ---------- */}

@@ -61,9 +61,13 @@ body {
 }
 
 .top-header-left h1 {
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 700;
   color: #1e293b;
+}
+
+@media (min-width: 640px) {
+  .top-header-left h1 { font-size: 18px; }
 }
 
 .top-header-left .sep {
@@ -72,7 +76,7 @@ body {
 
 .top-header-left .subtitle {
   color: #64748b;
-  font-size: 13px;
+  font-size: 14px;
 }
 
 .top-header-right {
@@ -1248,8 +1252,7 @@ ol.risk-list li::before {
   .step-dot { width: 26px; height: 26px; font-size: 12px; }
   .progress-step { min-width: 44px; }
   .slider-row { grid-template-columns: 1fr; }
-  .top-header { padding: 10px 0; margin-bottom: 16px; }
-  .top-header-left h1 { font-size: 16px; }
+  .top-header { padding: 8px 0; margin-bottom: 16px; }
   .top-header-left .subtitle { display: none; }
   .step-actions { flex-direction: column-reverse; }
   .step-actions button { width: 100%; }

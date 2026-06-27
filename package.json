@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build && mkdir -p dist/tianshu && cp tianshu/index.html tianshu/*.js tianshu/VERSION dist/tianshu/",
+    "build": "bash scripts/build-prod.sh",
     "lint": "eslint .",
     "preview": "vite preview",
     "test:unit": "node tests/tianshu-unit.cjs",

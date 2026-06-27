@@ -158,7 +158,7 @@ interface InfoField {
 
 const SCENE_INFO: Record<SceneId, InfoField[]> = {
   school: [
-    { key: "school", label: "本科学校", prompt: "你的本科学校是哪所？", hint: "例如 北京邮电大学 / 985" },
+    { key: "school", label: "毕业院校", prompt: "你的毕业院校是哪所？", hint: "例如 北京邮电大学 / 985" },
     { key: "major", label: "目前专业", prompt: "你目前读什么专业？", hint: "例如 通信工程 / 计算机" },
     { key: "gpa", label: "GPA/均分", prompt: "你的 GPA 或均分是多少？", hint: "例如 82/100 或 3.4/4.0" },
     { key: "targetCountry", label: "目标国家", prompt: "你想去哪个国家留学？", hint: "例如 英国 / 美国 / 澳洲" },

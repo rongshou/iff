@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import type { ChatMessage } from "../types";
 import { sendChat, streamChat } from "../services/chat";
 import { renderMarkdown } from "../utils/markdown";
+import { mergeChatInfo, createChatHistoryItem, addHistoryItem } from "../services/profile";
 
 /* =========================================================================
  * 场景（Tab）定义
@@ -354,6 +355,7 @@ export default function ChatPage() {
     // 追问后信息补充完整 → 整合发给 AI
     if (missing.length === 0 && !collectedInfo[activeScene]) {
       setCollectedInfo((prev) => ({ ...prev, [activeScene]: newInfo }));
+      mergeChatInfo(newInfo); // 自动保存到个人档案
       const desc = infoToDescription(newInfo);
       // 把收集到的信息拼入消息历史，替换最后一条 assistant 消息（追问）
       const infoMsg: ChatMessage = {
@@ -496,6 +498,10 @@ export default function ChatPage() {
 
   const handleClear = () => {
     if (loading) handleStop();
+    // 清空前把当前会话保存到历史
+    if (messages.length >= 2) {
+      addHistoryItem(createChatHistoryItem(activeScene, messages));
+    }
     setScenes((prev) => ({ ...prev, [activeScene]: [] }));
     setCollectedInfo((prev) => ({ ...prev, [activeScene]: {} }));
     setError(null);
@@ -506,6 +512,12 @@ export default function ChatPage() {
   const handleClearAll = () => {
     if (loading) handleStop();
     if (!window.confirm("清空所有对话历史？此操作不可恢复。")) return;
+    // 清空前保存所有非空会话
+    for (const [sid, msgs] of Object.entries(scenes)) {
+      if (msgs.length >= 2) {
+        addHistoryItem(createChatHistoryItem(sid, msgs));
+      }
+    }
     setScenes({ school: [], essay: [], visa: [] });
     setCollectedInfo({});
     setError(null);
@@ -552,6 +564,14 @@ AI 留学智能问答
             </span>
           </div>
           <div className="flex items-center gap-1 shrink-0">
+            <a
+              href="./profile"
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium text-slate-400 border border-slate-200 hover:text-indigo-600 hover:border-indigo-300 hover:bg-indigo-50 transition-all whitespace-nowrap"
+              title="我的档案"
+            >
+              <span>📁</span>
+              <span>档案</span>
+            </a>
             <a
               href="../tianshu/"
               className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium text-slate-400 border border-slate-200 hover:text-indigo-600 hover:border-indigo-300 hover:bg-indigo-50 transition-all whitespace-nowrap"

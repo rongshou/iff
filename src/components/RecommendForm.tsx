@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { RecommendRequest } from "../types";
+import { loadProfile } from "../services/profile";
 
 const COUNTRIES = [
   "英国", "美国", "澳大利亚", "中国香港", "新加坡", "加拿大",
@@ -23,6 +24,25 @@ export default function RecommendForm({ onSubmit, loading }: Props) {
   const [targetMajor, setTargetMajor] = useState("");
   const [originalMajor, setOriginalMajor] = useState("");
   const [undergradSchool, setUndergradSchool] = useState("");
+
+  // 从个人档案自动填充
+  useEffect(() => {
+    const profile = loadProfile();
+    if (!profile) return;
+    if (profile.school) setUndergradSchool(profile.school);
+    if (profile.original_major) setOriginalMajor(profile.original_major);
+    if (profile.target_major) setTargetMajor(profile.target_major);
+    if (profile.study_level) setStudyLevel(profile.study_level);
+    if (profile.gpa_score != null) setGpaScore(String(profile.gpa_score));
+    if (profile.gpa_format) {
+      // 映射格式名称
+      const fmt = profile.gpa_format === "100分制" ? "百分制" : profile.gpa_format;
+      if (GPA_FORMATS.includes(fmt)) setGpaFormat(fmt);
+    }
+    if (profile.target_countries && profile.target_countries.length > 0) {
+      setCountries(profile.target_countries.filter(c => COUNTRIES.includes(c) || c === "澳洲" ? COUNTRIES.includes("澳大利亚") : true).map(c => c === "澳洲" ? "澳大利亚" : c));
+    }
+  }, []);
 
   const toggleCountry = (c: string) => {
     setCountries((prev) =>

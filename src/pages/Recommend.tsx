@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { RecommendRequest, RecommendResult, ViewMode } from "../types";
 import { fetchRecommend } from "../services/api";
 import RecommendForm from "../components/RecommendForm";
+import { loadProfile, addHistoryItem, createRecommendHistoryItem } from "../services/profile";
 import SchoolCard from "../components/SchoolCard";
 import SchoolTable from "../components/SchoolTable";
 import PathwaySection from "../components/PathwaySection";
@@ -27,6 +28,12 @@ export default function RecommendPage() {
     try {
       const res = await fetchRecommend(data);
       setResult(res);
+      // 保存推荐结果到历史
+      const profile = loadProfile() || {};
+      addHistoryItem(createRecommendHistoryItem(
+        { ...profile, ...data, target_countries: data.target_countries },
+        res,
+      ));
       const firstCountry = res.by_country[0]?.country;
       if (firstCountry) {
         setExpandedCountries(new Set([firstCountry]));
@@ -51,7 +58,14 @@ export default function RecommendPage() {
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-4xl mx-auto px-4 py-8">
         <header className="text-center mb-6">
-          <h1 className="text-3xl font-bold text-gray-900">天权</h1>
+          <div className="flex items-center justify-center gap-3">
+            <h1 className="text-3xl font-bold text-gray-900">天权</h1>
+            <a
+              href="./profile"
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium text-slate-400 border border-slate-200 hover:text-indigo-600 hover:border-indigo-300 hover:bg-indigo-50 transition-all"
+              title="我的档案"
+            ><span>📁</span>档案</a>
+          </div>
           <p className="text-gray-500 mt-1">
             基于 17 万+ 真实录取案例的相似背景匹配
           </p>

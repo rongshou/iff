@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { MBTIMajorResult, TimelinePhase } from "../types";
 import { MBTI_QUESTIONS, calculateMBTI, fetchMBTIMajors, fetchTimeline } from "../services/explore";
+import { saveProfile, addHistoryItem, createMBTIHistoryItem, loadProfile } from "../services/profile";
 
 const MBTI_EMOJI: Record<string, string> = {
   INTJ: "🏗️", INTP: "🔬", ENTJ: "👑", ENTP: "💡",
@@ -31,6 +32,9 @@ export default function ExplorePage() {
     try {
       const result = await fetchMBTIMajors(mbti);
       setMbtiResult(result);
+      // 自动保存 MBTI 到 profile + history
+      saveProfile({ tianshu: { ...(loadProfile()?.tianshu || {} as any), mbti: { type: result.type, name: result.name, top_majors: result.top_majors }, updated_at: new Date().toISOString() } as any });
+      addHistoryItem(createMBTIHistoryItem(result, answers));
     } catch { /* ignore */ }
     setLoading(false);
   };
@@ -52,6 +56,11 @@ export default function ExplorePage() {
         <header className="text-center mb-8">
           <div className="flex items-center justify-center gap-3 mb-2">
             <h1 className="text-3xl font-bold text-gray-900">留学工具箱</h1>
+            <a
+              href="./profile"
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium text-slate-400 border border-slate-200 hover:text-indigo-600 hover:border-indigo-300 hover:bg-indigo-50 transition-all"
+              title="我的档案"
+            ><span>📁</span>档案</a>
             <a
               href="../tianshu/"
               className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium text-slate-400 border border-slate-200 hover:text-indigo-600 hover:border-indigo-300 hover:bg-indigo-50 transition-all"

@@ -580,6 +580,52 @@ function renderStep5() {
 
     state.results = { bazi, ziwei, mbti, holland, cross, majors, gradRecs, career, challenges, yearlyForecast, summary, sunSign };
 
+    // ===== 自动保存到 localStorage（我的档案） =====
+    try {
+      // 更新 profile 中的 tianshu 数据
+      var existingProfile = JSON.parse(localStorage.getItem("iff_profile") || "{}");
+      existingProfile.tianshu = {
+        student: state.student,
+        bazi: bazi,
+        mbti: {
+          type: state.mbtiType,
+          nick: mbti ? mbti.nick : "",
+          core: mbti ? mbti.core : "",
+          strength: mbti ? mbti.strength : "",
+          weakness: mbti ? mbti.weakness : "",
+          fitMajors: mbti ? mbti.fitMajors : "",
+        },
+        holland: holland ? {
+          scores: state.hollandScores,
+          top3: holland.top3 || "",
+          codeExplain: holland.codeExplain || "",
+          dimensions: holland.dimensions || {},
+          sorted: holland.sorted || [],
+        } : null,
+        sunSign: sunSign || null,
+        summary: summary ? { tags: summary.tags || [], summary: summary.summary || "" } : null,
+        updated_at: new Date().toISOString(),
+      };
+      existingProfile.updated_at = new Date().toISOString();
+      localStorage.setItem("iff_profile", JSON.stringify(existingProfile));
+
+      // 写入历史记录
+      var history = JSON.parse(localStorage.getItem("iff_history") || "[]");
+      history.unshift({
+        id: Date.now().toString(36) + Math.random().toString(36).slice(2, 8),
+        type: "tianshu_report",
+        system: "tianshu",
+        data: { student: state.student, results: state.results },
+        summary: (summary && summary.summary ? summary.summary.slice(0, 60) : "综合测评报告"),
+        subtitle: (state.student.name || "匿名") + " · " + (state.student.grade || ""),
+        created_at: new Date().toISOString(),
+      });
+      if (history.length > 200) history.length = 200;
+      localStorage.setItem("iff_history", JSON.stringify(history));
+    } catch (e) {
+      console.warn("保存档案失败:", e);
+    }
+
     app.innerHTML = `
       <div class="step-card">
         <div class="step-header">

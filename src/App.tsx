@@ -21,9 +21,11 @@ export default function App() {
           padding: "24px 0 16px",
           fontSize: 11,
           color: "#94a3b8",
+          lineHeight: 1.8,
         }}
       >
-        {VERSION}
+        <div>提示：我们只提供工具，生成的内容仅供参考，请自主做出判断、选择和决策。</div>
+        <div style={{ marginTop: 4 }}>{VERSION}</div>
       </footer>
     </>
   );

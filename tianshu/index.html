@@ -1276,12 +1276,13 @@ ol.risk-list li::before {
   ol.risk-list li::before { width: 18px; height: 18px; font-size: 11px; left: 10px; }
 }
 
-/* ===== 底部版本号 ===== */
+/* ===== 底部 ===== */
 .app-footer {
   text-align: center;
   padding: 24px 0 16px;
   font-size: 11px;
   color: #94a3b8;
+  line-height: 1.8;
 }
 
 @media (max-width: 480px) {
@@ -1348,7 +1349,8 @@ ol.risk-list li::before {
 </div>
 
 <footer class="app-footer">
-  <span class="footer-version" id="footer-version"></span>
+  <div>提示：我们只提供工具，生成的内容仅供参考，请自主做出判断、选择和决策。</div>
+  <div style="margin-top:4px"><span id="footer-version"></span></div>
 </footer>
 
 </div>

@@ -57,10 +57,13 @@ REQUIRED_PROFILE_FIELDS: list[dict] = [
     {
         "field": "target_major",
         "label": "目标专业",
-        "check": lambda p: p.get("target_major") is not None,
+        "check": lambda p: (
+            p.get("target_major") is not None
+            and p["target_major"] not in ("其他", "其它", "不限", "不确定", "还没想好", "未定")
+        ),
         "questions": [
-            "你想申请什么专业方向？",
-            "有目标专业吗？可以是本专业继续深造，也可以跨专业。",
+            "你想申请什么专业方向？可以继续深挖本专业，也可以考虑跨到计算机、商科或其他方向——你更倾向哪一种？",
+            "有目标专业吗？比如继续读本专业、转CS/商科，或者其他方向？",
         ],
     },
 ]

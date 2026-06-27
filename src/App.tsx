@@ -3,15 +3,28 @@ import ExplorePage from "./pages/Explore";
 import ChatPage from "./pages/Chat";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
+const VERSION = import.meta.env.VITE_APP_VERSION || "v?";
 
 export default function App() {
   return (
-    <BrowserRouter basename={BASE}>
-      <Routes>
-        <Route path="/" element={<ChatPage />} />
-        <Route path="/explore" element={<ExplorePage />} />
-        <Route path="/chat" element={<ChatPage />} />
-      </Routes>
-    </BrowserRouter>
+    <>
+      <BrowserRouter basename={BASE}>
+        <Routes>
+          <Route path="/" element={<ChatPage />} />
+          <Route path="/explore" element={<ExplorePage />} />
+          <Route path="/chat" element={<ChatPage />} />
+        </Routes>
+      </BrowserRouter>
+      <footer
+        style={{
+          textAlign: "center",
+          padding: "24px 0 16px",
+          fontSize: 11,
+          color: "#94a3b8",
+        }}
+      >
+        {VERSION}
+      </footer>
+    </>
   );
 }

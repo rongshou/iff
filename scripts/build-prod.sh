@@ -4,11 +4,15 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
+echo "=== read version ==="
+VERSION="$(cat tianshu/VERSION 2>/dev/null || echo "v0.0")"
+echo "version: $VERSION"
+
 echo "=== tsc ==="
 npx tsc -b
 
 echo "=== vite build ==="
-npx vite build
+VITE_APP_VERSION="$VERSION" npx vite build
 
 echo "=== move React app to dist/tianquan/ ==="
 mkdir -p dist/tianquan

@@ -29,6 +29,8 @@ function init() {
   // 设置版本号
   const vEl = document.getElementById("version-display");
   if (vEl) vEl.textContent = (window.TIANSHU_VERSION || "v0.2") + " (Web 版)";
+  const fvEl = document.getElementById("footer-version");
+  if (fvEl) fvEl.textContent = window.TIANSHU_VERSION || "v?";
   updateProgress(1);
   renderStep1();
 }

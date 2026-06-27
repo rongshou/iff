@@ -1276,6 +1276,14 @@ ol.risk-list li::before {
   ol.risk-list li::before { width: 18px; height: 18px; font-size: 11px; left: 10px; }
 }
 
+/* ===== 底部版本号 ===== */
+.app-footer {
+  text-align: center;
+  padding: 24px 0 16px;
+  font-size: 11px;
+  color: #94a3b8;
+}
+
 @media (max-width: 480px) {
   .progress-track { display: none; }
   .progress-step .step-label { display: none; }
@@ -1338,6 +1346,10 @@ ol.risk-list li::before {
 <div id="app">
   <div class="loading">加载中...</div>
 </div>
+
+<footer class="app-footer">
+  <span class="footer-version" id="footer-version"></span>
+</footer>
 
 </div>
 

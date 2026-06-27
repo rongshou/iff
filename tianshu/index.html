@@ -35,45 +35,57 @@ body {
   margin: 0 auto;
 }
 
-header.banner {
-  text-align: center;
-  padding: 30px 20px;
-  margin-bottom: 30px;
-}
-
-header.banner h1 {
-  color: #2c5282;
-  font-size: 24px;
-  font-weight: 700;
-  letter-spacing: 8px;
-  margin-bottom: 8px;
-  background: linear-gradient(135deg, #2c5282 0%, #6b46c1 50%, #b7791f 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-header.banner .subtitle {
-  color: #718096;
-  font-size: 12px;
-  letter-spacing: 1px;
-}
-
-header.banner .compass {
-  margin-bottom: 8px;
+/* ===== 顶部导航（天权风格） ===== */
+.top-header {
   display: flex;
-  justify-content: center;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 0;
+  margin-bottom: 24px;
 }
 
-header.banner .compass svg {
-  filter: drop-shadow(0 0 20px rgba(192, 132, 252, 0.4));
+.top-header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.top-header-accent {
+  display: inline-block;
+  width: 4px;
+  height: 20px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #8b5cf6 0%, #a855f7 100%);
+  flex-shrink: 0;
+}
+
+.top-header-left h1 {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.top-header-left .sep {
+  color: #cbd5e1;
+}
+
+.top-header-left .subtitle {
+  color: #64748b;
+  font-size: 13px;
+}
+
+.top-header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
 }
 
 .nav-switch {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  margin-top: 12px;
   padding: 3px 12px;
   border-radius: 999px;
   font-size: 12px;
@@ -1236,8 +1248,9 @@ ol.risk-list li::before {
   .step-dot { width: 26px; height: 26px; font-size: 12px; }
   .progress-step { min-width: 44px; }
   .slider-row { grid-template-columns: 1fr; }
-  header.banner { padding: 20px 10px; }
-  header.banner h1 { font-size: 28px; letter-spacing: 5px; }
+  .top-header { padding: 10px 0; margin-bottom: 16px; }
+  .top-header-left h1 { font-size: 16px; }
+  .top-header-left .subtitle { display: none; }
   .step-actions { flex-direction: column-reverse; }
   .step-actions button { width: 100%; }
   .report h2 { font-size: 16px; padding: 12px 16px; }
@@ -1267,7 +1280,7 @@ ol.risk-list li::before {
 
 @media print {
   body { background: #fff; padding: 0; }
-  header.banner, .step-header, .step-actions, .form-grid, .hint, .sliders, .btn-text { display: none; }
+  .top-header, .step-header, .step-actions, .form-grid, .hint, .sliders, .btn-text { display: none; }
   .step-card { box-shadow: none; padding: 0; }
   .report h2 { page-break-before: always; }
   .report h2:first-child { page-break-before: avoid; }
@@ -1278,13 +1291,18 @@ ol.risk-list li::before {
 
 <div class="container">
 
-<header class="banner">
-  <div class="compass" id="beidou-container"></div>
-  <h1>天枢</h1>
-  <div class="subtitle">学生综合特质测评与生涯规划工具 · <span id="version-display">v? (Web 版)</span></div>
-  <div class="subtitle" style="margin-top:6px;">基于八字 + 紫微 + MBTI + 霍兰德四维交叉</div>
-  <a class="nav-switch" href="../tianquan/"><span>🎓</span> 天权</a>
+<header class="top-header">
+  <div class="top-header-left">
+    <span class="top-header-accent"></span>
+    <h1>天枢</h1>
+    <span class="sep">·</span>
+    <span class="subtitle">综合特质测评</span>
+  </div>
+  <div class="top-header-right">
+    <a class="nav-switch" href="../tianquan/"><span>🎓</span> 天权</a>
+  </div>
 </header>
+<div id="beidou-container" style="display:none"></div>
 
 <nav class="progress-bar" id="progress-bar">
   <div class="progress-track">

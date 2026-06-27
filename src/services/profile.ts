@@ -130,7 +130,9 @@ export function mergeChatInfo(info: Record<string, string>): void {
     }
   }
   if (info.targetCountry) mapped.target_countries = [info.targetCountry];
-  if (info.targetMajor) mapped.target_major = info.targetMajor;
+  if (info.targetMajor && !["其他","其它","不限","不确定","还没想好","未定"].includes(info.targetMajor)) {
+    mapped.target_major = info.targetMajor;
+  }
   if (Object.keys(mapped).length > 0) {
     saveProfile(mapped);
   }

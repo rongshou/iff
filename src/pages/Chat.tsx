@@ -32,7 +32,7 @@ const SCENES: Scene[] = [
     greeting: "选校定位 · 我来帮你参谋",
     intro: "",
     quickPrompts: [
-      { icon: "🇬🇧", text: "英国硕士选校：北京邮电大学 通信工程 GPA：82/100 大三 目标专业：其他" },
+      { icon: "🇬🇧", text: "英国硕士选校：北京邮电大学 通信工程 GPA：82/100 大三 目标专业：计算机" },
       { icon: "🇺🇸", text: "美国 CS 硕士：985 高校 计算机 GPA：3.4/4.0 已毕业 目标专业：CS" },
       { icon: "🇦🇺", text: "澳洲硕士选校：双非 金融 GPA：85/100 大四 目标专业：金融" },
       { icon: "📋", text: "先帮我评估选校，一步步问我的情况" },
@@ -194,7 +194,9 @@ function extractInfo(text: string): Record<string, string> {
   const mCountry = text.match(/(?:英国|美国|澳洲|加拿大|香港|新加坡|欧洲|日本|韩国)/);
   if (mCountry) info.targetCountry = mCountry[0];
   const mTargetMajor = text.match(/目标专业[：:]\s*([^\s\n\r]+)/);
-  if (mTargetMajor) info.targetMajor = mTargetMajor[1];
+  if (mTargetMajor && !["其他","其它","不限","不确定","还没想好","未定"].includes(mTargetMajor[1])) {
+    info.targetMajor = mTargetMajor[1];
+  }
   const mMajor = text.match(/专业[：:]\s*([^\s\n\r]+)/);
   if (mMajor && !info.targetMajor) info.major = mMajor[1];
   const mDoc = text.match(/PS|个人陈述|CV|简历|推荐信/);

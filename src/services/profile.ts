@@ -210,7 +210,6 @@ export function createRecommendHistoryItem(
   result: RecommendResult,
 ): Omit<HistoryItem, "id" | "created_at"> {
   const countryStr = (profile.target_countries || []).join("/");
-  const majorStr = profile.target_major || profile.original_major || "未指定";
   return {
     type: "recommend",
     system: "tianquan",

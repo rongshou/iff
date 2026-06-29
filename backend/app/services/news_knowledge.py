@@ -218,8 +218,23 @@ def _build_fts_index(conn):
     ).fetchall()]
     wers_conn.close()
     
+    # 加载排除列表（只加载一次）
+    excluded_ids: set[str] = set()
+    try:
+        ex_rows = conn.execute("SELECT article_id FROM excluded_articles").fetchall()
+        excluded_ids = {r[0] for r in ex_rows}
+        if excluded_ids:
+            print(f"[news_knowledge] {len(excluded_ids)} excluded articles will be skipped")
+    except Exception:
+        pass
+
     inserted = 0
+    skipped = 0
     for i, aid in enumerate(article_ids):
+        if str(aid) in excluded_ids:
+            skipped += 1
+            continue
+
         retry = 0
         while retry < 3:
             try:
@@ -259,7 +274,7 @@ def _build_fts_index(conn):
             conn.commit()
     
     conn.commit()
-    print(f"[news_knowledge] FTS index built: {inserted}/{len(article_ids)} articles indexed")
+    print(f"[news_knowledge] FTS index built: {inserted}/{len(article_ids)} articles indexed ({skipped} excluded)")
 
 
 def _sync_new_articles_to_fts(conn):

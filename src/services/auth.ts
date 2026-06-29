@@ -2,7 +2,7 @@
  * 本地授权管理 — 基于用户名+授权码验证
  * 默认授权码: 88888888
  */
-import { loadProfile } from "./profile";
+import { loadProfile, saveProfile } from "./profile";
 
 const AUTH_KEY = "iff_auth";
 const DEFAULT_AUTH_CODE = "88888888";
@@ -21,8 +21,21 @@ export function login(username: string, code: string): { ok: boolean; error?: st
   if (!trimmedCode) return { ok: false, error: "请输入授权码" };
 
   const profile = loadProfile();
-  const validUsername = profile?.username || "";
-  const validCode = profile?.auth_code || DEFAULT_AUTH_CODE;
+
+  // 首次使用：没有档案 → 自动注册
+  if (!profile) {
+    if (trimmedCode !== DEFAULT_AUTH_CODE) {
+      return { ok: false, error: "授权码不正确，首次登录请使用默认授权码 88888888" };
+    }
+    saveProfile({ username: trimmedUser, auth_code: DEFAULT_AUTH_CODE });
+    const session: AuthSession = { loggedIn: true, username: trimmedUser, timestamp: Date.now() };
+    localStorage.setItem(AUTH_KEY, JSON.stringify(session));
+    return { ok: true };
+  }
+
+  // 已有档案 → 正常验证
+  const validUsername = profile.username || "";
+  const validCode = profile.auth_code || DEFAULT_AUTH_CODE;
 
   if (trimmedUser !== validUsername) return { ok: false, error: "用户名不正确" };
   if (trimmedCode !== validCode) return { ok: false, error: "授权码不正确" };

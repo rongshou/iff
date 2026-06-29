@@ -22,18 +22,15 @@ export function login(username: string, code: string): { ok: boolean; error?: st
 
   const profile = loadProfile();
 
-  // 首次使用或旧档案缺少用户名 → 自动注册/补全
+  // 首次使用或旧档案缺少用户名 → 绑定用户名和授权码
   if (!profile || !profile.username) {
-    if (trimmedCode !== DEFAULT_AUTH_CODE) {
-      return { ok: false, error: "授权码不正确，请使用默认授权码 88888888" };
-    }
-    saveProfile({ username: trimmedUser, auth_code: profile?.auth_code || DEFAULT_AUTH_CODE });
+    saveProfile({ username: trimmedUser, auth_code: trimmedCode });
     const session: AuthSession = { loggedIn: true, username: trimmedUser, timestamp: Date.now() };
     localStorage.setItem(AUTH_KEY, JSON.stringify(session));
     return { ok: true };
   }
 
-  // 已有完整档案 → 正常验证
+  // 已有档案 → 正常验证绑定的用户名和授权码
   const validUsername = profile.username;
   const validCode = profile.auth_code || DEFAULT_AUTH_CODE;
 

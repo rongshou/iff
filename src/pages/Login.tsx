@@ -33,7 +33,7 @@ export default function LoginPage() {
             IFF
           </div>
           <h1 className="text-2xl font-bold text-slate-900">AI留学规划与生涯规划工具</h1>
-          <p className="text-sm text-slate-500 mt-2">首次登录即自动注册</p>
+          <p className="text-sm text-slate-500 mt-2">首次登录即绑定，后续使用相同凭据登录</p>
         </div>
 
         {/* Form */}

@@ -1,19 +1,34 @@
-import { HashRouter, Routes, Route } from "react-router-dom";
+import { Navigate, HashRouter, Routes, Route, Outlet } from "react-router-dom";
+import { isAuthenticated } from "./services/auth";
+import LoginPage from "./pages/Login";
 import ExplorePage from "./pages/Explore";
 import ChatPage from "./pages/Chat";
 import ProfilePage from "./pages/ProfilePage";
 
 const VERSION = import.meta.env.VITE_APP_VERSION || "v?";
 
+/** 路由守卫：未登录跳转 /login */
+function AuthGuard() {
+  if (!isAuthenticated()) {
+    return <Navigate to="/login" replace />;
+  }
+  return <Outlet />;
+}
+
 export default function App() {
   return (
     <>
       <HashRouter>
         <Routes>
-          <Route path="/" element={<ChatPage />} />
-          <Route path="/explore" element={<ExplorePage />} />
-          <Route path="/chat" element={<ChatPage />} />
-          <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/login" element={<LoginPage />} />
+
+          {/* 受保护路由 */}
+          <Route element={<AuthGuard />}>
+            <Route path="/" element={<ChatPage />} />
+            <Route path="/explore" element={<ExplorePage />} />
+            <Route path="/chat" element={<ChatPage />} />
+            <Route path="/profile" element={<ProfilePage />} />
+          </Route>
         </Routes>
       </HashRouter>
       <footer

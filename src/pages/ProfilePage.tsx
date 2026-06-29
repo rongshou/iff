@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import type { HistoryItem, ProfileData } from "../services/profile";
 import {
   loadProfile,
@@ -8,6 +8,7 @@ import {
   deleteHistoryItem,
   clearHistory,
 } from "../services/profile";
+import { logout } from "../services/auth";
 import type { RecommendResult, MBTIMajorResult, ChatMessage } from "../types";
 
 /* =====================================================================
@@ -29,6 +30,7 @@ export default function ProfilePage() {
   const [profile, setProfile] = useState<ProfileData>({ updated_at: "" });
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [saved, setSaved] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     setProfile(loadProfile() || { updated_at: "" });
@@ -92,7 +94,13 @@ export default function ProfilePage() {
             ><span>🧰</span>工具箱</Link>
           </div>
           <span className="w-px h-4 bg-slate-200" />
-          <h1 className="text-xl font-bold text-slate-900">📁 我的档案</h1>
+          <h1 className="text-xl font-bold text-slate-900 flex-1">📁 我的档案</h1>
+          <button
+            onClick={() => { logout(); navigate("/login", { replace: true }); }}
+            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium text-slate-400 border border-slate-200 hover:text-red-600 hover:border-red-300 hover:bg-red-50 transition-all"
+          >
+            <span>🚪</span>退出
+          </button>
         </header>
 
         {/* ======== ① 基本信息 ======== */}

@@ -33,7 +33,7 @@ export default function LoginPage() {
             天
           </div>
           <h1 className="text-2xl font-bold text-slate-900">天权 · 留学助手</h1>
-          <p className="text-sm text-slate-500 mt-2">首次登录即自动注册，授权码默认为 88888888</p>
+          <p className="text-sm text-slate-500 mt-2">首次登录即自动注册</p>
         </div>
 
         {/* Form */}

@@ -3,6 +3,8 @@ services:
     build: .
     image: tianquan-nginx:latest
     container_name: tianquan-nginx
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     ports:
       - "8080:80"
     depends_on:

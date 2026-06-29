@@ -132,6 +132,17 @@ export default function ProfilePage() {
                 className="mt-1 px-3 py-2 border border-slate-200 rounded-lg text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400"
               />
             </label>
+            {/* 授权码 */}
+            <label className="flex flex-col text-sm text-slate-600">
+              授权码
+              <input
+                value={profile.auth_code || ""}
+                onChange={(e) => handleField("auth_code", e.target.value)}
+                placeholder="输入授权码"
+                type="password"
+                className="mt-1 px-3 py-2 border border-slate-200 rounded-lg text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400"
+              />
+            </label>
             {/* 学校 */}
             <label className="flex flex-col text-sm text-slate-600">
               学校

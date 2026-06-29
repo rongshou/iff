@@ -14,6 +14,7 @@ export interface ProfileData {
   /** 基本信息（可编辑） */
   username?: string;
   email?: string;
+  auth_code?: string;
   school?: string;
   original_major?: string;
   gpa_score?: number;

@@ -32,7 +32,7 @@ export default function LoginPage() {
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 text-white text-2xl font-bold shadow-lg shadow-indigo-200 mb-4">
             天
           </div>
-          <h1 className="text-2xl font-bold text-slate-900">天权 · 留学助手</h1>
+          <h1 className="text-2xl font-bold text-slate-900">AI留学规划与生涯规划工具</h1>
           <p className="text-sm text-slate-500 mt-2">首次登录即自动注册</p>
         </div>
 

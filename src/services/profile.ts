@@ -12,6 +12,8 @@ import type { RecommendResult, ChatMessage, MBTIMajorResult } from "../types";
 
 export interface ProfileData {
   /** 基本信息（可编辑） */
+  username?: string;
+  email?: string;
   school?: string;
   original_major?: string;
   gpa_score?: number;

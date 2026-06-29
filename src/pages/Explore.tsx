@@ -58,6 +58,11 @@ export default function ExplorePage() {
           <div className="flex items-center justify-center gap-3 mb-2">
             <h1 className="text-3xl font-bold text-gray-900">留学工具箱</h1>
             <Link
+              to="/"
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium text-indigo-600 bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 transition-all"
+              title="首页"
+            ><span>🏠</span>首页</Link>
+            <Link
               to="/profile"
               className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium text-slate-400 border border-slate-200 hover:text-indigo-600 hover:border-indigo-300 hover:bg-indigo-50 transition-all"
               title="我的档案"

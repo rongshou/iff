@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import type { HistoryItem, ProfileData } from "../services/profile";
 import {
   loadProfile,
@@ -14,8 +15,8 @@ import type { RecommendResult, MBTIMajorResult, ChatMessage } from "../types";
  * ===================================================================== */
 
 const COUNTRIES = ["英国", "美国", "澳洲", "加拿大", "香港", "新加坡", "欧洲", "日本", "韩国"];
-const STUDY_LEVELS = ["本科", "硕士", "博士", "预科"];
-const GPA_FORMATS = ["100分制", "4分制", "5分制"];
+const STUDY_LEVELS = ["高中", "本科", "硕士", "博士", "预科", "其他"];
+const GPA_FORMATS = ["百分制", "4分制", "5分制", "7分制", "9分制", "英制百分制"];
 
 const TYPE_ICONS: Record<string, string> = {
   recommend: "📌",
@@ -78,12 +79,18 @@ export default function ProfilePage() {
 
         {/* ======== 头部 ======== */}
         <header className="flex items-center gap-3 mb-6">
-          <a
-            href="./"
-            className="inline-flex items-center gap-1 text-sm text-slate-400 hover:text-indigo-600 transition-colors"
-          >
-            ← 返回
-          </a>
+          <div className="flex items-center gap-1">
+            <Link
+              to="/"
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium text-indigo-600 bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 transition-all"
+              title="首页"
+            ><span>🏠</span>首页</Link>
+            <Link
+              to="/explore"
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium text-slate-400 border border-slate-200 hover:text-indigo-600 hover:border-indigo-300 hover:bg-indigo-50 transition-all"
+              title="留学工具箱"
+            ><span>🧰</span>工具箱</Link>
+          </div>
           <span className="w-px h-4 bg-slate-200" />
           <h1 className="text-xl font-bold text-slate-900">📁 我的档案</h1>
         </header>
@@ -104,9 +111,30 @@ export default function ProfilePage() {
             </button>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-3.5">
-            {/* 本科学校 */}
+            {/* 用户名 */}
             <label className="flex flex-col text-sm text-slate-600">
-              本科学校
+              用户名
+              <input
+                value={profile.username || ""}
+                onChange={(e) => handleField("username", e.target.value)}
+                placeholder="你的昵称"
+                className="mt-1 px-3 py-2 border border-slate-200 rounded-lg text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400"
+              />
+            </label>
+            {/* 邮箱 */}
+            <label className="flex flex-col text-sm text-slate-600">
+              邮箱
+              <input
+                value={profile.email || ""}
+                onChange={(e) => handleField("email", e.target.value)}
+                placeholder="your@email.com"
+                type="email"
+                className="mt-1 px-3 py-2 border border-slate-200 rounded-lg text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400"
+              />
+            </label>
+            {/* 学校 */}
+            <label className="flex flex-col text-sm text-slate-600">
+              学校
               <input
                 value={profile.school || ""}
                 onChange={(e) => handleField("school", e.target.value)}
@@ -114,9 +142,9 @@ export default function ProfilePage() {
                 className="mt-1 px-3 py-2 border border-slate-200 rounded-lg text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400"
               />
             </label>
-            {/* 本科专业 */}
+            {/* 专业 */}
             <label className="flex flex-col text-sm text-slate-600">
-              本科专业
+              专业
               <input
                 value={profile.original_major || ""}
                 onChange={(e) => handleField("original_major", e.target.value)}
@@ -150,9 +178,9 @@ export default function ProfilePage() {
                 ))}
               </select>
             </label>
-            {/* 学位阶段 */}
+            {/* 申请阶段 */}
             <label className="flex flex-col text-sm text-slate-600">
-              学位阶段
+              申请阶段
               <select
                 value={profile.study_level || ""}
                 onChange={(e) => handleField("study_level", e.target.value)}
@@ -218,6 +246,40 @@ export default function ProfilePage() {
                 className="mt-1 px-3 py-2 border border-slate-200 rounded-lg text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400"
               />
             </label>
+
+            {/* MBTI（从天枢同步，只读） */}
+            {tianshu?.mbti && (
+              <div className="border border-indigo-100 rounded-xl p-4 bg-indigo-50/30 sm:col-span-1">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-lg">🧠</span>
+                  <span className="font-semibold text-sm text-slate-700">MBTI</span>
+                  <span className="text-sm font-bold text-indigo-600 ml-auto">{tianshu.mbti.type}</span>
+                </div>
+                <p className="text-xs text-slate-500">{tianshu.mbti.core || tianshu.mbti.nick}</p>
+                {tianshu.mbti.fitMajors && (
+                  <p className="text-xs text-slate-500 mt-1">🎯 {tianshu.mbti.fitMajors}</p>
+                )}
+              </div>
+            )}
+
+            {/* 霍兰德（从天枢同步，只读） */}
+            {tianshu?.holland && (
+              <div className="border border-amber-100 rounded-xl p-4 bg-amber-50/30 sm:col-span-1">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-lg">🎯</span>
+                  <span className="font-semibold text-sm text-slate-700">霍兰德</span>
+                  <span className="text-sm font-bold text-amber-600 ml-auto">{tianshu.holland.top3}</span>
+                </div>
+                <p className="text-xs text-slate-500">{tianshu.holland.codeExplain}</p>
+                <div className="flex flex-wrap gap-1 mt-1.5">
+                  {(tianshu.holland.sorted || []).slice(0, 3).map(([code, score]) => (
+                    <span key={code} className="text-xs px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded-full">
+                      {code} {score}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </section>
 

@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo, memo } from "react";
 import { Link } from "react-router-dom";
 import type { ChatMessage } from "../types";
 import { sendChat, streamChat } from "../services/chat";
@@ -200,35 +200,94 @@ function looksLikeSchoolRequest(text: string): boolean {
   return false;
 }
 
+/* ----- 简称 → 全称映射（与后端 _UNIV_ABBREV 保持一致） ----- */
+const SCHOOL_ABBREV: Record<string, string> = {
+  "北邮": "北京邮电大学", "北航": "北京航空航天大学", "北理": "北京理工大学",
+  "上交": "上海交通大学", "西交": "西安交通大学",
+  "华科": "华中科技大学", "中科大": "中国科学技术大学",
+  "哈工大": "哈尔滨工业大学", "同济": "同济大学",
+  "南开": "南开大学", "天大": "天津大学", "厦大": "厦门大学",
+  "中大": "中山大学", "华南理工": "华南理工大学",
+  "成电": "电子科技大学", "西电": "西安电子科技大学",
+  "北交": "北京交通大学", "北科": "北京科技大学",
+  "南大": "南京大学", "浙大": "浙江大学", "武大": "武汉大学",
+  "川大": "四川大学", "山大": "山东大学", "吉大": "吉林大学",
+  "湖大": "湖南大学", "重大": "重庆大学",
+  "北大": "北京大学", "清华": "清华大学",
+  "复旦": "复旦大学", "交大": "上海交通大学",
+  "人大": "中国人民大学", "北师大": "北京师范大学",
+  "上外": "上海外国语大学", "北外": "北京外国语大学",
+  "上财": "上海财经大学", "央财": "中央财经大学",
+  "中传": "中国传媒大学",
+};
+
+/* ----- 国家别名（与后端 COUNTRY_ALIASES 保持一致） ----- */
+const COUNTRY_ALIASES: Record<string, string> = {
+  "英国": "英国", "美国": "美国", "澳洲": "澳洲", "澳大利亚": "澳洲",
+  "加拿大": "加拿大", "枫叶国": "加拿大",
+  "香港": "香港", "新加坡": "新加坡",
+  "日本": "日本", "韩国": "韩国",
+  "德国": "德国", "法国": "法国",
+  "新西兰": "新西兰", "爱尔兰": "爱尔兰",
+  "荷兰": "荷兰", "瑞士": "瑞士",
+  "意大利": "意大利", "西班牙": "西班牙",
+  "瑞典": "瑞典", "丹麦": "丹麦",
+  "芬兰": "芬兰", "挪威": "挪威",
+  "马来西亚": "马来西亚", "澳门": "澳门",
+};
 /** 从用户输入中提取已有信息 */
 function extractInfo(text: string): Record<string, string> {
   const info: Record<string, string> = {};
-  const mGpa = text.match(/(?:GPA|均分)[：:]\s*([\d.]+(?:\s*\/\s*[\d.]+)?)/i);
+
+  // --- GPA（可选冒号，支持空格 "GPA 82/100" 和 "均分82"）---
+  const mGpa = text.match(/(?:GPA|均分|绩点)\s*[:：]?\s*([\d.]+(?:\s*\/\s*[\d.]+)?)/i);
   if (mGpa) info.gpa = mGpa[1];
-  const mSchool = text.match(/(?:大学|学院)/);
-  if (mSchool) {
-    const parts = text.split(/[\s\n\r]+/);
-    for (const p of parts) {
-      if (/大学|学院/.test(p)) {
-        // grab preceding word too
-        const idx = parts.indexOf(p);
-        info.school = (idx > 0 ? parts[idx - 1] + " " : "") + p;
-        break;
+
+  // --- 学校（简称优先，再查 "大学/学院" 全名）---
+  for (const [abbr, full] of Object.entries(SCHOOL_ABBREV)) {
+    if (text.includes(abbr)) {
+      info.school = full;
+      break;
+    }
+  }
+  if (!info.school) {
+    const mSchool = text.match(/(?:大学|学院)/);
+    if (mSchool) {
+      const parts = text.split(/[\s\n\r]+/);
+      for (const p of parts) {
+        if (/大学|学院/.test(p)) {
+          const idx = parts.indexOf(p);
+          info.school = (idx > 0 ? parts[idx - 1] + " " : "") + p;
+          break;
+        }
       }
     }
   }
-  const mCountry = text.match(/(?:英国|美国|澳洲|加拿大|香港|新加坡|欧洲|日本|韩国)/);
-  if (mCountry) info.targetCountry = mCountry[0];
-  const mTargetMajor = text.match(/目标专业[：:]\s*([^\s\n\r]+)/);
-  if (mTargetMajor && !["其他","其它","不限","不确定","还没想好","未定"].includes(mTargetMajor[1])) {
-    info.targetMajor = mTargetMajor[1];
+
+  // --- 目标国家（别名 → 标准名）---
+  for (const [alias, standard] of Object.entries(COUNTRY_ALIASES)) {
+    if (text.includes(alias)) {
+      info.targetCountry = standard;
+      break;
+    }
   }
-  const mMajor = text.match(/专业[：:]\s*([^\s\n\r]+)/);
-  if (mMajor && !info.targetMajor) info.major = mMajor[1];
+
+  // --- 目标专业（"目标专业：计算机" / "目标专业：Computer Science"）---
+  const mTargetMajor = text.match(/目标专业[：:]\s*([^，。,.!！?？\n]{1,30})/);
+  if (mTargetMajor && !["其他","其它","不限","不确定","还没想好","未定"].includes(mTargetMajor[1].trim())) {
+    info.targetMajor = mTargetMajor[1].trim();
+  }
+
+  // --- 目前专业（到标点终止，支持英文专业名含空格）---
+  const mMajor = text.match(/专业[：:]\s*([^，。,.!！?？\n]{2,30})/);
+  if (mMajor && !info.targetMajor) info.major = mMajor[1].trim();
+
+  // --- 文书 / 签证类型 ---
   const mDoc = text.match(/PS|个人陈述|CV|简历|推荐信/);
   if (mDoc) info.docType = mDoc[0];
   const mVisa = text.match(/F-1|Tier 4|学生签/);
   if (mVisa) info.visaType = mVisa[0];
+
   return info;
 }
 
@@ -312,14 +371,18 @@ export default function ChatPage() {
     el.style.height = Math.min(el.scrollHeight, 160) + "px";
   }, [input]);
 
+  // ref 避免 onScroll 依赖 messages.length（频繁变化导致回调重建）
+  const msgLenRef = useRef(0);
+  msgLenRef.current = messages.length;
+
   const onScroll = useCallback(() => {
     const el = scrollRef.current;
     if (!el) return;
     const distance = el.scrollHeight - el.scrollTop - el.clientHeight;
     const atBottom = distance < 80;
     atBottomRef.current = atBottom;
-    setShowScrollBottom(!atBottom && messages.length > 0);
-  }, [messages.length]);
+    setShowScrollBottom(!atBottom && msgLenRef.current > 0);
+  }, []);
 
   const scrollToBottom = () => {
     const el = scrollRef.current;
@@ -399,9 +462,15 @@ export default function ChatPage() {
         return;
       }
 
-      // 已有信息或非首次 → 正常调 AI
+      // 已有信息或非首次 → 正常调 AI（同时合并本轮新提取的字段）
       if (collectedInfo[activeScene] && Object.keys(collectedInfo[activeScene]).length > 0) {
-        const desc = infoToDescription(collectedInfo[activeScene]);
+        // 如果本轮消息提取出了新字段 → 更新状态并落盘
+        const hasNewInfo = Object.keys(newInfo).length > Object.keys(currentInfo).length;
+        if (hasNewInfo) {
+          setCollectedInfo((prev) => ({ ...prev, [activeScene]: newInfo }));
+          mergeChatInfo(newInfo);
+        }
+        const desc = infoToDescription(newInfo); // 使用最新合并后的信息
         const enrichedMsg: ChatMessage = {
           id: userMsg.id,
           role: "user",
@@ -595,6 +664,14 @@ AI 留学智能问答
             </span>
           </div>
           <div className="flex items-center gap-1 shrink-0">
+            <Link
+              to="/"
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium text-indigo-600 bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 transition-all whitespace-nowrap"
+              title="首页"
+            >
+              <span>🏠</span>
+              <span>首页</span>
+            </Link>
             <Link
               to="/profile"
               className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium text-slate-400 border border-slate-200 hover:text-indigo-600 hover:border-indigo-300 hover:bg-indigo-50 transition-all whitespace-nowrap"
@@ -863,10 +940,12 @@ function EmptyState({
   );
 }
 
-/* ---------- 消息气泡 ---------- */
+/* ---------- 消息气泡（React.memo 避免无关消息重渲染） ---------- */
 
-function MessageBubble({ msg }: { msg: ChatMessage }) {
+const MessageBubble = memo(function MessageBubble({ msg }: { msg: ChatMessage }) {
   const isUser = msg.role === "user";
+  const renderedContent = useMemo(() => msg.content ? renderMarkdown(msg.content) : null, [msg.content]);
+
   return (
     <div className={`flex gap-2 sm:gap-3 ${isUser ? "flex-row-reverse" : "flex-row"}`}>
       <Avatar role={msg.role} />
@@ -887,7 +966,7 @@ function MessageBubble({ msg }: { msg: ChatMessage }) {
           {isUser ? (
             <div className="whitespace-pre-wrap break-words">{msg.content}</div>
           ) : msg.content ? (
-            <div className="break-words">{renderMarkdown(msg.content)}</div>
+            <div className="break-words">{renderedContent}</div>
           ) : msg.reasoning ? (
             <div className="flex items-center gap-2 text-slate-400 text-[13px]">
               <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none">
@@ -913,4 +992,4 @@ function MessageBubble({ msg }: { msg: ChatMessage }) {
       </div>
     </div>
   );
-}
+}, (prev, next) => prev.msg.id === next.msg.id && prev.msg.content === next.msg.content && prev.msg.reasoning === next.msg.reasoning);

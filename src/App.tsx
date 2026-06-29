@@ -1,22 +1,21 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { HashRouter, Routes, Route } from "react-router-dom";
 import ExplorePage from "./pages/Explore";
 import ChatPage from "./pages/Chat";
 import ProfilePage from "./pages/ProfilePage";
 
-const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 const VERSION = import.meta.env.VITE_APP_VERSION || "v?";
 
 export default function App() {
   return (
     <>
-      <BrowserRouter basename={BASE}>
+      <HashRouter>
         <Routes>
           <Route path="/" element={<ChatPage />} />
           <Route path="/explore" element={<ExplorePage />} />
           <Route path="/chat" element={<ChatPage />} />
           <Route path="/profile" element={<ProfilePage />} />
         </Routes>
-      </BrowserRouter>
+      </HashRouter>
       <footer
         style={{
           textAlign: "center",

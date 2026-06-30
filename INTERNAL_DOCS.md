@@ -218,7 +218,8 @@ docker-compose up -d
 |------|------|------|
 | `#/login` | Login.tsx | 登录 / 自动注册 |
 | `#/` | Chat.tsx | AI 智能问答（首页） |
-| `#/explore` | Explore.tsx | 留学工具箱（MBTI + 时间线） |
+| `#/recommend` | Recommend.tsx | 选校推荐引擎（三维评分） |
+| `#/chat` | Chat.tsx | AI 智能问答 |
 | `#/profile` | ProfilePage.tsx | 个人档案 |
 | 外部 `/tianshu/` | tianshu/ | 天枢测评（独立页面） |
 
@@ -228,16 +229,17 @@ docker-compose up -d
 
 | 文件 | 职责 |
 |------|------|
-| `src/services/auth.ts` | 登录/登出/验证，默认授权码 `88888888` |
+| `src/services/auth.ts` | 登录/登出/验证，默认授权码 `88888888`，7 天 session 过期 |
 | `src/services/profile.ts` | 档案 CRUD（localStorage `iff_profile`），历史记录（`iff_history`） |
 | `src/services/chat.ts` | AI 对话 API（流式 + 非流式） |
-| `src/services/api.ts` | 推荐引擎 / 新闻 API |
+| `src/services/api.ts` | 推荐引擎 / 新闻 API / 授权码验证 |
 | `src/utils/markdown.tsx` | 轻量 Markdown 渲染器 |
-| `src/pages/Login.tsx` | 登录页，首次访问自动注册 |
-| `src/pages/Chat.tsx` | AI 问答主页，含信息自动提取 |
-| `src/pages/Explore.tsx` | MBTI 测评 + 申请时间线 |
-| `src/pages/Recommend.tsx` | 选校推荐引擎页面 |
-| `src/pages/ProfilePage.tsx` | 档案管理页 |
+| `src/pages/Login.tsx` | 登录页，后端验证授权码 + 前端本地绑定 |
+| `src/pages/Chat.tsx` | AI 问答主页，多轮信息收集向导 + 档案预填 |
+| `src/pages/Recommend.tsx` | 选校推荐引擎页面，卡片/表格双视图 |
+| `src/pages/ProfilePage.tsx` | 档案管理 + 查询历史 |
+| `src/components/SchoolCard.tsx` | 推荐结果卡片（含冲刺校提分建议） |
+| `src/components/SchoolTable.tsx` | 推荐结果表格（含冲刺校提分建议） |
 
 ### 5.3 ProfileData 数据结构
 
@@ -270,13 +272,23 @@ interface ProfileData {
 | GPA | 正则 `/(GPA\|均分\|绩点)\s*[:：]?\s*\d+(?:\/\d+)?/` |
 | 学校 | 45+ 简称映射（北邮→北京邮电大学），回退到 XX大学/XX学院 匹配 |
 | 国家 | 25+ 别名映射（澳大利亚→澳洲，枫叶国→加拿大） |
-| 专业 | `专业：XXX` 或 `目标专业：XXX` 模式，到标点终止 |
+| 专业 | 多层级匹配：`本科读/学/专业`、`专业[：:是为]`、`读/学 XXX`、`XXX专业`（不含专业课） |
+| 目标专业 | `目标专业[：:是为]? XXX`，排除"其他/不限/还没想好"等占位词 |
 
 提取后在符合条件时自动调用 `mergeChatInfo()` 保存到 localStorage。
 
-提取逻辑与后端 `chat.py` 的 `_extract_profile_from_history()` 并行——前端负责即时反馈，后端负责推荐引擎输入。
+首次对话会自动从 `iff_profile` 预填已有信息，避免重复追问。
 
-### 5.5 性能优化
+### 5.5 信息收集向导（Chat.tsx 多轮追问）
+
+选校场景下，系统通过以下流程收集完整背景信息：
+
+1. 首次选校请求 → 从档案 + 消息提取已有信息
+2. 如有缺失字段 → 逐个追问（学校/专业/GPA/目标国家/目标专业）
+3. 用户每次回复都重新提取+合并，直到全部字段齐全
+4. 收集完成后自动调用推荐引擎，并保存到个人档案
+
+### 5.6 性能优化
 
 - `MessageBubble` 使用 `memo()` + 自定义比较器，streaming 期间仅当前输出消息重渲染
 - `renderMarkdown()` 结果通过 `useMemo` 缓存
@@ -284,43 +296,98 @@ interface ProfileData {
 
 ---
 
-## 六、登录系统
+## 六、登录与授权
 
 ### 6.1 设计
 
-基于 localStorage 的本地授权，不使用服务端用户系统。
+前后端双层验证：后端验证授权码合法性，前端管理本地会话。
 
 | 文件 | 说明 |
 |------|------|
-| `src/services/auth.ts` | `login()` / `logout()` / `isAuthenticated()` |
-| `src/pages/Login.tsx` | 登录页 |
+| `src/services/auth.ts` | `login()` / `logout()` / `isAuthenticated()`，含 7 天过期 |
+| `src/pages/Login.tsx` | 登录页，先后端验证再前端绑定 |
 | `src/App.tsx` | AuthGuard 路由守卫 |
+| `backend/app/api/auth.py` | `POST /api/verify-auth-code` 后端授权码校验 |
+| `backend/app/core/config.py` | `VALID_AUTH_CODES` 环境变量配置 |
 
 ### 6.2 登录流程
 
 ```
-首次访问 → 无档案或档案无用户名 → 输入用户名 + 88888888 → 自动创建档案并登录
-已有档案 → 验证用户名 + 授权码 → 登录成功
+用户输入用户名 + 授权码
+  → 前端调 POST /api/verify-auth-code 验证授权码是否在 VALID_AUTH_CODES 白名单
+  → 不合法 → "授权码无效，请联系管理员"
+  → 合法 → 前端本地绑定：首次绑定用户名+授权码，再次校验一致性
+  → 写入 localStorage.iff_auth = { loggedIn, username, timestamp }
 ```
 
-### 6.3 会话存储
+### 6.3 会话管理
 
 - 会话标记：`localStorage.iff_auth` = `{ loggedIn, username, timestamp }`
+- 过期策略：`isAuthenticated()` 检查 `Date.now() - timestamp > 7天`，超期自动清除
 - 档案数据：`localStorage.iff_profile` = `ProfileData`
 - 历史记录：`localStorage.iff_history`
+- **重启容器后无需重新登录**（纯前端会话，不依赖后端 Session）
+
+### 6.4 授权码配置
+
+在 `.env` 中设置 `TIANQUAN_VALID_AUTH_CODES=码1,码2,...`，逗号分隔。留空则全部放行（兼容旧版）。当前已配置 30 个授权码。
 
 ---
 
-## 七、部署与构建
+## 七、推荐引擎
 
-### 7.1 双轨部署
+### 7.1 三维评分模型
+
+**文件**：`backend/app/services/case_matcher.py`
+
+| 维度 | 权重 | 说明 |
+|------|------|------|
+| GPA 匹配分 | 40% | 用户 GPA 在该校历史录取分布中的位置（p25/p50/p75 区间线性得分） |
+| 学校排名分 | 30% | QS 排名越靠前 → 基础分越低 → 天然偏冲刺（QS#1-20=18, #21-50=22, #51-100=25, #101-200=28, #200+=30） |
+| 案例证据分 | 30% | 同背景录取案例数：0例=0, 1-5例=10, 6-15例=18, 16+例=30 |
+
+**分档阈值**：总分 ≥75 = 安全 | 55-74 = 匹配 | <55 = 冲刺
+
+**冲刺校 GPA 提升建议**：计算需要多少百分点才能达到总分 55（匹配档），通过 `gpa_gap` 字段返回。
+
+### 7.2 输出控制
+
+| 规则 | 值 |
+|------|-----|
+| 每档上限 | 6 所 |
+| 档内排序 | QS 排名升序 |
+| 最终排序 | 冲刺 → 匹配 → 安全 |
+| 非大学过滤 | 排除语言学校、国际学院、预科、分校区 |
+
+### 7.3 数据来源
+
+案例数据来自 `backend/data/advisor.db` 的 `cases` 表（约 17.6 万条）。GPA 百分位数据：
+- 专业级：`school_major_gpa_percentiles` 表（同校 + 同专业类别 + 同学校层次的 p10/p25/p50/p75）
+- 学校级回退：`real_case_probability.json`（同校 + 同层次的 p25/p50/p75）
+
+### 7.4 Chat 与 Recommend 页面的关系
+
+两个页面使用**同一个推荐引擎** `recommend.run()`，区别仅在于呈现方式：
+
+| | Recommend 页面 | Chat 页面 |
+|------|------|------|
+| 触发 | 用户填表提交 | AI 收集信息后自动调用 |
+| 输出 | 结构化的卡片/表格 | LLM 自然语言回答 |
+| 数据 | 直接 JSON | `_format_recommend_result()` 文本化后传给 LLM |
+| 一致性 | 完全一致（同引擎同数据） |
+
+---
+
+## 八、部署与构建
+
+### 8.1 双轨部署
 
 | 目标 | 方式 | 地址 |
 |------|------|------|
 | GitHub Pages | GitHub Actions 自动构建部署 | `https://rongshou.github.io/iff/tianquan/` |
 | 自托管服务器 | GitHub Actions webhook → Docker rebuild | `http://47.93.149.29/tianquan/` |
 
-### 7.2 CI/CD 流程
+### 8.2 CI/CD 流程
 
 ```
 git push master
@@ -331,14 +398,14 @@ git push master
       → git pull → npm run build → docker restart tianquan-nginx
 ```
 
-### 7.3 Webhook 配置
+### 8.3 Webhook 配置
 
 - Webhook 服务：`webhook-server.js`，运行在宿主机端口 7800
 - Nginx 代理：`nginx.conf` 中 `/webhook/` → `host.docker.internal:7800`
 - Docker extra_hosts：`docker-compose.yml` 中 `host.docker.internal:host-gateway`
 - 密钥文件：`/home/admin/tianquan/.webhook-secret`（自动生成）
 
-### 7.4 手动部署（服务器）
+### 8.4 手动部署（服务器）
 
 ```bash
 cd /home/admin/tianquan
@@ -346,13 +413,13 @@ git pull origin master
 docker compose up -d --build
 ```
 
-### 7.5 Docker 构建注意事项
+### 8.5 Docker 构建注意事项
 
 - Node 阶段使用 `node:20-alpine`，需安装 bash（`apk add --no-cache bash`）
 - 构建脚本 `scripts/build-prod.sh` 依赖 bash，不可改为 sh
 - Nginx 配置文件变更后需要重建容器才能生效
 
-### 7.6 本地开发
+### 8.6 本地开发
 
 ```bash
 cd /home/admin/tianquan
@@ -363,12 +430,15 @@ API 代理配置在 `vite.config.ts`：`/api` → `http://localhost:3470`。
 
 ---
 
-## 八、相关路径速查（更新）
+## 九、相关路径速查（更新）
 
 | 文件/路径 | 用途 |
 |-----------|------|
 | `/home/admin/tianquan/src/` | 前端源码 |
 | `/home/admin/tianquan/backend/app/` | 后端源码 |
+| `/home/admin/tianquan/backend/app/services/case_matcher.py` | 推荐引擎核心（三维评分 + 案例匹配） |
+| `/home/admin/tianquan/backend/app/api/auth.py` | 授权码验证 API |
+| `/home/admin/tianquan/backend/app/api/recommend.py` | 推荐引擎 API |
 | `/home/admin/tianquan/backend/data/advisor.db` | 应用数据库 |
 | `/home/admin/werss/data/db.db` | 源文章库（只读） |
 | `/home/admin/tianquan/.webhook-secret` | Webhook 密钥 |

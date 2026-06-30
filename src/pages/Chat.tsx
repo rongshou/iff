@@ -7,6 +7,7 @@ import type { SceneId } from "../config/scenes";
 import { useChatInput } from "../hooks/useChatInput";
 import { useChatScroll } from "../hooks/useChatScroll";
 import { useChatSend } from "../hooks/useChatSend";
+import { useChatStore } from "../store/chatStore";
 type SceneState = Record<SceneId, ChatMessage[]>;
 
 export default function ChatPage() {
@@ -19,10 +20,12 @@ export default function ChatPage() {
     essay: [],
     visa: [],
   }));
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  /** 已收集的信息（每个场景） */
-  const [collectedInfo, setCollectedInfo] = useState<Record<string, Record<string, string>>>({});
+  const loading = useChatStore((s) => s.loading);
+  const error = useChatStore((s) => s.error);
+  const collectedInfo = useChatStore((s) => s.collectedInfo);
+  const setLoading = useChatStore((s) => s.setLoading);
+  const setError = useChatStore((s) => s.setError);
+  const setCollectedInfo = useChatStore((s) => s.setCollectedInfo);
 
   const abortRef = useRef<AbortController | null>(null);
   const atBottomRef = useRef(true);

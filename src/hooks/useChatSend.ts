@@ -16,7 +16,11 @@ export function useChatSend(
   scenes: SceneState,
   setScenes: React.Dispatch<React.SetStateAction<SceneState>>,
   collectedInfo: Record<SceneId, Record<string, string>>,
-  setCollectedInfo: React.Dispatch<React.SetStateAction<Record<SceneId, Record<string, string>>>>,
+  setCollectedInfo: (
+    v:
+      | Record<string, Record<string, string>>
+      | ((prev: Record<string, Record<string, string>>) => Record<string, Record<string, string>>)
+  ) => void,
   setLoading: React.Dispatch<React.SetStateAction<boolean>>,
   setError: React.Dispatch<React.SetStateAction<string | null>>,
   setInput: React.Dispatch<React.SetStateAction<string>>,

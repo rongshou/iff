@@ -2,8 +2,6 @@ import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import type { HistoryItem, ProfileData } from "../services/profile";
 import {
-  loadProfile,
-  saveProfile,
   loadHistory,
   deleteHistoryItem,
   clearHistory,
@@ -11,6 +9,7 @@ import {
 import { logout } from "../services/auth";
 import { viewDetail } from "../utils/profile-utils";
 import HistoryRow from "../components/HistoryRow";
+import { useProfileStore } from "../store/profileStore";
 
 /* =====================================================================
  * 我的档案 — 个人信息 + 天枢测评结果 + 查询历史
@@ -22,24 +21,28 @@ const GPA_FORMATS = ["百分制", "4分制", "5分制", "7分制", "9分制", "�
 
 
 export default function ProfilePage() {
-  const [profile, setProfile] = useState<ProfileData>({ updated_at: "" });
+  const profile = useProfileStore((s) => s.profile);
+  const loadProfileFromStore = useProfileStore((s) => s.load);
+  const update = useProfileStore((s) => s.update);
+  const setProfileField = useProfileStore((s) => s.setProfileField);
+
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [saved, setSaved] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
-    setProfile(loadProfile() || { updated_at: "" });
+    loadProfileFromStore();
     setHistory(loadHistory());
   }, []);
 
   const handleSave = () => {
-    saveProfile(profile);
+    if (profile) update(profile);
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
   };
 
   const handleField = (key: keyof ProfileData, value: any) => {
-    setProfile((prev) => ({ ...prev, [key]: value }));
+    setProfileField(key, value);
   };
 
   const handleCountry = (c: string) => {

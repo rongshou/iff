@@ -1,8 +1,7 @@
-import { useState } from "react";
 import { Link } from "react-router-dom";
-import type { MBTIMajorResult, TimelinePhase } from "../types";
 import { MBTI_QUESTIONS, calculateMBTI, fetchMBTIMajors, fetchTimeline } from "../services/explore";
 import { saveProfile, addHistoryItem, createMBTIHistoryItem, loadProfile } from "../services/profile";
+import { useExploreStore } from "../store/exploreStore";
 
 const MBTI_EMOJI: Record<string, string> = {
   INTJ: "🏗️", INTP: "🔬", ENTJ: "👑", ENTP: "💡",
@@ -12,11 +11,16 @@ const MBTI_EMOJI: Record<string, string> = {
 };
 
 export default function ExplorePage() {
-  const [answers, setAnswers] = useState<Record<number, string>>({});
-  const [mbtiResult, setMbtiResult] = useState<MBTIMajorResult | null>(null);
-  const [timeline, setTimeline] = useState<TimelinePhase[]>([]);
-  const [studyLevel, setStudyLevel] = useState("硕士");
-  const [loading, setLoading] = useState(false);
+  const answers = useExploreStore((s) => s.answers);
+  const mbtiResult = useExploreStore((s) => s.mbtiResult);
+  const timeline = useExploreStore((s) => s.timeline);
+  const studyLevel = useExploreStore((s) => s.studyLevel);
+  const loading = useExploreStore((s) => s.loading);
+  const setAnswers = useExploreStore((s) => s.setAnswers);
+  const setMbtiResult = useExploreStore((s) => s.setMbtiResult);
+  const setTimeline = useExploreStore((s) => s.setTimeline);
+  const setStudyLevel = useExploreStore((s) => s.setStudyLevel);
+  const setLoading = useExploreStore((s) => s.setLoading);
 
   const handleAnswer = (qId: number, value: string) => {
     if (mbtiResult) return;

@@ -12,7 +12,7 @@ import { useChatScroll } from "../hooks/useChatScroll";
 type SceneState = Record<SceneId, ChatMessage[]>;
 
 export default function ChatPage() {
-  const { input, setInput, inputRef, handleKeyDown, setSendHandler } = useChatInput();
+  const { input, setInput, inputRef, handleKeyDown } = useChatInput(() => handleSend());
   const { scrollRef, showScrollBottom, setShowScrollBottom, onScroll, scrollToBottom } = useChatScroll();
   const [activeScene, setActiveScene] = useState<SceneId>("school");
   // 每个场景的对话历史独立存储，切换 Tab 不串
@@ -84,7 +84,6 @@ export default function ChatPage() {
   };
 
   const handleSend = async (text?: string) => {
-    setSendHandler(() => handleSend);
     const content = (text ?? input).trim();
     if (!content || loading) return;
     setError(null);

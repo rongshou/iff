@@ -1,14 +1,17 @@
-import sqlite3
+"""留学资讯 API —— 分类、列表、最新文章。
+
+通过 WerssRepository 访问 werss 数据库，分类逻辑保留在 API 层。
+"""
 from pathlib import Path
 from datetime import datetime
 from fastapi import APIRouter, Query
 from typing import Optional
 
-# werss db path
-WERSS_DB = Path("/app/data/werss.db")
+from ..core.config import settings
+from ..repositories import WerssRepository
 
 # ---------------------------------------------------------------------------
-# AI 智能分类体系（12个类）
+# 分类体系（业务逻辑，非数据访问）
 # ---------------------------------------------------------------------------
 CATEGORIES = {
     "语言考试": ["雅思", "托福", "PTE", "GRE", "GMAT", "SAT", "ACT", "A-level", "IB", "GPA"],
@@ -25,7 +28,6 @@ CATEGORIES = {
     "综合资讯": [],
 }
 
-# 旧版关键词分类（兜底用）
 LEGACY_CATEGORIES = {
     "语言考试": ["雅思", "托福", "PTE", "GRE", "GMAT", "SAT", "ACT", "A-level", "IB"],
     "签证": ["签证", "护照", "入境", "海关"],
@@ -39,13 +41,23 @@ LEGACY_CATEGORIES = {
     "国际高中": ["高中", "中学", "低龄", "私校", "国际学校", "美高", "英高"],
 }
 
+# ---------------------------------------------------------------------------
+# Repository（惰性初始化）
+# ---------------------------------------------------------------------------
 
-def get_connection() -> sqlite3.Connection:
-    conn = sqlite3.connect(str(WERSS_DB), timeout=30.0)
-    conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA journal_mode=WAL")
-    conn.execute("PRAGMA busy_timeout=30000")
-    return conn
+_repo: WerssRepository | None = None
+
+
+def _get_repo() -> WerssRepository:
+    global _repo
+    if _repo is None:
+        _repo = WerssRepository(settings.WERS_DB_PATH)
+    return _repo
+
+
+# ---------------------------------------------------------------------------
+# 业务逻辑
+# ---------------------------------------------------------------------------
 
 
 def get_ai_category(title: str, description: str = "") -> str:
@@ -59,116 +71,103 @@ def get_ai_category(title: str, description: str = "") -> str:
     return "综合资讯"
 
 
+def _format_article(r: dict, max_desc: int = 200) -> dict:
+    """统一格式化文章返回结构。"""
+    ai_cat = r.get("ai_category") or get_ai_category(r.get("title", ""), r.get("description", ""))
+    return {
+        "id": r["id"],
+        "title": r["title"],
+        "pic_url": r.get("pic_url", ""),
+        "url": r.get("url", ""),
+        "description": (r["description"][:max_desc] + "...")
+        if r.get("description") and len(r["description"]) > max_desc
+        else r.get("description", ""),
+        "publish_time": r.get("publish_time"),
+        "publish_date": datetime.fromtimestamp(r["publish_time"]).strftime("%Y-%m-%d")
+        if r.get("publish_time")
+        else None,
+        "category": ai_cat,
+    }
+
+
 def get_articles(category: str = None, page: int = 1, page_size: int = 20):
+    repo = _get_repo()
     offset = (page - 1) * page_size
-    conn = get_connection()
-    try:
-        params = []
-        ai_cat_filter = category and category in CATEGORIES
-        legacy_cat = category and category in LEGACY_CATEGORIES
+    params: list = []
+    where_clause: str
 
-        if ai_cat_filter:
-            base_where = "WHERE ai_category = ?"
-            params.append(category)
-        elif legacy_cat:
-            keywords = LEGACY_CATEGORIES[category]
-            conditions = " OR ".join([f"(title LIKE ? OR description LIKE ?)" for _ in keywords])
-            base_where = f"WHERE ({conditions}) AND ai_category IS NULL"
-            params = [f"%{kw}%" for kw in keywords for _ in range(2)]
-        elif category == "综合资讯":
-            # 综合资讯 = 有 ai_category 但值是"综合资讯"，或者既没 ai_category 也没命中关键词
-            base_where = "WHERE (ai_category = '综合资讯' OR (ai_category IS NULL AND 1=0))"
-        else:
-            base_where = "WHERE 1=1"
+    ai_cat_filter = category and category in CATEGORIES
+    legacy_cat = category and category in LEGACY_CATEGORIES
 
-        # COUNT
-        count_sql = f"SELECT COUNT(*) as total FROM articles {base_where}"
-        total = conn.execute(count_sql, params).fetchone()["total"]
+    if ai_cat_filter:
+        where_clause = "WHERE ai_category = ?"
+        params.append(category)
+    elif legacy_cat:
+        keywords = LEGACY_CATEGORIES[category]
+        conditions = " OR ".join([f"(title LIKE ? OR description LIKE ?)" for _ in keywords])
+        where_clause = f"WHERE ({conditions}) AND ai_category IS NULL"
+        params = [f"%{kw}%" for kw in keywords for _ in range(2)]
+    elif category == "综合资讯":
+        where_clause = "WHERE ai_category = '综合资讯'"
+    else:
+        where_clause = "WHERE 1=1"
 
-        # SELECT
-        sql = f"""
-            SELECT id, title, pic_url, url, description, publish_time, mp_id, ai_category
-            FROM articles
-            {base_where}
-            ORDER BY publish_time DESC
-            LIMIT ? OFFSET ?
-        """
-        rows = conn.execute(sql, params + [page_size, offset]).fetchall()
+    total = repo.count_articles(where_clause, tuple(params))
+    rows = repo.list_articles(where_clause, tuple(params), page, page_size)
 
-        articles = []
-        for r in rows:
-            ai_cat = r["ai_category"] if r["ai_category"] else get_ai_category(r["title"], r["description"])
-            articles.append({
-                "id": r["id"],
-                "title": r["title"],
-                "pic_url": r["pic_url"],
-                "url": r["url"],
-                "description": (r["description"][:200] + "...") if r["description"] and len(r["description"]) > 200 else r["description"],
-                "publish_time": r["publish_time"],
-                "publish_date": datetime.fromtimestamp(r["publish_time"]).strftime("%Y-%m-%d") if r["publish_time"] else None,
-                "category": ai_cat,
-            })
-
-        return {
-            "articles": articles,
-            "total": total,
-            "page": page,
-            "page_size": page_size,
-            "total_pages": (total + page_size - 1) // page_size if total > 0 else 0,
-        }
-    finally:
-        conn.close()
+    return {
+        "articles": [_format_article(r) for r in rows],
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+        "total_pages": (total + page_size - 1) // page_size if total > 0 else 0,
+    }
 
 
 def get_categories():
-    """单次 SQL 统计所有分类数量"""
-    conn = get_connection()
-    try:
-        cat_names = [c for c in CATEGORIES if c != "综合资讯"]
-        # Single aggregation query - 11 params (one per category)
-        case_parts = ", ".join([f'SUM(CASE WHEN ai_category = ? THEN 1 ELSE 0 END)' for _ in cat_names])
-        sql = f"SELECT {case_parts} FROM articles"
+    """统计各分类的文章数量。"""
+    repo = _get_repo()
+    cat_names = [c for c in CATEGORIES if c != "综合资讯"]
+    counts = repo.get_category_counts(cat_names)
 
-        row = conn.execute(sql, cat_names).fetchone()
-        cats = []
-        for i, c in enumerate(cat_names):
-            cnt = row[i] or 0
-            if cnt > 0:
-                cats.append({"name": c, "count": cnt})
-        # 综合资讯 = ai_category = '综合资讯'
-        uncount = conn.execute(
-            "SELECT COUNT(*) as c FROM articles WHERE ai_category = '综合资讯'"
-        ).fetchone()["c"]
-        if uncount > 0:
-            cats.append({"name": "综合资讯", "count": uncount})
-        return sorted(cats, key=lambda x: -x["count"])
-    finally:
-        conn.close()
+    cats = []
+    for i, c in enumerate(cat_names):
+        cnt = counts[i] or 0
+        if cnt > 0:
+            cats.append({"name": c, "count": cnt})
+
+    uncount = repo.count_uncategorized()
+    if uncount > 0:
+        cats.append({"name": "综合资讯", "count": uncount})
+
+    return sorted(cats, key=lambda x: -x["count"])
 
 
 def get_latest_articles(limit: int = 10):
-    conn = get_connection()
-    try:
-        rows = conn.execute(
-            "SELECT id, title, pic_url, url, description, publish_time, ai_category FROM articles ORDER BY publish_time DESC LIMIT ?",
-            (limit,)
-        ).fetchall()
-        return [
-            {
-                "id": r["id"],
-                "title": r["title"],
-                "pic_url": r["pic_url"],
-                "url": r["url"],
-                "description": (r["description"][:150] + "...") if r["description"] and len(r["description"]) > 150 else r["description"],
-                "publish_time": r["publish_time"],
-                "publish_date": datetime.fromtimestamp(r["publish_time"]).strftime("%m-%d") if r["publish_time"] else "",
-                "category": r["ai_category"] if r["ai_category"] else get_ai_category(r["title"], r["description"]),
-            }
-            for r in rows
-        ]
-    finally:
-        conn.close()
+    repo = _get_repo()
+    rows = repo.get_latest(limit)
+    return [
+        {
+            "id": r["id"],
+            "title": r["title"],
+            "pic_url": r.get("pic_url", ""),
+            "url": r.get("url", ""),
+            "description": (r["description"][:150] + "...")
+            if r.get("description") and len(r["description"]) > 150
+            else r.get("description", ""),
+            "publish_time": r["publish_time"],
+            "publish_date": datetime.fromtimestamp(r["publish_time"]).strftime("%m-%d")
+            if r.get("publish_time")
+            else "",
+            "category": r.get("ai_category") or get_ai_category(r.get("title", ""), r.get("description", "")),
+        }
+        for r in rows
+    ]
 
+
+# ---------------------------------------------------------------------------
+# Router
+# ---------------------------------------------------------------------------
 
 router = APIRouter(prefix="/api/news", tags=["留学资讯"])
 

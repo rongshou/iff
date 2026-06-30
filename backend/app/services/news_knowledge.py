@@ -10,13 +10,34 @@
 """
 
 import re
-import sqlite3
 import time
 from pathlib import Path
 from typing import Any
 
 from ..core.config import settings
-from ..core.database import get_db
+from ..repositories import ArticleRepository, WerssRepository
+
+
+# ============================================================
+# Repository
+# ============================================================
+
+_article_repo: ArticleRepository | None = None
+_werss_repo: WerssRepository | None = None
+
+
+def _get_article_repo() -> ArticleRepository:
+    global _article_repo
+    if _article_repo is None:
+        _article_repo = ArticleRepository(str(settings.DB_PATH))
+    return _article_repo
+
+
+def _get_werss_repo() -> WerssRepository:
+    global _werss_repo
+    if _werss_repo is None:
+        _werss_repo = WerssRepository(str(settings.WERS_DB_PATH))
+    return _werss_repo
 
 
 # ============================================================
@@ -172,20 +193,18 @@ def _ensure_fts_index() -> None:
         return
     
     try:
-        with get_db() as conn:
-            fts_exists = conn.execute(
-                "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='articles_fts'"
-            ).fetchone()[0]
+        repo = _get_article_repo()
+        with repo.get_conn() as conn:
+            fts_exists = repo.fts_table_exists(conn)
             
             if fts_exists:
-                fts_count = conn.execute("SELECT COUNT(*) FROM articles_fts").fetchone()[0]
+                fts_count = repo.fts_count(conn)
                 if fts_count > 0:
                     _FTS_INIT_DONE = True
                     _FTS_INIT_TIME = now
                     return
                 # 空表，删除后重建
-                conn.execute("DROP TABLE IF EXISTS articles_fts")
-                conn.commit()
+                repo.drop_fts_table(conn)
             
             # 全量构建
             _build_fts_index(conn)
@@ -203,27 +222,19 @@ def _build_fts_index(conn) -> None:
         print("[news_knowledge] werss.db not found, skipping FTS build")
         return
     
+    article_repo = _get_article_repo()
+    werss_repo = _get_werss_repo()
+    
     # 创建 FTS5 虚拟表（unicode61 分词器）
-    conn.execute("""
-        CREATE VIRTUAL TABLE articles_fts USING fts5(
-            article_id, title, content, ai_category,
-            tokenize='unicode61'
-        )
-    """)
-    conn.commit()
+    article_repo.create_fts_table(conn)
     
     # 先获取全部文章 ID（轻量查询）
-    wers_conn = sqlite3.connect(str(wers_db), timeout=30)
-    article_ids = [r[0] for r in wers_conn.execute(
-        "SELECT id FROM articles WHERE content IS NOT NULL AND length(content) > 100"
-    ).fetchall()]
-    wers_conn.close()
+    article_ids = werss_repo.get_article_ids_with_content()
     
     # 加载排除列表（只加载一次）
     excluded_ids: set[str] = set()
     try:
-        ex_rows = conn.execute("SELECT article_id FROM excluded_articles").fetchall()
-        excluded_ids = {r[0] for r in ex_rows}
+        excluded_ids = article_repo.load_excluded_article_ids()
         if excluded_ids:
             print(f"[news_knowledge] {len(excluded_ids)} excluded articles will be skipped")
     except Exception:
@@ -239,20 +250,15 @@ def _build_fts_index(conn) -> None:
         retry = 0
         while retry < 3:
             try:
-                wers_conn = sqlite3.connect(str(wers_db), timeout=30)
-                row = wers_conn.execute(
-                    "SELECT id, title, content, ai_category FROM articles WHERE id = ?",
-                    (aid,)
-                ).fetchone()
-                wers_conn.close()
+                row = werss_repo.get_article_by_id(aid)
                 
                 if not row:
                     break
                 
-                article_id = str(row[0])
-                title = row[1] or ""
-                raw_content = row[2] or ""
-                category = row[3] or "综合资讯"
+                article_id = str(row["id"])
+                title = row.get("title") or ""
+                raw_content = row.get("content") or ""
+                category = row.get("ai_category") or "综合资讯"
                 
                 clean_content = _prepare_for_index(raw_content, max_length=2000)
                 clean_title = _space_chinese(title)
@@ -260,10 +266,7 @@ def _build_fts_index(conn) -> None:
                 if not clean_content.strip():
                     break
                 
-                conn.execute(
-                    "INSERT INTO articles_fts(article_id, title, content, ai_category) VALUES (?, ?, ?, ?)",
-                    (article_id, clean_title, clean_content, category)
-                )
+                article_repo.insert_into_fts(conn, article_id, clean_title, clean_content, category)
                 inserted += 1
                 break
             except Exception:
@@ -284,15 +287,14 @@ def _sync_new_articles_to_fts(conn) -> None:
     if not wers_db.exists():
         return
     
+    article_repo = _get_article_repo()
+    werss_repo = _get_werss_repo()
+    
     # 快速检查：比较 FTS 索引数量和 werss.db 文章数量
-    fts_count = conn.execute("SELECT COUNT(*) FROM articles_fts").fetchone()[0]
+    fts_count = article_repo.fts_count(conn)
     
     try:
-        wers_conn = sqlite3.connect(str(wers_db), timeout=10)
-        wers_count = wers_conn.execute(
-            "SELECT COUNT(*) FROM articles WHERE content IS NOT NULL AND length(content) > 100"
-        ).fetchone()[0]
-        wers_conn.close()
+        wers_count = werss_repo.get_article_count_with_content()
     except Exception:
         return
     
@@ -304,16 +306,11 @@ def _sync_new_articles_to_fts(conn) -> None:
     print(f"[news_knowledge] FTS sync needed: FTS={fts_count}, werss={wers_count}")
     
     # 获取 FTS 中已有的 article_id
-    existing_ids = set(
-        r[0] for r in conn.execute("SELECT article_id FROM articles_fts").fetchall()
-    )
+    existing_ids = article_repo.list_fts_article_ids(conn)
     
     # 从 werss.db 获取新文章（使用游标逐条读取，避免大查询）
     try:
-        wers_conn = sqlite3.connect(str(wers_db), timeout=30)
-        cursor = wers_conn.execute(
-            "SELECT id, title, content, ai_category FROM articles WHERE content IS NOT NULL AND length(content) > 100"
-        )
+        wers_conn, cursor = werss_repo.iterate_articles_with_content()
         
         inserted = 0
         while True:
@@ -335,10 +332,7 @@ def _sync_new_articles_to_fts(conn) -> None:
             if not clean_content.strip():
                 continue
             
-            conn.execute(
-                "INSERT OR IGNORE INTO articles_fts(article_id, title, content, ai_category) VALUES (?, ?, ?, ?)",
-                (article_id, clean_title, clean_content, category)
-            )
+            article_repo.insert_or_ignore_into_fts(conn, article_id, clean_title, clean_content, category)
             inserted += 1
         
         wers_conn.close()
@@ -366,9 +360,7 @@ def _load_excluded_ids() -> set[str]:
     if _EXCLUDED_CACHE is not None and (now - _EXCLUDED_CACHE_TIME) < _CACHE_TTL:
         return _EXCLUDED_CACHE
     try:
-        with get_db() as conn:
-            rows = conn.execute("SELECT article_id FROM excluded_articles").fetchall()
-        _EXCLUDED_CACHE = {r[0] for r in rows}
+        _EXCLUDED_CACHE = _get_article_repo().load_excluded_article_ids()
         _EXCLUDED_CACHE_TIME = now
         return _EXCLUDED_CACHE
     except Exception:
@@ -408,32 +400,22 @@ def search_articles(query: str, limit: int = 8) -> list[dict[str, Any]]:
         return []
     
     try:
-        with get_db() as conn:
-            # FTS5 BM25 搜索：标题权重 10x，内容权重 1x
-            sql = """
-                SELECT article_id, title, content, ai_category,
-                       bm25(articles_fts, 10.0, 1.0, 0.0) as rank_score
-                FROM articles_fts
-                WHERE articles_fts MATCH ?
-                ORDER BY rank_score ASC
-                LIMIT ?
-            """
-            rows = conn.execute(sql, (fts_query, limit * 3)).fetchall()
+        rows = _get_article_repo().search_fts(fts_query, limit * 3)
         
         # 组装结果
         results: list[dict] = []
         seen_ids: set[str] = set()
         
         for row in rows:
-            article_id = row[0]
+            article_id = row["article_id"]
             if article_id in excluded_ids or article_id in seen_ids:
                 continue
             seen_ids.add(article_id)
             
             # title 和 content 是加了空格的版本，需要清理
-            raw_title = row[1] or ""
-            raw_content = row[2] or ""
-            category = row[3] or "综合资讯"
+            raw_title = row.get("title") or ""
+            raw_content = row.get("content") or ""
+            category = row.get("ai_category") or "综合资讯"
             
             # 去除中文间的空格，恢复原始文本
             title = re.sub(r'(?<=[\u4e00-\u9fff])\s+(?=[\u4e00-\u9fff])', '', raw_title)
@@ -521,35 +503,16 @@ def _fallback_search(query: str, limit: int, excluded_ids: set[str]) -> list[dic
         return []
     
     try:
-        wers_conn = sqlite3.connect(str(wers_db))
-        wers_conn.row_factory = sqlite3.Row
-        
-        conditions = " OR ".join(
-            "(title LIKE ? OR content LIKE ?)" for _ in terms[:4]
-        )
-        params = []
-        for t in terms[:4]:
-            params.extend([f"%{t}%", f"%{t}%"])
-        
-        sql = f"""
-            SELECT id, title, ai_category, description, content
-            FROM articles
-            WHERE ({conditions}) AND content IS NOT NULL
-            ORDER BY LENGTH(content) DESC
-            LIMIT ?
-        """
-        params.append(limit * 2)
-        
-        rows = wers_conn.execute(sql, params).fetchall()
-        wers_conn.close()
+        werss_repo = _get_werss_repo()
+        rows = werss_repo.search_fallback(terms, limit)
         
         results = []
         for r in rows:
             if r["id"] in excluded_ids:
                 continue
-            title = r["title"] or ""
-            content = _clean_html(r["content"] or "")
-            category = r["ai_category"] or "综合资讯"
+            title = r.get("title") or ""
+            content = _clean_html(r.get("content") or "")
+            category = r.get("ai_category") or "综合资讯"
             desc = content[:120]
             snippet = _extract_snippet(content, query, context_chars=300)
             

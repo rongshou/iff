@@ -13,6 +13,7 @@ import re
 import sqlite3
 import time
 from pathlib import Path
+from typing import Any
 
 from ..core.config import settings
 from ..core.database import get_db
@@ -162,7 +163,7 @@ _FTS_INIT_TIME: float = 0
 _FTS_CHECK_INTERVAL: float = 300  # 5 分钟检查一次新文章
 
 
-def _ensure_fts_index():
+def _ensure_fts_index() -> None:
     """确保 FTS5 索引已建立。只做存在性检查，不做增量同步（同步由外部脚本处理）"""
     global _FTS_INIT_DONE, _FTS_INIT_TIME
     now = time.time()
@@ -195,7 +196,7 @@ def _ensure_fts_index():
         print(f"[news_knowledge] FTS index init failed: {e}")
 
 
-def _build_fts_index(conn):
+def _build_fts_index(conn) -> None:
     """从 werss.db 构建完整的 FTS5 索引（逐条处理，带重试）"""
     wers_db = Path(settings.WERS_DB_PATH)
     if not wers_db.exists():
@@ -277,7 +278,7 @@ def _build_fts_index(conn):
     print(f"[news_knowledge] FTS index built: {inserted}/{len(article_ids)} articles indexed ({skipped} excluded)")
 
 
-def _sync_new_articles_to_fts(conn):
+def _sync_new_articles_to_fts(conn) -> None:
     """增量同步新文章到 FTS5（轻量级：只检查文章总数差异）"""
     wers_db = Path(settings.WERS_DB_PATH)
     if not wers_db.exists():

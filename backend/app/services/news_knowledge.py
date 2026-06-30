@@ -379,10 +379,10 @@ def _load_excluded_ids() -> set[str]:
 # 主检索函数 - 基于 FTS5 BM25
 # ============================================================
 
-_SEARCH_CACHE: dict[str, tuple[float, list[dict]]] = {}
+_SEARCH_CACHE: dict[str, tuple[float, list[dict[str, Any]]]] = {}
 
 
-def search_articles(query: str, limit: int = 8) -> list[dict]:
+def search_articles(query: str, limit: int = 8) -> list[dict[str, Any]]:
     """使用 FTS5 BM25 搜索文章。
     
     返回格式：
@@ -510,7 +510,7 @@ def _extract_snippet(content: str, query: str, context_chars: int = 300) -> str:
     return snippet
 
 
-def _fallback_search(query: str, limit: int, excluded_ids: set[str]) -> list[dict]:
+def _fallback_search(query: str, limit: int, excluded_ids: set[str]) -> list[dict[str, Any]]:
     """降级方案：当 FTS5 搜索失败时，使用 LIKE 查询"""
     wers_db = Path(settings.WERS_DB_PATH)
     if not wers_db.exists():

@@ -1,14 +1,12 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
 import type { ChatMessage } from "../types";
-import { sendChat, streamChat } from "../services/chat";
-import { mergeChatInfo, createChatHistoryItem, addHistoryItem, loadProfile } from "../services/profile";
 import MessageBubble from "../components/MessageBubble";
 import { SCENES } from "../config/scenes";
 import type { SceneId } from "../config/scenes";
-import { generateId, ts, SCENE_INFO, looksLikeSchoolRequest, extractInfo, getMissingFields, profileToInfo, infoToDescription } from "../services/chat-helpers";
 import { useChatInput } from "../hooks/useChatInput";
 import { useChatScroll } from "../hooks/useChatScroll";
+import { useChatSend } from "../hooks/useChatSend";
 type SceneState = Record<SceneId, ChatMessage[]>;
 
 export default function ChatPage() {
@@ -28,6 +26,11 @@ export default function ChatPage() {
 
   const abortRef = useRef<AbortController | null>(null);
   const atBottomRef = useRef(true);
+  const { handleSend, handleStop, handleClear, handleClearAll } = useChatSend(
+    activeScene, scenes, setScenes, collectedInfo, setCollectedInfo,
+    setLoading, setError, setInput, inputRef, abortRef,
+    loading, input, atBottomRef,
+  );
 
   const messages = scenes[activeScene];
   const scene = useMemo(
@@ -74,283 +77,6 @@ export default function ChatPage() {
 
   // scrollToBottom extracted to useChatScroll hook
 
-  const handleStop = () => {
-    abortRef.current?.abort();
-    abortRef.current = null;
-  };
-
-  const updateSceneMessages = (updater: (prev: ChatMessage[]) => ChatMessage[]) => {
-    setScenes((prev) => ({ ...prev, [activeScene]: updater(prev[activeScene]) }));
-  };
-
-  const handleSend = async (text?: string) => {
-    const content = (text ?? input).trim();
-    if (!content || loading) return;
-    setError(null);
-
-    const userMsg: ChatMessage = {
-      id: generateId(),
-      role: "user",
-      content,
-      timestamp: ts(),
-    };
-
-    // 先把用户消息压入当前场景
-    const updatedMessages = [...messages, userMsg];
-    updateSceneMessages(() => updatedMessages);
-    setInput("");
-    setLoading(true);
-    atBottomRef.current = true;
-
-    // ---------- 信息收集检查（仅 school 场景且消息像是选校请求时才触发）----------
-    const isSchoolRequest = activeScene === "school" && looksLikeSchoolRequest(content);
-    if (isSchoolRequest) {
-      const currentInfo = collectedInfo[activeScene] || {};
-      const fields = SCENE_INFO[activeScene];
-
-      // 首次进入: 从个人档案预填已有信息, 避免追问已设置的字段
-      let baseInfo: Record<string, string> = {};
-      if (!collectedInfo[activeScene] || Object.keys(currentInfo).length === 0) {
-        const profile = loadProfile();
-        if (profile) baseInfo = profileToInfo(profile);
-      }
-
-      const newInfo = { ...baseInfo, ...currentInfo, ...await extractInfo(content) };
-      const missing = getMissingFields(newInfo, fields);
-
-      // 首次且信息不全 → 逐个追问
-      if (!collectedInfo[activeScene] && missing.length > 0) {
-        const nextField = missing[0];
-        setCollectedInfo((prev) => ({ ...prev, [activeScene]: newInfo }));
-        updateSceneMessages((prev) => [
-          ...prev,
-          {
-            id: generateId(),
-            role: "assistant",
-            content: `收到您提供的信息，但还有一些不清楚的地方，需要跟您进一步确认：\n\n**${nextField.prompt}**\n\n提示：${nextField.hint}`,
-            timestamp: ts(),
-          },
-        ]);
-        setLoading(false);
-        return;
-      }
-
-      // 追问后信息补充完整 → 整合发给 AI
-      if (missing.length === 0 && !collectedInfo[activeScene]) {
-        setCollectedInfo((prev) => ({ ...prev, [activeScene]: newInfo }));
-        mergeChatInfo(newInfo); // 自动保存到个人档案
-        const desc = infoToDescription(newInfo);
-        const infoMsg: ChatMessage = {
-          id: generateId(),
-          role: "user" as const,
-          content: `我提供的信息如下：\n${desc}\n\n请根据以上信息帮我分析。`,
-          timestamp: ts(),
-        };
-        updateSceneMessages((prev) => [...prev.slice(0, -1), infoMsg]);
-        const finalMessages = [...updatedMessages.slice(0, -1), infoMsg];
-        await doSendToAI(finalMessages);
-        return;
-      }
-
-      // 已有信息或非首次 → 正常调 AI（同时合并本轮新提取的字段）
-      if (collectedInfo[activeScene] && Object.keys(collectedInfo[activeScene]).length > 0) {
-        // 如果本轮消息提取出了新字段 → 更新状态并落盘
-        const hasNewInfo = Object.keys(newInfo).length > Object.keys(currentInfo).length;
-        if (hasNewInfo) {
-          setCollectedInfo((prev) => ({ ...prev, [activeScene]: newInfo }));
-          mergeChatInfo(newInfo);
-        }
-        const desc = infoToDescription(newInfo); // 使用最新合并后的信息
-        const enrichedMsg: ChatMessage = {
-          id: userMsg.id,
-          role: "user",
-          content: `${content}\n\n（已知信息：${desc}）`,
-          timestamp: ts(),
-        };
-        updateSceneMessages((prev) => [...prev.slice(0, -1), enrichedMsg]);
-        await doSendToAI([...updatedMessages.slice(0, -1), enrichedMsg]);
-        return;
-      }
-
-      // School request but no collected info and no missing fields → directly to AI
-      await doSendToAI(updatedMessages);
-      return;
-    }
-
-    // ---------- 多轮追问: 信息收集未完成时继续追问（即使当前消息不像选校请求）----------
-    if (activeScene === "school" && collectedInfo[activeScene]) {
-      const currentInfo = collectedInfo[activeScene] || {};
-      const fields = SCENE_INFO[activeScene];
-      const newInfo = { ...currentInfo, ...await extractInfo(content) };
-      const missing = getMissingFields(newInfo, fields);
-
-      if (missing.length > 0) {
-        const nextField = missing[0];
-        setCollectedInfo((prev) => ({ ...prev, [activeScene]: newInfo }));
-        updateSceneMessages((prev) => [
-          ...prev,
-          {
-            id: generateId(),
-            role: "assistant",
-            content: `好的，还差最后几项：\n\n**${nextField.prompt}**\n\n提示：${nextField.hint}`,
-            timestamp: ts(),
-          },
-        ]);
-        setLoading(false);
-        return;
-      }
-
-      // 所有字段收集完毕 → 整合发送
-      setCollectedInfo((prev) => ({ ...prev, [activeScene]: newInfo }));
-      mergeChatInfo(newInfo);
-      const desc = infoToDescription(newInfo);
-      updateSceneMessages((prev) => [
-        ...prev.slice(0, -1),
-        {
-          id: userMsg.id,
-          role: "user" as const,
-          content: `我提供的信息如下：\n${desc}\n\n请根据以上信息帮我分析。`,
-          timestamp: ts(),
-        },
-      ]);
-      await doSendToAI([
-        ...updatedMessages.slice(0, -1),
-        { id: userMsg.id, role: "user" as const, content: `我提供的信息如下：\n${desc}\n\n请根据以上信息帮我分析。`, timestamp: ts() },
-      ]);
-      return;
-    }
-
-    // ---------- 非选校请求 → 直接调 AI ----------
-    await doSendToAI(updatedMessages);
-  };
-
-  /** 调 AI（流式 + fallback） */
-  const doSendToAI = async (msgs: ChatMessage[]) => {
-    const assistantId = generateId();
-    updateSceneMessages((prev) => [
-      ...prev,
-      { id: assistantId, role: "assistant", content: "", timestamp: ts() },
-    ]);
-
-    const controller = new AbortController();
-    abortRef.current = controller;
-
-    try {
-      const apiMessages = msgs.map((m) => ({
-        role: m.role as "user" | "assistant",
-        content: m.content,
-      }));
-
-      let accumulated = "";
-      let reasoningText = "";
-      await streamChat(
-        apiMessages,
-        (chunk) => {
-          accumulated += chunk;
-          const current = accumulated;
-          setScenes((prev) => ({
-            ...prev,
-            [activeScene]: prev[activeScene].map((m) =>
-              m.id === assistantId ? { ...m, content: current } : m
-            ),
-          }));
-        },
-        () => {},
-        controller.signal,
-        (reasoning) => {
-          reasoningText += reasoning;
-          setScenes((prev) => ({
-            ...prev,
-            [activeScene]: prev[activeScene].map((m) =>
-              m.id === assistantId ? { ...m, reasoning: reasoningText } : m
-            ),
-          }));
-        }
-      );
-    } catch (e: any) {
-      if (e?.name === "AbortError") {
-        setScenes((prev) => ({
-          ...prev,
-          [activeScene]: prev[activeScene].map((m) =>
-            m.id === assistantId && !m.content
-              ? { ...m, content: "_（已停止生成）_" }
-              : m
-          ),
-        }));
-      } else {
-        try {
-          const apiMessages = msgs.map((m) => ({
-            role: m.role as "user" | "assistant",
-            content: m.content,
-          }));
-          const res = await sendChat(apiMessages);
-          setScenes((prev) => ({
-            ...prev,
-            [activeScene]: prev[activeScene].map((m) =>
-              m.id === assistantId ? { ...m, content: res.reply } : m
-            ),
-          }));
-        } catch (retryErr: any) {
-          const msg = retryErr?.message || "";
-          let errorMsg = "网络异常，请稍后重试";
-          let contentMsg = "抱歉，请求失败，请稍后重试。";
-          if (msg.includes("401") || msg.includes("余额")) {
-            errorMsg = "AI 服务暂不可用（余额不足），请联系管理员";
-            contentMsg = "AI 服务暂不可用，请联系管理员处理。";
-          } else if (msg.includes("500")) {
-            errorMsg = "服务端处理出错，已记录日志，请稍后重试";
-          } else if (msg.includes("timeout") || msg.includes("超时")) {
-            errorMsg = "请求超时，请稍后重试";
-          } else if (msg.includes("429") || msg.includes("Too Many Requests")) {
-            errorMsg = "请求过于频繁，请稍后再试";
-          }
-          setError(errorMsg);
-          setScenes((prev) => ({
-            ...prev,
-            [activeScene]: prev[activeScene].map((m) =>
-              m.id === assistantId && !m.content
-                ? { ...m, content: contentMsg }
-                : m
-            ),
-          }));
-        }
-      }
-    } finally {
-      setLoading(false);
-      abortRef.current = null;
-      inputRef.current?.focus();
-    }
-  };
-
-
-
-  const handleClear = () => {
-    if (loading) handleStop();
-    // 清空前把当前会话保存到历史
-    if (messages.length >= 2) {
-      addHistoryItem(createChatHistoryItem(activeScene, messages));
-    }
-    setScenes((prev) => ({ ...prev, [activeScene]: [] }));
-    setCollectedInfo((prev) => ({ ...prev, [activeScene]: {} }));
-    setError(null);
-    setInput("");
-    setTimeout(() => inputRef.current?.focus(), 0);
-  };
-
-  const handleClearAll = () => {
-    if (loading) handleStop();
-    if (!window.confirm("清空所有对话历史？此操作不可恢复。")) return;
-    // 清空前保存所有非空会话
-    for (const [sid, msgs] of Object.entries(scenes)) {
-      if (msgs.length >= 2) {
-        addHistoryItem(createChatHistoryItem(sid, msgs));
-      }
-    }
-    setScenes({ school: [], essay: [], visa: [] });
-    setCollectedInfo({});
-    setError(null);
-    setInput("");
-  };
 
   const handleRetry = () => {
     if (loading || messages.length === 0) return;

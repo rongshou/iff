@@ -189,15 +189,22 @@ python3 /home/admin/scripts/cleanup_knowledge_base.py
 
 ### 4.3 想修改 SYSTEM_PROMPT
 
+注意 SYSTEM_PROMPT 的 `## 📋 回复结构要求` 章节（v0.14 新增），要求 LLM 按 `## 推荐院校` / `## 申请策略` 章节组织推荐回复。修改时保留此结构。
+
 编辑 `/home/admin/tianquan/backend/app/services/chat.py` 中的 `SYSTEM_PROMPT` 常量。
 
 ### 4.4 想修改广告过滤规则
 
 编辑 `_AD_STRONG_PATTERNS` / `_AD_WEAK_PATTERNS` / `_UI_NOISE_PATTERNS` / `_BRAND_SOURCES`。
 
-### 4.5 想修改学校名称解析规则
+### 4.5 想修改学校简称映射
 
-编辑 `_parse_undergrad()` 中的 `_extract_best_university()`、缩写映射表、院校层级关键词。
+编辑 `backend/app/services/school_abbrev.py` 中的 `UNIVERSITY_ABBREVIATIONS` 字典。这是**唯一权威源**，前后端共用。
+
+```bash
+# 验证前后端条目一致
+python3 -c "from backend.app.services.school_abbrev import UNIVERSITY_ABBREVIATIONS; print(len(UNIVERSITY_ABBREVIATIONS))"
+```
 
 ### 4.6 启动服务
 
@@ -218,7 +225,7 @@ docker-compose up -d
 |------|------|------|
 | `#/login` | Login.tsx | 登录 / 自动注册 |
 | `#/` | Chat.tsx | AI 智能问答（首页） |
-| `#/recommend` | Recommend.tsx | 选校推荐引擎（三维评分） |
+| ~~`#/recommend`~~ | ~~Recommend.tsx~~ | ~~选校推荐引擎（三维评分）~~ *v0.14 已删除，统一到 Chat* |
 | `#/chat` | Chat.tsx | AI 智能问答 |
 | `#/profile` | ProfilePage.tsx | 个人档案 |
 | 外部 `/tianshu/` | tianshu/ | 天枢测评（独立页面） |
@@ -232,14 +239,12 @@ docker-compose up -d
 | `src/services/auth.ts` | 登录/登出/验证，默认授权码 `88888888`，7 天 session 过期 |
 | `src/services/profile.ts` | 档案 CRUD（localStorage `iff_profile`），历史记录（`iff_history`） |
 | `src/services/chat.ts` | AI 对话 API（流式 + 非流式） |
-| `src/services/api.ts` | 推荐引擎 / 新闻 API / 授权码验证 |
+| `src/services/api.ts` | 新闻 API / 授权码验证 |
 | `src/utils/markdown.tsx` | 轻量 Markdown 渲染器 |
 | `src/pages/Login.tsx` | 登录页，后端验证授权码 + 前端本地绑定 |
 | `src/pages/Chat.tsx` | AI 问答主页，多轮信息收集向导 + 档案预填 |
-| `src/pages/Recommend.tsx` | 选校推荐引擎页面，卡片/表格双视图 |
 | `src/pages/ProfilePage.tsx` | 档案管理 + 查询历史 |
-| `src/components/SchoolCard.tsx` | 推荐结果卡片（含冲刺校提分建议） |
-| `src/components/SchoolTable.tsx` | 推荐结果表格（含冲刺校提分建议） |
+| `src/services/school.ts` | 学校简称映射前端缓存层（从后端 API 拉取） |
 
 ### 5.3 ProfileData 数据结构
 
@@ -265,15 +270,18 @@ interface ProfileData {
 
 ### 5.4 信息自动提取
 
-`Chat.tsx` 中的 `extractInfo()` 从用户对话中自动提取档案信息：
+`Chat.tsx` 中的 `extractInfo()` 从用户对话中自动提取档案信息（该函数是 `async`）：
 
 | 字段 | 提取方式 |
 |------|---------|
 | GPA | 正则 `/(GPA\|均分\|绩点)\s*[:：]?\s*\d+(?:\/\d+)?/` |
-| 学校 | 45+ 简称映射（北邮→北京邮电大学），回退到 XX大学/XX学院 匹配 |
+| 学校 | 50+ 简称映射（从后端 `/api/school/abbreviations` 动态加载，缓存层在 `src/services/school.ts`），回退到 XX大学/XX学院 匹配 |
 | 国家 | 25+ 别名映射（澳大利亚→澳洲，枫叶国→加拿大） |
 | 专业 | 多层级匹配：`本科读/学/专业`、`专业[：:是为]`、`读/学 XXX`、`XXX专业`（不含专业课） |
 | 目标专业 | `目标专业[：:是为]? XXX`，排除"其他/不限/还没想好"等占位词 |
+
+**学校简称数据源**：`backend/app/services/school_abbrev.py` 是**唯一权威源**（49 条），前端通过 `GET /api/school/abbreviations` 拉取。修改简称只改后端一处即可。
+
 
 提取后在符合条件时自动调用 `mergeChatInfo()` 保存到 localStorage。
 
@@ -365,16 +373,23 @@ interface ProfileData {
 - 专业级：`school_major_gpa_percentiles` 表（同校 + 同专业类别 + 同学校层次的 p10/p25/p50/p75）
 - 学校级回退：`real_case_probability.json`（同校 + 同层次的 p25/p50/p75）
 
-### 7.4 Chat 与 Recommend 页面的关系
+### 7.5 测试覆盖
 
-两个页面使用**同一个推荐引擎** `recommend.run()`，区别仅在于呈现方式：
+`tests/test_case_matcher.py`（v0.14 新增）：
+- **70 个测试用例**，覆盖 3D 评分、GPA 提分建议、案例聚合、档位划分、辅助函数
+- 纯函数测试，**不依赖数据库/网络**
+- 6 个 `skip`（依赖 sqlite 的函数标记占位）
+- 运行：`python3 -m pytest tests/test_case_matcher.py -v`
 
-| | Recommend 页面 | Chat 页面 |
-|------|------|------|
-| 触发 | 用户填表提交 | AI 收集信息后自动调用 |
-| 输出 | 结构化的卡片/表格 | LLM 自然语言回答 |
-| 数据 | 直接 JSON | `_format_recommend_result()` 文本化后传给 LLM |
-| 一致性 | 完全一致（同引擎同数据） |
+### 7.4 推荐结果在 Chat 中的呈现
+
+**v0.14 删除 Recommend 页面**（功能与 Chat 重叠），推荐结果统一由 Chat 呈现：
+
+1. `recommend.run()` 输出的结构化数据通过 `_format_recommend_result()` 转为带章节标题的文本，注入 LLM system context
+2. LLM 按以下格式组织回复：
+   - `## 推荐院校` — 按国家 + 档位（冲刺/匹配/安全）列出学校，含 QS 排名、案例数、GPA 中位数、三维评分
+   - `## 申请策略` — 简要列出当前背景的补充路径（预科/桥梁/双录取等），无则提示"适合直录"
+3. `recommend_payload` 字段包含完整结构化数据，供前端未来扩展（当前不使用）
 
 ---
 
@@ -438,7 +453,10 @@ API 代理配置在 `vite.config.ts`：`/api` → `http://localhost:3470`。
 | `/home/admin/tianquan/backend/app/` | 后端源码 |
 | `/home/admin/tianquan/backend/app/services/case_matcher.py` | 推荐引擎核心（三维评分 + 案例匹配） |
 | `/home/admin/tianquan/backend/app/api/auth.py` | 授权码验证 API |
-| `/home/admin/tianquan/backend/app/api/recommend.py` | 推荐引擎 API |
+| `/home/admin/tianquan/backend/app/services/school_abbrev.py` | 学校简称映射权威源（49 条） |
+| `/home/admin/tianquan/backend/app/api/school.py` | `GET /api/school/abbreviations` |
+| `/home/admin/tianquan/src/services/school.ts` | 前端学校简称缓存层 |
+| `/home/admin/tianquan/tests/test_case_matcher.py` | 推荐引擎单元测试（70 用例） |
 | `/home/admin/tianquan/backend/data/advisor.db` | 应用数据库 |
 | `/home/admin/werss/data/db.db` | 源文章库（只读） |
 | `/home/admin/tianquan/.webhook-secret` | Webhook 密钥 |

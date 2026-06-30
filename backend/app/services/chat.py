@@ -1,6 +1,9 @@
+from __future__ import annotations
+
 import json
 import re
 import httpx
+from typing import Any, TYPE_CHECKING
 from ..core.config import settings
 from ..core.database import get_db
 from .news_knowledge import search_articles
@@ -8,6 +11,10 @@ from .recommend import run as run_recommend
 from ..utils.gpa import GPA_RANGES, GPA_FORMAT_ALIASES
 from ..utils.countries import VALID_COUNTRIES
 from .school_abbrev import _UNIV_ABBREV
+
+if TYPE_CHECKING:
+    # 仅用于类型标注；运行时由 _stream_response 内部按需 import，避免模块加载时引入 fastapi 依赖
+    from fastapi.responses import StreamingResponse
 
 
 
@@ -887,7 +894,7 @@ def load_context_from_history(messages: list[dict]) -> tuple[str, dict | None]:
     return "\n".join(parts), recommend_payload
 
 
-async def call_llm(messages: list[dict], stream: bool = False):
+async def call_llm(messages: list[dict], stream: bool = False) -> tuple[str, dict | None] | StreamingResponse:
     provider = settings.LLM_PROVIDER
     api_key = settings.LLM_API_KEY
     base_url = settings.LLM_BASE_URL
@@ -923,7 +930,7 @@ async def call_llm(messages: list[dict], stream: bool = False):
         return data["choices"][0]["message"]["content"], recommend_payload
 
 
-def _stream_response(url: str, headers: dict, payload: dict, recommend_payload: dict | None = None):
+def _stream_response(url: str, headers: dict, payload: dict, recommend_payload: dict | None = None) -> StreamingResponse:
     from fastapi.responses import StreamingResponse
 
     async def generate():
@@ -955,7 +962,7 @@ def _stream_response(url: str, headers: dict, payload: dict, recommend_payload: 
     return StreamingResponse(generate(), media_type="text/event-stream")
 
 
-async def chat(messages: list[dict], stream: bool = False):
+async def chat(messages: list[dict], stream: bool = False) -> dict[str, Any] | StreamingResponse:
     if not settings.LLM_API_KEY:
         return {
             "reply": "抱歉，AI 对话功能尚未配置。请联系管理员设置 LLM_API_KEY。",

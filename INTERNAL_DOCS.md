@@ -239,10 +239,13 @@ docker-compose up -d
 | `src/services/auth.ts` | 登录/登出/验证，默认授权码 `88888888`，7 天 session 过期 |
 | `src/services/profile.ts` | 档案 CRUD（localStorage `iff_profile`），历史记录（`iff_history`） |
 | `src/services/chat.ts` | AI 对话 API（流式 + 非流式） |
+| `src/hooks/useChatSend.ts`（291 行） | 聊天核心逻辑：handleSend/doSendToAI/清空 |
+| `src/hooks/useChatInput.ts`（30 行） | 输入状态 + Enter 发送处理 |
+| `src/hooks/useChatScroll.ts`（23 行） | 滚动定位 + 回到底部按钮 |
 | `src/services/api.ts` | 新闻 API / 授权码验证 |
 | `src/utils/markdown.tsx` | 轻量 Markdown 渲染器 |
 | `src/pages/Login.tsx` | 登录页，后端验证授权码 + 前端本地绑定 |
-| `src/pages/Chat.tsx` | AI 问答主页，多轮信息收集向导 + 档案预填 |
+| `src/pages/Chat.tsx`（321 行） | AI 问答主页，多轮信息收集向导 + 档案预填 |
 | `src/pages/ProfilePage.tsx` | 档案管理 + 查询历史 |
 | `src/services/school.ts` | 学校简称映射前端缓存层（从后端 API 拉取） |
 
@@ -373,6 +376,23 @@ interface ProfileData {
 - 专业级：`school_major_gpa_percentiles` 表（同校 + 同专业类别 + 同学校层次的 p10/p25/p50/p75）
 - 学校级回退：`real_case_probability.json`（同校 + 同层次的 p25/p50/p75）
 
+### 7.4 Chat.tsx 重构历程（v0.14）
+
+**起点**：单文件 1072 行，耦合场景定义/消息管理/信息收集/AI 调用/UI 渲染。
+
+**拆分过程**：
+
+| Phase | 提取内容 | 文件 | 行数 | 目标行数 |
+|-------|---------|------|------|---------|
+| 1 | MessageBubble 组件 | `components/MessageBubble.tsx` | 112 | 994 |
+| 2 | EmptyState + Scene 配置 | `config/scenes.ts` + 内联 | 83+72 | 796 |
+| 3 | 10 个工具函数 | `services/chat-helpers.ts` | 189 | 613 |
+| 4A | 输入状态 Hook | `hooks/useChatInput.ts` | 27 | 595 |
+| 4B | 滚动定位 Hook | `hooks/useChatScroll.ts` | 23 | 595 |
+| 5 | 聊天核心逻辑（handleSend/doSendToAI） | `hooks/useChatSend.ts` | 291 | **321** |
+
+**结果**：Chat.tsx 净减 751 行（1072→321），可维护性显著提升。
+
 ### 7.5 测试覆盖
 
 `tests/test_case_matcher.py`（v0.14 新增）：
@@ -381,7 +401,7 @@ interface ProfileData {
 - 6 个 `skip`（依赖 sqlite 的函数标记占位）
 - 运行：`python3 -m pytest tests/test_case_matcher.py -v`
 
-### 7.4 推荐结果在 Chat 中的呈现
+### 7.6 推荐结果在 Chat 中的呈现
 
 **v0.14 删除 Recommend 页面**（功能与 Chat 重叠），推荐结果统一由 Chat 呈现：
 
@@ -394,6 +414,10 @@ interface ProfileData {
 ---
 
 ## 八、部署与构建
+
+
+
+
 
 ### 8.1 双轨部署
 

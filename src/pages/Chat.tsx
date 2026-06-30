@@ -734,14 +734,6 @@ AI 留学智能问答
           </div>
           <div className="flex items-center gap-1 shrink-0">
             <Link
-              to="/recommend"
-              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium text-indigo-600 bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 transition-all whitespace-nowrap"
-              title="选校推荐"
-            >
-              <span>🎓</span>
-              <span>推荐</span>
-            </Link>
-            <Link
               to="/"
               className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium text-indigo-600 bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 transition-all whitespace-nowrap"
               title="首页"

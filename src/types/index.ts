@@ -1,39 +1,3 @@
-export interface SchoolMatchItem {
-  name: string;
-  qs_rank: number | null;
-  usnews_rank: number | null;
-  matched_cases: number;
-  gpa_min: number | null;
-  gpa_max: number | null;
-  gpa_p50: number | null;
-  majors: string[];
-  meets_requirement: boolean;
-  requirement_value: number | null;
-  admission_chance: string;
-  admission_score: number;
-  p50_reference: number | null;
-  gpa_gap: number | null;
-}
-
-export interface CountryMatchResult {
-  country: string;
-  matched_cases: number;
-  matched_schools: number;
-  schools: SchoolMatchItem[];
-}
-
-export interface BackgroundInfo {
-  gpa_percent: number | null;
-  gpa4: number | null;
-  school_tier: number;
-  school_tier_label: string;
-}
-
-export interface MatchSummary {
-  total_cases: number;
-  total_schools: number;
-}
-
 export interface PathwayProgram {
   provider: string;
   program_type: string;
@@ -54,26 +18,6 @@ export interface PathwaySuggestion {
   programs: PathwayProgram[];
   reason: string;
 }
-
-export interface RecommendResult {
-  background: BackgroundInfo;
-  match_summary: MatchSummary;
-  by_country: CountryMatchResult[];
-  pathway_suggestions: PathwaySuggestion[];
-  generated_at: string;
-}
-
-export interface RecommendRequest {
-  target_countries: string[];
-  gpa_score: number;
-  gpa_format: string;
-  study_level: string;
-  target_major?: string;
-  original_major?: string;
-  undergraduate_school?: string;
-}
-
-export type ViewMode = "cards" | "table";
 
 export interface MBTIType {
   type: string;

@@ -6,7 +6,7 @@
  *   iff_history  → 所有查询/测评记录的时间线
  */
 
-import type { RecommendResult, ChatMessage, MBTIMajorResult } from "../types";
+import type { ChatMessage, MBTIMajorResult } from "../types";
 
 /* ==================== 类型定义 ==================== */
 
@@ -207,22 +207,6 @@ export function getHistoryByType(type: HistoryType): HistoryItem[] {
 
 function generateId(): string {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
-}
-
-/** 创建推荐历史记录 */
-export function createRecommendHistoryItem(
-  profile: Partial<ProfileData>,
-  result: RecommendResult,
-): Omit<HistoryItem, "id" | "created_at"> {
-  const countryStr = (profile.target_countries || []).join("/");
-  return {
-    type: "recommend",
-    system: "tianquan",
-    profile_snapshot: profile,
-    data: result,
-    summary: `${countryStr} ${profile.study_level || ""} · GPA ${profile.gpa_score || "?"}`,
-    subtitle: `匹配 ${result.match_summary.total_cases} 例 · ${result.match_summary.total_schools} 校`,
-  };
 }
 
 /** 创建 MBTI 历史记录 */

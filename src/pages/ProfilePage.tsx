@@ -9,7 +9,7 @@ import {
   clearHistory,
 } from "../services/profile";
 import { logout } from "../services/auth";
-import type { RecommendResult, MBTIMajorResult, ChatMessage } from "../types";
+import type { MBTIMajorResult, ChatMessage } from "../types";
 
 /* =====================================================================
  * 我的档案 — 个人信息 + 天枢测评结果 + 查询历史
@@ -20,7 +20,6 @@ const STUDY_LEVELS = ["高中", "本科", "硕士", "博士", "预科", "其他"
 const GPA_FORMATS = ["百分制", "4分制", "5分制", "7分制", "9分制", "英制百分制"];
 
 const TYPE_ICONS: Record<string, string> = {
-  recommend: "📌",
   mbti: "🧠",
   chat_session: "💬",
   tianshu_report: "🧭",
@@ -69,7 +68,6 @@ export default function ProfilePage() {
   const tianshu = profile.tianshu;
   const hasHistory = history.length > 0;
   const historyCounts = {
-    recommend: history.filter((h) => h.type === "recommend").length,
     mbti: history.filter((h) => h.type === "mbti").length,
     chat: history.filter((h) => h.type === "chat_session").length,
     tianshu: history.filter((h) => h.type === "tianshu_report").length,
@@ -87,11 +85,6 @@ export default function ProfilePage() {
               className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium text-indigo-600 bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 transition-all"
               title="首页"
             ><span>🏠</span>首页</Link>
-            <Link
-              to="/recommend"
-              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium text-slate-400 border border-slate-200 hover:text-indigo-600 hover:border-indigo-300 hover:bg-indigo-50 transition-all"
-              title="选校推荐"
-            ><span>🎓</span>推荐</Link>
           </div>
           <span className="w-px h-4 bg-slate-200" />
           <h1 className="text-xl font-bold text-slate-900 flex-1">📁 我的档案</h1>
@@ -400,7 +393,7 @@ export default function ProfilePage() {
             <h2 className="text-base font-semibold text-slate-800">📋 查询历史</h2>
             <div className="flex items-center gap-3">
               <span className="text-xs text-slate-400">
-                {historyCounts.recommend} 推荐 · {historyCounts.mbti} MBTI · {historyCounts.chat} 对话 · {historyCounts.tianshu} 天枢
+                {historyCounts.mbti} MBTI · {historyCounts.chat} 对话 · {historyCounts.tianshu} 天枢
               </span>
               {hasHistory && (
                 <button
@@ -484,7 +477,6 @@ function HistoryRow({
  * ===================================================================== */
 
 function typeLabel(type: string, system: string): string {
-  if (type === "recommend") return "📌 选校推荐";
   if (type === "mbti") return "🧠 MBTI 测评";
   if (type === "chat_session") return "💬 AI 对话";
   if (type === "tianshu_report") return system === "tianshu" ? "🧭 天枢测评" : "📄 测评报告";
@@ -507,26 +499,7 @@ export function formatDate(iso: string): string {
 function viewDetail(item: HistoryItem) {
   const data = item.data as Record<string, unknown>;
 
-  if (item.type === "recommend") {
-    const r = data as unknown as RecommendResult;
-    const lines = [
-      `背景: ${r.background?.school_tier_label || "?"} · GPA ${r.background?.gpa4 || "?"}`,
-      `匹配: ${r.match_summary?.total_cases || 0} 例 · ${r.match_summary?.total_schools || 0} 所学校`,
-      "",
-    ];
-    for (const c of r.by_country || []) {
-      lines.push(`【${c.country}】${c.matched_schools} 校 · ${c.matched_cases} 例`);
-      for (const s of (c.schools || []).slice(0, 5)) {
-        const chance = s.admission_chance || "";
-        const gpa = s.p50_reference ? `p50=${s.p50_reference}` : "";
-        lines.push(`  ${chance === "安全" ? "✅" : chance === "匹配" ? "📌" : chance === "冲刺" ? "⚡" : "•"} ${s.name} ${gpa}`);
-      }
-      if ((c.schools || []).length > 5) {
-        lines.push(`  ...还有 ${c.schools.length - 5} 所`);
-      }
-    }
-    window.alert(lines.join("\n"));
-  } else if (item.type === "mbti") {
+  if (item.type === "mbti") {
     const m = data.result as MBTIMajorResult || data as unknown as MBTIMajorResult;
     window.alert(
       `🧠 ${m.type} · ${m.name}\n\n` +

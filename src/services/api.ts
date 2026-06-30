@@ -1,21 +1,4 @@
-import type { RecommendRequest, RecommendResult } from "../types";
-
 const API_BASE = import.meta.env.VITE_API_BASE || "/api";
-
-export async function fetchRecommend(
-  data: RecommendRequest
-): Promise<RecommendResult> {
-  const res = await fetch(`${API_BASE}/recommend`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(data),
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({ detail: res.statusText }));
-    throw new Error(err.detail || "请求失败");
-  }
-  return res.json();
-}
 
 /**
  * 验证授权码是否合法（调后端校验）

@@ -17,6 +17,19 @@ export async function fetchRecommend(
   return res.json();
 }
 
+/**
+ * 验证授权码是否合法（调后端校验）
+ * @returns valid: true=合法, false=无效授权码
+ */
+export async function verifyAuthCode(authCode: string): Promise<{ valid: boolean }> {
+  const res = await fetch(`${API_BASE}/verify-auth-code`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ auth_code: authCode }),
+  });
+  return res.json();
+}
+
 export async function fetchHealth(): Promise<{ status: string; version: string }> {
   const res = await fetch(`${API_BASE}/health`);
   return res.json();

@@ -94,14 +94,16 @@ export default function RecommendPage() {
             <p>
               <strong>第三步 — 概率估算</strong>：对匹配到的每所学校，提取该校同层次申请者的 GPA 百分位数据（p25/p50/p75），对比你的 GPA 位置，判断录取概率：
             </p>
+            <p>
+              <strong>第三步 — 三维评分</strong>：综合 <strong>GPA 匹配分（40%）+ 学校排名分（30%）+ 案例证据分（30%）</strong> 进行打分，分三档输出：
+            </p>
             <div className="flex flex-wrap gap-2 ml-2 my-1">
-              <span className="px-2.5 py-1 bg-green-50 text-green-700 rounded-full text-xs font-medium">你的 GPA &gt; p75 → 安全</span>
-              <span className="px-2.5 py-1 bg-blue-50 text-blue-700 rounded-full text-xs font-medium">p50 &lt; 你的 GPA &lt; p75 → 主申</span>
-              <span className="px-2.5 py-1 bg-amber-50 text-amber-700 rounded-full text-xs font-medium">p25 &lt; 你的 GPA &lt; p50 → 冲刺</span>
-              <span className="px-2.5 py-1 bg-red-50 text-red-700 rounded-full text-xs font-medium">你的 GPA &lt; p25 → 彩票</span>
+              <span className="px-2.5 py-1 bg-amber-50 text-amber-700 rounded-full text-xs font-medium">总分 &lt; 55 → 冲刺（需补强软背景）</span>
+              <span className="px-2.5 py-1 bg-blue-50 text-blue-700 rounded-full text-xs font-medium">55 ≤ 总分 &lt; 75 → 匹配（大概率可录）</span>
+              <span className="px-2.5 py-1 bg-green-50 text-green-700 rounded-full text-xs font-medium">总分 ≥ 75 → 安全（稳拿）</span>
             </div>
             <p>
-              <strong>第四步 — 综合排序</strong>：结合匹配案例数、概率分数、达标情况、跨层匹配衰减进行综合评分，每档选 ≤10 所学校，按 冲刺→主申→保底 + QS 排名输出。
+              <strong>第四步 — 档内排序</strong>：每档最多 6 所，档内按 QS 排名升序排列。冲刺校附带提分建议（需提升多少百分点可进匹配档）。
             </p>
             <p className="text-xs text-gray-400 mt-1">
               💡 每所学校都标注了"同背景匹配案例 N 例"和"录取 GPA 中位数"，数据均来自真实录取案例，不是黑箱估算。

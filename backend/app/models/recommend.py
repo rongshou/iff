@@ -16,6 +16,7 @@ class SchoolMatchItem(BaseModel):
     admission_chance: str = ""
     admission_score: float = 0.0
     p50_reference: Optional[float] = None
+    gpa_gap: Optional[float] = None  # 冲刺校: 需提升多少百分点才能进匹配档
 
 
 class CountryMatchResult(BaseModel):

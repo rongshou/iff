@@ -24,6 +24,7 @@ NON_UNIVERSITY_KEYWORDS = [
     "语言学院", "语言学校", "语言中心", "语言课程",
     "教育局", "中学", "高中", "国际学校",
     "培训", "补习", "私塾", "专门学校",
+    "国际学院", "预科", "校区",
 ]
 
 MAJOR_KEYWORD_EXPANSION = {
@@ -155,6 +156,119 @@ def _classify_chance_major_aware(
                 return "冲刺", 0.15, p50, n
             return "彩票", 0.15, p50, n
     return classify_admission_chance(gpa_percent, uni_name, tier_label)
+
+
+# ── 三维评分模型 ──
+# 总分 = GPA匹配分(40) + 学校排名分(30) + 案例证据分(30)
+# ≥75 = 安全 | 55-74 = 匹配 | <55 = 冲刺
+
+QS_RANK_BANDS = [
+    (20, 18),   # QS 1-20: 顶级校, 低基础分 → 偏冲刺
+    (50, 22),   # QS 21-50
+    (100, 25),  # QS 51-100
+    (200, 28),  # QS 101-200
+]
+
+
+def _score_school_3d(
+    school_percentiles: Optional[dict],
+    qs_rank: Optional[int],
+    case_count: int,
+    gpa_percent: float,
+) -> tuple[float, float, float, float, str]:
+    """三维评分: 返回 (gpa_score, rank_score, evidence_score, total, tier)."""
+    # ── 维度一: GPA 匹配分 (0-40) ──
+    if school_percentiles:
+        p25 = school_percentiles.get("p25")
+        p50 = school_percentiles.get("p50")
+        p75 = school_percentiles.get("p75")
+        if p50 is not None and p75 is not None and p25 is not None and p75 > p25:
+            if gpa_percent >= p75:
+                gpa_score = 40.0
+            elif gpa_percent >= p50:
+                gpa_score = 24.0 + 16.0 * (gpa_percent - p50) / (p75 - p50)
+            elif gpa_percent >= p25:
+                gpa_score = 8.0 + 16.0 * (gpa_percent - p25) / (p50 - p25)
+            else:
+                gpa_score = max(0.0, 8.0 * gpa_percent / p25)
+        elif p50 is not None:
+            # 仅 p50 可用时用简单分档
+            if gpa_percent >= p50:
+                gpa_score = 40.0
+            elif gpa_percent >= p50 * 0.85:
+                gpa_score = 24.0
+            elif gpa_percent >= p50 * 0.70:
+                gpa_score = 12.0
+            else:
+                gpa_score = 4.0
+        else:
+            gpa_score = 20.0
+    else:
+        gpa_score = 20.0  # 无百分位数据, 中性分
+
+    # ── 维度二: 学校排名分 (0-30) ──
+    # 排名越靠前(数字越小) → 基础分越低 → 天然偏冲刺
+    if qs_rank and qs_rank <= 9998:
+        rank_score = 30.0  # default for QS 200+
+        for threshold, score in QS_RANK_BANDS:
+            if qs_rank <= threshold:
+                rank_score = float(score)
+                break
+    else:
+        rank_score = 30.0  # 无 QS → 最高基础分(低门槛)
+
+    # ── 维度三: 案例证据分 (0-30) ──
+    if case_count >= 16:
+        evidence_score = 30.0
+    elif case_count >= 6:
+        evidence_score = 18.0
+    elif case_count >= 1:
+        evidence_score = 10.0
+    else:
+        evidence_score = 0.0
+
+    total = gpa_score + rank_score + evidence_score
+
+    if total >= 75:
+        tier = "安全"
+    elif total >= 55:
+        tier = "匹配"
+    else:
+        tier = "冲刺"
+
+    return gpa_score, rank_score, evidence_score, total, tier
+
+
+def _calculate_gpa_gap(
+    school_percentiles: Optional[dict],
+    user_gpa_percent: float,
+    gpa_score: float,
+    rank_score: float,
+    evidence_score: float,
+) -> Optional[float]:
+    """冲刺校: 计算 GPA 需提升多少百分点才能进入匹配档(总分≥55)."""
+    if not school_percentiles:
+        return None
+    p25 = school_percentiles.get("p25")
+    p50 = school_percentiles.get("p50")
+    p75 = school_percentiles.get("p75")
+    if not all([p25, p50, p75]) or p75 <= p25:
+        return None
+
+    matching_target = 55.0
+    gpa_needed = max(0.0, matching_target - rank_score - evidence_score)
+
+    if gpa_needed <= 8.0:
+        needed_percent = (gpa_needed / 8.0) * p25
+    elif gpa_needed <= 24.0:
+        needed_percent = p25 + (gpa_needed - 8.0) * (p50 - p25) / 16.0
+    elif gpa_needed <= 40.0:
+        needed_percent = p50 + (gpa_needed - 24.0) * (p75 - p50) / 16.0
+    else:
+        needed_percent = p75 + 5.0
+
+    gap = needed_percent - user_gpa_percent
+    return round(max(0.0, gap), 1)
 
 
 def match_schools_by_background(
@@ -473,40 +587,11 @@ def _enrich_with_ranking(
     return by_country
 
 
-def _adjust_chance_by_rank(school_list: list[dict], gpa_percent: float) -> None:
-    """以 GPA 百分位分档为主，排名作为名校下限保护。
-
-    排名字段因国家而异（美国用 USNews，其余用 QS），阈值通用：
-      - 排名≤15（超顶尖名校）：最低冲刺（防帝国理工/UCL/牛剑当保底）
-      - 排名≤30（名校）：最低匹配（防墨尔本/UNSW/港大当保底）
-      - 排名>30：完全按 GPA 百分位（p25/p50/p75 主导）
-    """
-    chance_num = {"彩票": -1, "冲刺": 0, "匹配": 1, "安全": 2}
-    num_chance = {-1: "彩票", 0: "冲刺", 1: "匹配", 2: "安全"}
-
-    for s in school_list:
-        rank = s["_sort_rank"]
-        if rank >= 9999:
-            continue
-
-        current = chance_num.get(s["admission_chance"])
-        if current is None:
-            continue
-
-        if rank <= 15:
-            floor = 0
-        elif rank <= 30:
-            floor = 1
-        else:
-            continue
-
-        if current > floor:
-            current = floor
-
-        s["admission_chance"] = num_chance[current]
-
-
 def _build_response(by_country: dict, target_countries: list[str], gpa_percent: float, tier_label: str, conn: sqlite3.Connection, target_major: Optional[str] = None) -> dict:
+    """三维评分模型构建输出: 冲刺/匹配/安全 各最多 6 所, 档内按 QS 排名排序."""
+    MAX_PER_TIER = 6
+    TIER_ORDER = {"冲刺": 0, "匹配": 1, "安全": 2}
+
     result_countries = []
 
     for country_name in target_countries:
@@ -520,32 +605,40 @@ def _build_response(by_country: dict, target_countries: list[str], gpa_percent: 
         schools = by_country[country_name]
         rank_field = COUNTRY_RANK_FIELD.get(country_name, "qs_rank")
 
+        # 预查专业级 GPA 百分位（同 target_major 只查一次 taxonomy）
+        major_category = _target_major_to_category(target_major)
+
         school_list = []
         for uni_name, slot in schools.items():
-            rank = slot.get(rank_field)
-            if rank is None or rank == 0:
-                rank = 9999
+            qs_rank = slot.get(rank_field)
+            if qs_rank is None or qs_rank == 0:
+                qs_rank = 9999
 
-            chance_label, chance_score, p50_ref, prob_n = _classify_chance_major_aware(
-                conn, gpa_percent, uni_name, target_major, tier_label,
-            )
+            # GPA 百分位: 优先专业级 → 学校级回退
+            school_percentiles = None
+            if major_category:
+                tier_key = _normalize_tier_key(tier_label)
+                school_percentiles = _get_major_percentiles(conn, uni_name, major_category, tier_key)
+            if not school_percentiles:
+                school_percentiles = get_school_percentiles(uni_name, tier_label)
 
-            # D: GPA 展示用匹配案例区间 + 该校录取 GPA 中位数(p50)
-            all_gpas = slot.get("all_gpas", [])
-            matched_gpas = slot["gpas"]
+            p50_ref = school_percentiles.get("p50") if school_percentiles else None
             case_count = len(slot["cases"])
 
-            import math
-            strict_bonus = 1.2 if slot.get("strict_meets", True) else 1.0
-            # 跨层匹配权重衰减: 取该校所有案例的最小tier_diff（最匹配的层次）
-            min_diff = min(slot.get("tier_diffs", [0]))
-            tier_decay = max(1.0 - 0.15 * min(min_diff, 3), 0.4)
-            composite = math.sqrt(max(case_count, 1)) * chance_score * strict_bonus * tier_decay
+            # ── 三维评分 + 分档 ──
+            gpa_score, rank_score, evidence_score, total, tier = _score_school_3d(
+                school_percentiles, qs_rank, case_count, gpa_percent,
+            )
 
-            # 获取 p25/p75 用于 A 的 QS 排名调整
-            perc = get_school_percentiles(uni_name, tier_label)
-            p25 = perc.get("p25") if perc else None
-            p75 = perc.get("p75") if perc else None
+            # ── 冲刺校 GPA 提升建议 ──
+            gpa_gap = None
+            if tier == "冲刺":
+                gpa_gap = _calculate_gpa_gap(
+                    school_percentiles, gpa_percent,
+                    gpa_score, rank_score, evidence_score,
+                )
+
+            matched_gpas = slot["gpas"]
 
             school_list.append({
                 "name": uni_name,
@@ -558,38 +651,34 @@ def _build_response(by_country: dict, target_countries: list[str], gpa_percent: 
                 "majors": slot["majors"],
                 "meets_requirement": slot["meets_req"],
                 "requirement_value": slot.get("req_value"),
-                "admission_chance": chance_label,
-                "admission_score": round(chance_score, 2),
+                "admission_chance": tier,
+                "admission_score": round(total, 1),
                 "p50_reference": p50_ref,
-                "_strict_meets": slot.get("strict_meets", True),
-                "_composite": composite,
-                "_sort_rank": rank,
-                "_p25": p25,
-                "_p75": p75,
+                "gpa_gap": gpa_gap,
+                "_sort_rank": qs_rank,
             })
 
-        # A: 结合 QS 排名和 GPA 重新分档
-        _adjust_chance_by_rank(school_list, gpa_percent)
-
-        # C: 每档最多 8 所（按综合评分排序），不硬编码 3-7-2
-        chance_order = {"冲刺": 0, "匹配": 1, "安全": 2, "彩票": 3, "未知": 4}
-        by_chance: dict[str, list] = {}
+        # 按分档分组, 档内按 QS 排名升序排队, 每档最多 6 所
+        by_tier: dict[str, list] = {}
         for s in school_list:
-            by_chance.setdefault(s["admission_chance"], []).append(s)
-        for group in by_chance.values():
-            group.sort(key=lambda x: -x["_composite"])
+            by_tier.setdefault(s["admission_chance"], []).append(s)
 
-        MAX_PER_CHANCE = {"美国": 20, "英国": 12}.get(country_name, 10)
+        for group in by_tier.values():
+            group.sort(key=lambda x: x["_sort_rank"] if x["_sort_rank"] else 9999)
+
         selected = []
-        for chance in ("冲刺", "匹配", "安全", "彩票", "未知"):
-            selected.extend(by_chance.get(chance, [])[:MAX_PER_CHANCE])
+        for tier_name in ("冲刺", "匹配", "安全"):
+            group = by_tier.get(tier_name, [])
+            selected.extend(group[:MAX_PER_TIER])
 
-        # 按档位+QS排名排序
-        selected.sort(key=lambda x: (chance_order.get(x["admission_chance"], 9), x["_sort_rank"]))
+        # 最终排序: 冲刺 → 匹配 → 安全, 每档内 QS 排名升序
+        selected.sort(key=lambda x: (
+            TIER_ORDER.get(x["admission_chance"], 9),
+            x["_sort_rank"] if x["_sort_rank"] else 9999,
+        ))
 
         for s in selected:
-            for key in ("_sort_rank", "_strict_meets", "_composite", "_p25", "_p75"):
-                s.pop(key, None)
+            s.pop("_sort_rank", None)
 
         total_cases = sum(s["matched_cases"] for s in selected)
 

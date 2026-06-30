@@ -6,6 +6,7 @@ import { loadProfile, saveProfile } from "./profile";
 
 const AUTH_KEY = "iff_auth";
 const DEFAULT_AUTH_CODE = "88888888";
+const SESSION_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000; // 1 周
 
 export interface AuthSession {
   loggedIn: boolean;
@@ -55,7 +56,13 @@ export function isAuthenticated(): boolean {
     const raw = localStorage.getItem(AUTH_KEY);
     if (!raw) return false;
     const data: AuthSession = JSON.parse(raw);
-    return data.loggedIn === true;
+    if (data.loggedIn !== true) return false;
+    // 登录状态超过 1 周则自动过期
+    if (Date.now() - data.timestamp > SESSION_MAX_AGE_MS) {
+      localStorage.removeItem(AUTH_KEY);
+      return false;
+    }
+    return true;
   } catch {
     return false;
   }

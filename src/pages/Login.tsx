@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { login } from "../services/auth";
+import { verifyAuthCode } from "../services/api";
 
 export default function LoginPage() {
   const [username, setUsername] = useState("");
@@ -9,10 +10,30 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+
+    if (!authCode.trim()) {
+      setError("请输入授权码");
+      return;
+    }
+
     setLoading(true);
+
+    // 先调后端验证授权码是否合法
+    try {
+      const { valid } = await verifyAuthCode(authCode.trim());
+      if (!valid) {
+        setLoading(false);
+        setError("授权码无效，请联系管理员");
+        return;
+      }
+    } catch {
+      setLoading(false);
+      setError("无法验证授权码，请检查网络或联系管理员");
+      return;
+    }
 
     const result = login(username, authCode);
     setLoading(false);

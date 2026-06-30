@@ -23,6 +23,10 @@ class Settings(BaseSettings):
     LLM_BASE_URL: str = "https://dashscope.aliyuncs.com/compatible-mode/v1"
     LLM_MODEL: str = "qwen3.5-plus"
 
+    # 授权码体系 — 逗号分隔的合法授权码列表
+    # 留空则跳过授权码验证（兼容旧版）
+    VALID_AUTH_CODES: str = ""
+
     model_config = {"env_prefix": "TIANQUAN_", "env_file": ".env"}
 
 

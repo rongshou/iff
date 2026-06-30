@@ -88,10 +88,10 @@ export default function ProfilePage() {
               title="首页"
             ><span>🏠</span>首页</Link>
             <Link
-              to="/explore"
+              to="/recommend"
               className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium text-slate-400 border border-slate-200 hover:text-indigo-600 hover:border-indigo-300 hover:bg-indigo-50 transition-all"
-              title="留学工具箱"
-            ><span>🧰</span>工具箱</Link>
+              title="选校推荐"
+            ><span>🎓</span>推荐</Link>
           </div>
           <span className="w-px h-4 bg-slate-200" />
           <h1 className="text-xl font-bold text-slate-900 flex-1">📁 我的档案</h1>
@@ -140,16 +140,12 @@ export default function ProfilePage() {
                 className="mt-1 px-3 py-2 border border-slate-200 rounded-lg text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400"
               />
             </label>
-            {/* 授权码 */}
+            {/* 授权码（只读，由系统分配） */}
             <label className="flex flex-col text-sm text-slate-600">
               授权码
-              <input
-                value={profile.auth_code || ""}
-                onChange={(e) => handleField("auth_code", e.target.value)}
-                placeholder="输入授权码"
-                type="password"
-                className="mt-1 px-3 py-2 border border-slate-200 rounded-lg text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400"
-              />
+              <div className="mt-1 px-3 py-2 border border-slate-200 rounded-lg text-slate-800 text-sm bg-slate-50 select-all">
+                {profile.auth_code || "（未设置）"}
+              </div>
             </label>
             {/* 学校 */}
             <label className="flex flex-col text-sm text-slate-600">
@@ -523,7 +519,7 @@ function viewDetail(item: HistoryItem) {
       for (const s of (c.schools || []).slice(0, 5)) {
         const chance = s.admission_chance || "";
         const gpa = s.p50_reference ? `p50=${s.p50_reference}` : "";
-        lines.push(`  ${chance === "安全" ? "✅" : chance === "主申" ? "📌" : chance === "冲刺" ? "⚡" : chance === "彩票" ? "🎲" : "•"} ${s.name} ${gpa}`);
+        lines.push(`  ${chance === "安全" ? "✅" : chance === "匹配" ? "📌" : chance === "冲刺" ? "⚡" : "•"} ${s.name} ${gpa}`);
       }
       if ((c.schools || []).length > 5) {
         lines.push(`  ...还有 ${c.schools.length - 5} 所`);

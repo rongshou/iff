@@ -62,6 +62,13 @@ export default function SchoolCard({ school, rankLabel }: Props) {
           ))}
         </div>
       )}
+
+      {label === "冲刺" && school.gpa_gap != null && school.gpa_gap > 0 && (
+        <div className="mt-3 pt-3 border-t border-amber-100 text-xs text-amber-700 flex items-center gap-1">
+          <span>📈</span>
+          <span>提分 <strong>+{school.gpa_gap}</strong> 百分点可进入匹配档</span>
+        </div>
+      )}
     </div>
   );
 }

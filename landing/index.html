@@ -100,12 +100,45 @@ h1 {
   color: #1a2332;
 }
 
+.card-tagline {
+  font-size: 13px;
+  font-weight: 600;
+  color: #2563eb;
+  margin-bottom: 14px;
+  letter-spacing: 0.02em;
+  max-width: 280px;
+  line-height: 1.5;
+}
+
+.card-tianshu .card-tagline {
+  color: #7c3aed;
+}
+
 .card-subtitle {
-  font-size: 14px;
+  font-size: 13px;
   color: #6b7a99;
-  line-height: 1.6;
-  max-width: 260px;
+  line-height: 1.7;
+  max-width: 280px;
   text-align: center;
+}
+
+.card-highlights {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 14px;
+  max-width: 280px;
+}
+
+.card-highlights .hl {
+  font-size: 11px;
+  padding: 4px 10px;
+  border-radius: 12px;
+  background: #e8f0fe;
+  color: #2563eb;
+  font-weight: 500;
+  white-space: nowrap;
 }
 
 .card-badge {
@@ -142,20 +175,27 @@ h1 {
 <body>
 <div class="container">
   <h1>IFF · 留学智能平台</h1>
-  <p class="subtitle">选择工具开始使用</p>
+  <p class="subtitle">让 17 万个过来人，帮你选校 · 帮你认识自己</p>
 
   <div class="grid">
     <a class="card card-tianquan" href="tianquan/">
       <div class="card-icon">🎓</div>
       <div class="card-title">天权</div>
-      <div class="card-subtitle">基于 17 万+ 真实录取案例<br>智能匹配 · 冲刺/主申/保底 · 选校选专业</div>
+      <div class="card-tagline">不是 AI 替你选学校，是 17 万个过来人。</div>
+      <div class="card-subtitle">17.6 万真实录取案例打底<br>三维评分 · 冲刺 / 主申 / 保底<br>选校 · 文书 · 签证 · 全场景 AI 问答</div>
+      <div class="card-highlights">
+        <span class="hl">📊 GPA 概率可见</span>
+        <span class="hl">🇨🇳 985/211/双非都懂</span>
+        <span class="hl">🔗 天枢测评联动</span>
+      </div>
       <span class="card-badge">进入 →</span>
     </a>
 
     <a class="card card-tianshu" href="tianshu/">
       <div class="card-icon">🧭</div>
       <div class="card-title">天枢</div>
-      <div class="card-subtitle">学生综合特质测评<br>生涯规划 · 专业推荐 · 发展报告</div>
+      <div class="card-tagline">先认识自己，再选学校。</div>
+      <div class="card-subtitle">MBTI × 霍兰德 × 八字 × 紫微<br>多维交叉验证<br>生涯规划 · 专业推荐 · 发展报告</div>
       <span class="card-badge">进入 →</span>
     </a>
   </div>

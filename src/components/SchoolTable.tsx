@@ -48,6 +48,11 @@ export default function SchoolTable({ data, rankLabel }: Props) {
                 <span className={`px-2 py-0.5 rounded text-xs font-medium ${color}`}>
                   {label}
                 </span>
+                {label === "冲刺" && s.gpa_gap != null && s.gpa_gap > 0 && (
+                  <div className="text-[10px] text-amber-600 mt-0.5">
+                    📈 +{s.gpa_gap} 百分点
+                  </div>
+                )}
               </td>
               <td className="p-2 text-gray-500">{s.majors.join(", ") || "-"}</td>
             </tr>

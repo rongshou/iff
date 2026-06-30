@@ -5,12 +5,14 @@ export interface SchoolMatchItem {
   matched_cases: number;
   gpa_min: number | null;
   gpa_max: number | null;
+  gpa_p50: number | null;
   majors: string[];
   meets_requirement: boolean;
   requirement_value: number | null;
   admission_chance: string;
   admission_score: number;
   p50_reference: number | null;
+  gpa_gap: number | null;
 }
 
 export interface CountryMatchResult {

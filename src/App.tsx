@@ -1,9 +1,9 @@
 import { Navigate, HashRouter, Routes, Route, Outlet } from "react-router-dom";
 import { isAuthenticated } from "./services/auth";
 import LoginPage from "./pages/Login";
-import ExplorePage from "./pages/Explore";
 import ChatPage from "./pages/Chat";
 import ProfilePage from "./pages/ProfilePage";
+import RecommendPage from "./pages/Recommend";
 
 const VERSION = import.meta.env.VITE_APP_VERSION || "v?";
 
@@ -25,7 +25,7 @@ export default function App() {
           {/* 受保护路由 */}
           <Route element={<AuthGuard />}>
             <Route path="/" element={<ChatPage />} />
-            <Route path="/explore" element={<ExplorePage />} />
+            <Route path="/recommend" element={<RecommendPage />} />
             <Route path="/chat" element={<ChatPage />} />
             <Route path="/profile" element={<ProfilePage />} />
           </Route>

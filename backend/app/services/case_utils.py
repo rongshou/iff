@@ -9,6 +9,8 @@ from .probability import classify_admission_chance, get_school_percentiles
 from ..utils.tier import classify_school_tier, get_tier_label
 from .gpa_requirement import meets_requirement
 from .probability import classify_admission_chance, get_school_percentiles
+from ..core.config import settings
+from ..repositories import CaseRepository
 
 COUNTRY_RANK_FIELD = {
     "英国": "qs_rank", "美国": "usnews_rank", "澳大利亚": "qs_rank",
@@ -98,15 +100,19 @@ def _normalize_tier_key(tier_label: str) -> str:
     return "双非"
 
 
+
+_repo: CaseRepository | None = None
+def _get_repo() -> CaseRepository:
+    global _repo
+    if _repo is None:
+        _repo = CaseRepository(str(settings.DB_PATH))
+    return _repo
+
 def _get_major_percentiles(
     conn: sqlite3.Connection, university: str, major_category: str, tier_key: str,
 ) -> Optional[dict]:
     """从 school_major_gpa_percentiles 查专业级 GPA 百分位。"""
-    row = conn.execute(
-        """SELECT n, p10, p25, p50, p75 FROM school_major_gpa_percentiles
-           WHERE university = ? AND major_category = ? AND tier = ?""",
-        (university, major_category, tier_key),
-    ).fetchone()
+    row = _get_repo().get_major_percentiles(university, major_category, tier_key)
     if not row:
         return None
     return {"n": row["n"], "p10": row["p10"], "p25": row["p25"], "p50": row["p50"], "p75": row["p75"]}
@@ -315,17 +321,14 @@ def _query_cases(
         WHERE {where}
         LIMIT 80000
     """
-    rows = conn.execute(sql, params).fetchall()
-    return [dict(r) for r in rows]
+    return _get_repo().query_cases(sql, params)
 
 
 def _expand_countries(conn: sqlite3.Connection, countries: list[str]) -> list[str]:
     expanded = set()
     country_map = {}
-    rows = conn.execute(
-        "SELECT DISTINCT country FROM cases WHERE country IS NOT NULL"
-    ).fetchall()
-    for r in rows:
+    all_db_countries = _get_repo().expand_countries()
+    for cntry in all_db_countries:
         cn = r["country"]
         if cn:
             country_map[cn] = cn
@@ -344,14 +347,8 @@ def _fetch_university_requirements(
     uni_ids = list(set(r.get("university_id") for r in rows if r.get("university_id")))
     if not uni_ids:
         return {}
-
-    ph = ",".join("?" for _ in uni_ids)
-    req_rows = conn.execute(
-        f"SELECT id, gpa_requirement FROM universities WHERE id IN ({ph})",
-        uni_ids,
-    ).fetchall()
-
-    return {r["id"]: r["gpa_requirement"] for r in req_rows if r["gpa_requirement"]}
+    req_map = _get_repo().fetch_university_requirements(tuple(uni_ids))
+    return {k: v for k, v in req_map.items() if v}
 
 
 def _get_gpa_tolerance(user_gpa4: Optional[float]) -> float:

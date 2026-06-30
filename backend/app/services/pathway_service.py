@@ -4,6 +4,8 @@ from collections import defaultdict
 from typing import Optional
 
 from ..core.database import get_connection
+from ..repositories import PathwayRepository
+from ..core.config import settings
 
 PATHWAY_LEVEL_MAP = {
     "硕士": ("pre_masters", "硕士预科"),
@@ -17,10 +19,17 @@ STUDY_LEVEL_LABELS = {
 }
 
 
+_repo: PathwayRepository | None = None
+def _get_pathway_repo() -> PathwayRepository:
+    global _repo
+    if _repo is None:
+        _repo = PathwayRepository(str(settings.DB_PATH))
+    return _repo
+
+
 def _load_pathway_data(conn: sqlite3.Connection, study_level: str) -> list[dict]:
     table, _ = PATHWAY_LEVEL_MAP.get(study_level, ("pre_masters", "预科"))
-    rows = conn.execute(f"SELECT * FROM {table}").fetchall()
-    return [dict(r) for r in rows]
+    return _get_pathway_repo().load_all(table)
 
 
 def _normalize_uni_name(name: str) -> str:
@@ -109,14 +118,9 @@ def find_pathway_suggestions(
     suggestions = []
 
     for uni_name, programs in pathway_map.items():
-        uni_row = conn.execute(
-            "SELECT id, name, country, qs_rank, usnews_rank FROM universities WHERE name = ? LIMIT 1",
-            (uni_name,),
-        ).fetchone()
-        if not uni_row:
+        uni = _get_pathway_repo().find_university(uni_name)
+        if not uni:
             continue
-
-        uni = dict(uni_row)
         if uni["country"] not in ["UK", "IE", "AU", "US", "SG", "MY"]:
             continue
 

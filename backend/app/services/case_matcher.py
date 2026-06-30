@@ -59,6 +59,8 @@ MAJOR_KEYWORD_EXPANSION = {
 }
 
 
+from ..repositories import CaseRepository
+from ..core.config import settings
 from .case_utils import (
     _expand_major_keywords,
     _target_major_to_category,
@@ -73,6 +75,14 @@ from .case_utils import (
     _get_gpa_tolerance,
     _tier_adjacent,
 )
+
+
+_repo: CaseRepository | None = None
+def _get_repo() -> CaseRepository:
+    global _repo
+    if _repo is None:
+        _repo = CaseRepository(str(settings.DB_PATH))
+    return _repo
 
 def match_schools_by_background(
     conn: sqlite3.Connection,
@@ -246,23 +256,11 @@ def _enrich_with_ranking(
 
     id_list = list(all_ids)
     ph = ",".join("?" for _ in id_list)
-    rows = conn.execute(
-        f"SELECT id, qs_rank, usnews_rank, the_rank FROM universities WHERE id IN ({ph})",
-        id_list,
-    ).fetchall()
+    rows = _get_repo().fetch_ranking_batch(id_list)
     rank_map = {r["id"]: {"qs_rank": r["qs_rank"], "usnews_rank": r["usnews_rank"], "the_rank": r["the_rank"]} for r in rows}
 
     # D: 查每个学校所有录取案例的真实 GPA（不受过滤容差限制）
-    gpa_rows = conn.execute(
-        f"""SELECT c.university_id, c.gpa_score, c.gpa_format
-            FROM cases c
-            WHERE c.university_id IN ({ph})
-              AND c.gpa_score IS NOT NULL
-              AND c.gpa_format IS NOT NULL
-              AND c.gpa_format NOT IN ('英制百分制', '学位等级对应分数', '中国高考')
-              AND c.study_level NOT IN ('中学', '语言课程', '专科/职业学院', '预科')""",
-        id_list,
-    ).fetchall()
+    gpa_rows = _get_repo().fetch_case_gpa_batch(id_list)
 
     all_gpas_by_uni: dict = defaultdict(list)
     for r in gpa_rows:

@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
 import type { ChatMessage } from "../types";
 import { sendChat, streamChat } from "../services/chat";
@@ -7,9 +7,13 @@ import MessageBubble from "../components/MessageBubble";
 import { SCENES } from "../config/scenes";
 import type { SceneId } from "../config/scenes";
 import { generateId, ts, SCENE_INFO, looksLikeSchoolRequest, extractInfo, getMissingFields, profileToInfo, infoToDescription } from "../services/chat-helpers";
+import { useChatInput } from "../hooks/useChatInput";
+import { useChatScroll } from "../hooks/useChatScroll";
 type SceneState = Record<SceneId, ChatMessage[]>;
 
 export default function ChatPage() {
+  const { input, setInput, inputRef, handleKeyDown, setSendHandler } = useChatInput();
+  const { scrollRef, showScrollBottom, setShowScrollBottom, onScroll, scrollToBottom } = useChatScroll();
   const [activeScene, setActiveScene] = useState<SceneId>("school");
   // 每个场景的对话历史独立存储，切换 Tab 不串
   const [scenes, setScenes] = useState<SceneState>(() => ({
@@ -17,15 +21,11 @@ export default function ChatPage() {
     essay: [],
     visa: [],
   }));
-  const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [showScrollBottom, setShowScrollBottom] = useState(false);
   /** 已收集的信息（每个场景） */
   const [collectedInfo, setCollectedInfo] = useState<Record<string, Record<string, string>>>({});
 
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLTextAreaElement>(null);
   const abortRef = useRef<AbortController | null>(null);
   const atBottomRef = useRef(true);
 
@@ -70,22 +70,9 @@ export default function ChatPage() {
   const msgLenRef = useRef(0);
   msgLenRef.current = messages.length;
 
-  const onScroll = useCallback(() => {
-    const el = scrollRef.current;
-    if (!el) return;
-    const distance = el.scrollHeight - el.scrollTop - el.clientHeight;
-    const atBottom = distance < 80;
-    atBottomRef.current = atBottom;
-    setShowScrollBottom(!atBottom && msgLenRef.current > 0);
-  }, []);
+  // onScroll extracted to useChatScroll hook
 
-  const scrollToBottom = () => {
-    const el = scrollRef.current;
-    if (!el) return;
-    el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
-    atBottomRef.current = true;
-    setShowScrollBottom(false);
-  };
+  // scrollToBottom extracted to useChatScroll hook
 
   const handleStop = () => {
     abortRef.current?.abort();
@@ -97,6 +84,7 @@ export default function ChatPage() {
   };
 
   const handleSend = async (text?: string) => {
+    setSendHandler(() => handleSend);
     const content = (text ?? input).trim();
     if (!content || loading) return;
     setError(null);
@@ -335,12 +323,7 @@ export default function ChatPage() {
     }
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
-    }
-  };
+
 
   const handleClear = () => {
     if (loading) handleStop();

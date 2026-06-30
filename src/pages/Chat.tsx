@@ -1,10 +1,10 @@
-import { useState, useRef, useEffect, useCallback, useMemo, memo } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { Link } from "react-router-dom";
 import type { ChatMessage } from "../types";
 import { sendChat, streamChat } from "../services/chat";
-import { renderMarkdown } from "../utils/markdown";
 import { mergeChatInfo, createChatHistoryItem, addHistoryItem, loadProfile } from "../services/profile";
 import { getSchoolAbbrevMap } from "../services/school";
+import MessageBubble from "../components/MessageBubble";
 
 /* =========================================================================
  * 场景（Tab）定义
@@ -92,60 +92,6 @@ function generateId() {
 }
 
 const ts = () => Date.now();
-
-function formatTime(ms: number) {
-  const d = new Date(ms);
-  const hh = String(d.getHours()).padStart(2, "0");
-  const mm = String(d.getMinutes()).padStart(2, "0");
-  return `${hh}:${mm}`;
-}
-
-/* ---------- 子组件 ---------- */
-
-function Avatar({ role }: { role: "user" | "assistant" }) {
-  if (role === "user") {
-    return (
-      <div className="shrink-0 w-9 h-9 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-white grid place-items-center text-sm font-semibold shadow-sm">
-        我
-      </div>
-    );
-  }
-  return (
-    <div className="shrink-0 w-9 h-9 rounded-full bg-white border border-slate-200 grid place-items-center shadow-sm">
-      <span className="text-base brand-gradient font-bold">天</span>
-    </div>
-  );
-}
-
-function CopyButton({ text }: { text: string }) {
-  const [copied, setCopied] = useState(false);
-  const onCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
-    } catch {
-      /* ignore */
-    }
-  };
-  return (
-    <button
-      onClick={onCopy}
-      className="opacity-0 group-hover:opacity-100 transition-opacity text-xs px-2 py-1 rounded-md text-slate-500 hover:text-indigo-600 hover:bg-indigo-50"
-      aria-label="复制"
-    >
-      {copied ? "✓ 已复制" : "📋 复制"}
-    </button>
-  );
-}
-
-function TypingDots() {
-  return (
-    <span className="dot-bounce inline-flex items-center" aria-label="正在输入">
-      <span /><span /><span />
-    </span>
-  );
-}
 
 /* =========================================================================
  * 信息收集（首次消息的字段完整性检查）

@@ -6,15 +6,21 @@ import type { PathwaySuggestion } from "../types";
 const suggestions: PathwaySuggestion[] = [
   {
     university: "Test University",
+    reason: "Low GPA pathway option",
     country: "US",
     qs_rank: 50,
     usnews_rank: 30,
     programs: [
       {
-        name: "Master's Preparation",
+        provider: "Test Provider",
+        program_type: "Master's Preparation",
+        direction: "Business",
+        location: "Online",
         duration: "1 year",
-        fee_range: "$30,000-$40,000",
-        entry_requirement: "GPA 2.5+",
+        intake: "Sep 2026",
+        academic_req: "GPA 2.5+",
+        ielts_req: "6.0",
+        tuition_note: "$30,000-$40,000",
       },
     ],
   },

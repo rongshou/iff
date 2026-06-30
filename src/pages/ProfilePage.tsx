@@ -9,7 +9,8 @@ import {
   clearHistory,
 } from "../services/profile";
 import { logout } from "../services/auth";
-import type { MBTIMajorResult, ChatMessage } from "../types";
+import { viewDetail } from "../utils/profile-utils";
+import HistoryRow from "../components/HistoryRow";
 
 /* =====================================================================
  * 我的档案 — 个人信息 + 天枢测评结果 + 查询历史
@@ -19,11 +20,6 @@ const COUNTRIES = ["英国", "美国", "澳洲", "加拿大", "香港", "新加�
 const STUDY_LEVELS = ["高中", "本科", "硕士", "博士", "预科", "其他"];
 const GPA_FORMATS = ["百分制", "4分制", "5分制", "7分制", "9分制", "英制百分制"];
 
-const TYPE_ICONS: Record<string, string> = {
-  mbti: "🧠",
-  chat_session: "💬",
-  tianshu_report: "🧭",
-};
 
 export default function ProfilePage() {
   const [profile, setProfile] = useState<ProfileData>({ updated_at: "" });
@@ -415,7 +411,7 @@ export default function ProfilePage() {
           ) : (
             <div className="space-y-2">
               {history.map((item) => (
-                <HistoryRow key={item.id} item={item} onDelete={handleDelete} />
+                <HistoryRow key={item.id} item={item} onDelete={handleDelete} onViewDetail={viewDetail} />
               ))}
             </div>
           )}
@@ -429,94 +425,3 @@ export default function ProfilePage() {
  * 历史记录行
  * ===================================================================== */
 
-function HistoryRow({
-  item,
-  onDelete,
-}: {
-  item: HistoryItem;
-  onDelete: (id: string) => void;
-}) {
-  const icon = TYPE_ICONS[item.type] || "📄";
-  const date = formatDate(item.created_at);
-
-  return (
-    <div className="flex items-start gap-3 p-3 rounded-xl hover:bg-slate-50 transition-colors group">
-      <span className="text-xl mt-0.5 shrink-0">{icon}</span>
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-medium text-slate-700 truncate">
-            {typeLabel(item.type, item.system)}
-          </span>
-          <span className="text-xs text-slate-400 shrink-0">{date}</span>
-        </div>
-        <p className="text-sm text-slate-600 truncate">{item.summary}</p>
-        {item.subtitle && (
-          <p className="text-xs text-slate-400 truncate">{item.subtitle}</p>
-        )}
-      </div>
-      <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-        <button
-          onClick={() => viewDetail(item)}
-          className="text-xs px-2 py-1 rounded text-indigo-600 hover:bg-indigo-50"
-        >
-          查看
-        </button>
-        <button
-          onClick={() => onDelete(item.id)}
-          className="text-xs px-2 py-1 rounded text-red-500 hover:bg-red-50"
-        >
-          删除
-        </button>
-      </div>
-    </div>
-  );
-}
-
-/* =====================================================================
- * 工具函数
- * ===================================================================== */
-
-function typeLabel(type: string, system: string): string {
-  if (type === "mbti") return "🧠 MBTI 测评";
-  if (type === "chat_session") return "💬 AI 对话";
-  if (type === "tianshu_report") return system === "tianshu" ? "🧭 天枢测评" : "📄 测评报告";
-  return "📄 记录";
-}
-
-export function formatDate(iso: string): string {
-  try {
-    const d = new Date(iso);
-    const month = String(d.getMonth() + 1).padStart(2, "0");
-    const day = String(d.getDate()).padStart(2, "0");
-    const hour = String(d.getHours()).padStart(2, "0");
-    const min = String(d.getMinutes()).padStart(2, "0");
-    return `${month}/${day} ${hour}:${min}`;
-  } catch {
-    return iso;
-  }
-}
-
-function viewDetail(item: HistoryItem) {
-  const data = item.data as Record<string, unknown>;
-
-  if (item.type === "mbti") {
-    const m = data.result as MBTIMajorResult || data as unknown as MBTIMajorResult;
-    window.alert(
-      `🧠 ${m.type} · ${m.name}\n\n` +
-      `✅ 推荐: ${(m.top_majors || []).join("、")}\n` +
-      `⚠️ 慎重: ${(m.avoid_majors || []).join("、")}\n\n` +
-      `💼 职业: ${m.career_path || ""}\n` +
-      `💡 建议: ${m.study_tips || ""}`
-    );
-  } else if (item.type === "chat_session") {
-    const msgs = (data.messages || []) as ChatMessage[];
-    const sceneLabels: Record<string, string> = { school: "选校", essay: "文书", visa: "签证" };
-    const sceneLabel = sceneLabels[data.scene as string] || data.scene as string;
-    const text = msgs.map((m) =>
-      `${m.role === "user" ? "🧑" : "🤖"}: ${m.content.slice(0, 120)}`
-    ).join("\n\n");
-    window.alert(`💬 ${sceneLabel} · ${msgs.length} 轮\n\n${text}`);
-  } else if (item.type === "tianshu_report") {
-    window.alert("🧭 天枢综合测评报告\n\n完整报告请在天枢中查看。\n测评结果已保存在档案的「天枢测评结果」区块。");
-  }
-}

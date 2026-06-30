@@ -4,6 +4,7 @@ import type { ChatMessage } from "../types";
 import { sendChat, streamChat } from "../services/chat";
 import { renderMarkdown } from "../utils/markdown";
 import { mergeChatInfo, createChatHistoryItem, addHistoryItem, loadProfile } from "../services/profile";
+import { getSchoolAbbrevMap } from "../services/school";
 
 /* =========================================================================
  * 场景（Tab）定义
@@ -200,26 +201,8 @@ function looksLikeSchoolRequest(text: string): boolean {
   return false;
 }
 
-/* ----- 简称 → 全称映射（与后端 _UNIV_ABBREV 保持一致） ----- */
-const SCHOOL_ABBREV: Record<string, string> = {
-  "北邮": "北京邮电大学", "北航": "北京航空航天大学", "北理": "北京理工大学",
-  "上交": "上海交通大学", "西交": "西安交通大学",
-  "华科": "华中科技大学", "中科大": "中国科学技术大学",
-  "哈工大": "哈尔滨工业大学", "同济": "同济大学",
-  "南开": "南开大学", "天大": "天津大学", "厦大": "厦门大学",
-  "中大": "中山大学", "华南理工": "华南理工大学",
-  "成电": "电子科技大学", "西电": "西安电子科技大学",
-  "北交": "北京交通大学", "北科": "北京科技大学",
-  "南大": "南京大学", "浙大": "浙江大学", "武大": "武汉大学",
-  "川大": "四川大学", "山大": "山东大学", "吉大": "吉林大学",
-  "湖大": "湖南大学", "重大": "重庆大学",
-  "北大": "北京大学", "清华": "清华大学",
-  "复旦": "复旦大学", "交大": "上海交通大学",
-  "人大": "中国人民大学", "北师大": "北京师范大学",
-  "上外": "上海外国语大学", "北外": "北京外国语大学",
-  "上财": "上海财经大学", "央财": "中央财经大学",
-  "中传": "中国传媒大学",
-};
+/* ----- 简称 → 全称映射：从后端 /api/school/abbreviations 动态加载 ----- */
+/* （原硬编码 SCHOOL_ABBREV 已迁移到 backend/app/services/school_abbrev.py） */
 
 /* ----- 国家别名（与后端 COUNTRY_ALIASES 保持一致） ----- */
 const COUNTRY_ALIASES: Record<string, string> = {
@@ -236,7 +219,7 @@ const COUNTRY_ALIASES: Record<string, string> = {
   "马来西亚": "马来西亚", "澳门": "澳门",
 };
 /** 从用户输入中提取已有信息 */
-function extractInfo(text: string): Record<string, string> {
+async function extractInfo(text: string): Promise<Record<string, string>> {
   const info: Record<string, string> = {};
 
   // --- GPA（可选冒号，支持空格 "GPA 82/100" 和 "均分82"）---
@@ -244,6 +227,7 @@ function extractInfo(text: string): Record<string, string> {
   if (mGpa) info.gpa = mGpa[1];
 
   // --- 学校（简称优先，再查 "大学/学院" 全名）---
+  const SCHOOL_ABBREV = await getSchoolAbbrevMap();
   for (const [abbr, full] of Object.entries(SCHOOL_ABBREV)) {
     if (text.includes(abbr)) {
       info.school = full;
@@ -451,7 +435,7 @@ export default function ChatPage() {
         if (profile) baseInfo = profileToInfo(profile);
       }
 
-      const newInfo = { ...baseInfo, ...currentInfo, ...extractInfo(content) };
+      const newInfo = { ...baseInfo, ...currentInfo, ...await extractInfo(content) };
       const missing = getMissingFields(newInfo, fields);
 
       // 首次且信息不全 → 逐个追问
@@ -517,7 +501,7 @@ export default function ChatPage() {
     if (activeScene === "school" && collectedInfo[activeScene]) {
       const currentInfo = collectedInfo[activeScene] || {};
       const fields = SCENE_INFO[activeScene];
-      const newInfo = { ...currentInfo, ...extractInfo(content) };
+      const newInfo = { ...currentInfo, ...await extractInfo(content) };
       const missing = getMissingFields(newInfo, fields);
 
       if (missing.length > 0) {

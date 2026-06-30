@@ -1,5 +1,7 @@
 import { Navigate, HashRouter, Routes, Route, Outlet } from "react-router-dom";
+import { useEffect } from "react";
 import { isAuthenticated } from "./services/auth";
+import { loadSchoolAbbreviations } from "./services/school";
 import LoginPage from "./pages/Login";
 import ChatPage from "./pages/Chat";
 import ProfilePage from "./pages/ProfilePage";
@@ -15,6 +17,10 @@ function AuthGuard() {
 }
 
 export default function App() {
+  // 启动时预加载学校简称映射（fire-and-forget），让 Chat 页面调用时走同步缓存
+  useEffect(() => {
+    void loadSchoolAbbreviations();
+  }, []);
   return (
     <>
       <HashRouter>

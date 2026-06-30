@@ -7,6 +7,7 @@ from .api.timeline import router as timeline_router
 from .api.news import router as news_router
 from .api.chat import router as chat_router
 from .api.auth import router as auth_router
+from .api.school import router as school_router
 from .core.config import settings
 
 
@@ -30,6 +31,7 @@ def create_app() -> FastAPI:
     app.include_router(news_router)
     app.include_router(chat_router)
     app.include_router(auth_router)
+    app.include_router(school_router)
 
     return app
 

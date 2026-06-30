@@ -5,6 +5,8 @@ import { sendChat, streamChat } from "../services/chat";
 import { mergeChatInfo, createChatHistoryItem, addHistoryItem, loadProfile } from "../services/profile";
 import { getSchoolAbbrevMap } from "../services/school";
 import MessageBubble from "../components/MessageBubble";
+import { SCENES } from "../config/scenes";
+import type { SceneId } from "../config/scenes";
 
 /* =========================================================================
  * 场景（Tab）定义
@@ -12,78 +14,6 @@ import MessageBubble from "../components/MessageBubble";
  * 避免 AI 在不同主题间串台（比如聊完选校去问签证，AI 还在选校语境里）。
  * ========================================================================= */
 
-type SceneId = "school" | "essay" | "visa";
-
-interface Scene {
-  id: SceneId;
-  label: string;
-  icon: string;
-  shortLabel: string;
-  greeting: string;
-  intro: string;
-  quickPrompts: { icon: string; text: string }[];
-  followups: string[];
-}
-
-const SCENES: Scene[] = [
-  {
-    id: "school",
-    label: "选校定位",
-    shortLabel: "选校",
-    icon: "🎓",
-    greeting: "选校定位 · 我来帮你参谋",
-    intro: "",
-    quickPrompts: [
-      { icon: "🇬🇧", text: "英国硕士选校：北京邮电大学 通信工程 GPA：82/100 大三 目标专业：计算机" },
-      { icon: "🇺🇸", text: "美国 CS 硕士：985 高校 计算机 GPA：3.4/4.0 已毕业 目标专业：CS" },
-      { icon: "🇦🇺", text: "澳洲硕士选校：双非 金融 GPA：85/100 大四 目标专业：金融" },
-      { icon: "📋", text: "先帮我评估选校，一步步问我的情况" },
-    ],
-    followups: [
-      "推荐几所保底院校",
-      "雅思/托福要考到多少？",
-      "如何写一份有竞争力的 PS？",
-    ],
-  },
-  {
-    id: "essay",
-    label: "文书写作",
-    shortLabel: "文书",
-    icon: "✍️",
-    greeting: "文书写作 · 把故事讲好",
-    intro: "PS / CV / 推荐信怎么开头？结构怎么排？亮点怎么挖？我可以给你思路与模板。",
-    quickPrompts: [
-      { icon: "📝", text: "我的 PS 第一段该怎么写？有什么开头模板？" },
-      { icon: "📄", text: "帮我优化这段个人陈述：" },
-      { icon: "📚", text: "推荐信应该找什么样的老师写？" },
-      { icon: "🎯", text: "CV 怎么突出科研和项目经历？" },
-    ],
-    followups: [
-      "PS 字数一般多少合适？",
-      "如何把跨专业经历写成亮点？",
-      "推荐信里要不要写缺点？",
-    ],
-  },
-  {
-    id: "visa",
-    label: "签证与材料",
-    shortLabel: "签证",
-    icon: "🛂",
-    greeting: "签证疑问 · 帮你梳理",
-    intro: "F-1 / Tier 4 / 资金证明 / 面签准备，材料清单和流程都帮你梳理清楚。",
-    quickPrompts: [
-      { icon: "🇺🇸", text: "F-1 签证需要准备哪些材料？" },
-      { icon: "🇬🇧", text: "英国学生签资金证明要存多久？" },
-      { icon: "💰", text: "签证存款多少合适？冻结期怎么算？" },
-      { icon: "🎤", text: "美国签证面签常问哪些问题？" },
-    ],
-    followups: [
-      "签证最早什么时候办？",
-      "面签被拒了还能再签吗？",
-      "I-20 是什么？怎么用？",
-    ],
-  },
-];
 
 /* ---------- 工具函数 ---------- */
 
@@ -860,135 +790,7 @@ AI 留学智能问答
 
 /* ---------- 空状态 ---------- */
 
-function EmptyState({
-  scene,
-  onPick,
-  onSceneChange,
-}: {
-  scene: Scene;
-  onPick: (t: string) => void;
-  onSceneChange: (id: SceneId) => void;
-}) {
-  return (
-    <div className="flex-1 flex flex-col justify-center">
-      {/* Hero */}
-      <div className="text-center mb-6 sm:mb-8">
-        <div className="inline-flex items-center justify-center w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 text-white text-2xl sm:text-3xl font-bold shadow-lg shadow-indigo-200 mb-4">
-          {scene.icon}
-        </div>
-        <h2 className="text-xl sm:text-2xl font-bold text-slate-900 mb-2">
-          {scene.greeting}
-        </h2>
-        <p className="text-slate-500 text-sm sm:text-base max-w-md mx-auto leading-relaxed">
-          {scene.intro}
-        </p>
-      </div>
+import EmptyState from "../components/EmptyState";
 
-      {/* 使用说明 */}
-      {scene.id === "school" && (
-        <div className="mx-auto max-w-xl w-full mb-5 bg-indigo-50/70 border border-indigo-100 rounded-xl px-4 py-3 text-sm text-slate-700 leading-relaxed">
-          <div className="font-semibold text-indigo-800 mb-1">🎯 推荐原理</div>
-          <ul className="space-y-1 list-disc list-inside marker:text-indigo-400">
-            <li><strong>基于 17 万+ 真实录取案例</strong>的相似背景匹配引擎，不靠 AI 猜</li>
-            <li>按 <strong>GPA容差 + 学校层次 + 专业方向</strong> 三层过滤，找到和你最像的往届申请者</li>
-            <li>综合 <strong>GPA 匹配 · 学校排名 · 案例数量</strong> 三维评分，分 <strong>冲刺 / 匹配 / 安全</strong> 三档</li>
-            <li>每所学校都显示匹配案例数和录取 GPA 中位数，数据透明可验证</li>
-          </ul>
-          <p className="mt-2 text-indigo-600/80 text-xs">告诉我你的 GPA、学校、专业和目标国家即可开始。也可以直接点击下方快捷问题 👇</p>
-        </div>
-      )}
 
-      {/* 场景入口提示 */}
-      <div className="text-center mb-5">
-        <div className="inline-flex flex-wrap items-center justify-center gap-1 text-xs text-slate-400">
-          <span>也可以聊聊</span>
-          {SCENES.filter((s) => s.id !== scene.id).map((s, i, arr) => (
-            <span key={s.id}>
-              <button
-                onClick={() => onSceneChange(s.id)}
-                className="text-indigo-600 hover:underline font-medium"
-              >
-                {s.label}
-              </button>
-              {i < arr.length - 1 && <span className="mx-0.5">·</span>}
-            </span>
-          ))}
-        </div>
-      </div>
-
-      {/* 快捷问题 —— 点击填到输入框（不直接发送），让用户自己修改后再发 */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-xl mx-auto w-full">
-        {scene.quickPrompts.map((p) => (
-          <button
-            key={p.text}
-            onClick={() => onPick(p.text)}
-            className="lift text-left px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm text-slate-700 flex items-start gap-2 group"
-          >
-            <span className="text-lg shrink-0">{p.icon}</span>
-            <span className="leading-relaxed flex-1">{p.text}</span>
-            <span className="text-xs text-slate-400 group-hover:text-indigo-500 transition-colors shrink-0 mt-0.5">
-              →
-            </span>
-          </button>
-        ))}
-      </div>
-      <p className="text-[11px] text-slate-400 text-center mt-3 max-w-xl mx-auto">
-        点击上方问题会填到输入框，可修改后再发送
-      </p>
-    </div>
-  );
-}
-
-/* ---------- 消息气泡（React.memo 避免无关消息重渲染） ---------- */
-
-const MessageBubble = memo(function MessageBubble({ msg }: { msg: ChatMessage }) {
-  const isUser = msg.role === "user";
-  const renderedContent = useMemo(() => msg.content ? renderMarkdown(msg.content) : null, [msg.content]);
-
-  return (
-    <div className={`flex gap-2 sm:gap-3 ${isUser ? "flex-row-reverse" : "flex-row"}`}>
-      <Avatar role={msg.role} />
-      <div
-        className={`group flex flex-col ${
-          isUser ? "items-end" : "items-start"
-        } max-w-[85%] sm:max-w-[75%]`}
-      >
-        <div
-          className={`bubble-shadow ${
-            isUser
-              ? "bubble-user px-4 py-2.5 rounded-2xl rounded-tr-md"
-              : "bubble-ai px-[18px] py-3.5 rounded-2xl rounded-tl-md"
-          } text-[15px] sm:text-[15.5px] leading-relaxed ${
-            isUser ? "" : "prose-chat"
-          }`}
-        >
-          {isUser ? (
-            <div className="whitespace-pre-wrap break-words">{msg.content}</div>
-          ) : msg.content ? (
-            <div className="break-words">{renderedContent}</div>
-          ) : msg.reasoning ? (
-            <div className="flex items-center gap-2 text-slate-400 text-[13px]">
-              <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none">
-                <circle className="opacity-20" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" />
-                <path className="opacity-80" d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
-              </svg>
-              <span>正在思考…</span>
-            </div>
-          ) : (
-            <TypingDots />
-          )}
-        </div>
-        <div
-          className={`flex items-center gap-2 mt-1 px-1 ${
-            isUser ? "flex-row-reverse" : "flex-row"
-          }`}
-        >
-          <span className="text-[10px] text-slate-400">
-            {formatTime(msg.timestamp)}
-          </span>
-          {!isUser && msg.content && <CopyButton text={msg.content} />}
-        </div>
-      </div>
-    </div>
-  );
-}, (prev, next) => prev.msg.id === next.msg.id && prev.msg.content === next.msg.content && prev.msg.reasoning === next.msg.reasoning);
+/* ---------- 消息气泡已抽出为独立组件：src/components/MessageBubble.tsx ---------- */

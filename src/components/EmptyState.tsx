@@ -34,7 +34,7 @@ export default function EmptyState({
           <ul className="space-y-1 list-disc list-inside marker:text-indigo-400">
             <li><strong>基于 17 万+ 真实录取案例</strong>的相似背景匹配引擎，不靠 AI 猜</li>
             <li>按 <strong>GPA容差 + 学校层次 + 专业方向</strong> 三层过滤，找到和你最像的往届申请者</li>
-            <li>综合 <strong>GPA 匹配 · 学校排名 · 案例数量</strong> 三维评分，分 <strong>冲刺 / 匹配 / 安全</strong> 三档</li>
+            <li>综合 <strong>GPA 匹配 · 学校排名 · 案例数量</strong> 三维分析，分 <strong>冲刺 / 匹配 / 安全</strong> 三档</li>
             <li>每所学校都显示匹配案例数和录取 GPA 中位数，数据透明可验证</li>
           </ul>
           <p className="mt-2 text-indigo-600/80 text-xs">告诉我你的 GPA、学校、专业和目标国家即可开始。也可以直接点击下方快捷问题 👇</p>

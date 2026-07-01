@@ -310,6 +310,11 @@ def save_processed(kb_conn, article, structured, clean_text):
     """保存处理结果。"""
     article_id = article["id"]
 
+    # 质量门槛：低于 0.5 不入库
+    quality = structured.get("quality_score", 0)
+    if quality < 0.5:
+        return False
+
     # 保存结构化数据
     kb_conn.execute("""
         INSERT OR REPLACE INTO kb_processed

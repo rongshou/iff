@@ -128,6 +128,7 @@ def _filter_and_score(
 
     for r in rows:
         case_tier = None
+        tier_diff = 0
         if r.get("undergraduate_school"):
             case_tier, _ = classify_school_tier(r["undergraduate_school"])
             tier_diff = abs(user_tier - case_tier) if case_tier is not None else 0

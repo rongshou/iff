@@ -1,6 +1,10 @@
+import logging
+
 from fastapi import APIRouter, Query, HTTPException
 
 from ..core.database import fetch_all, fetch_one
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/mbti", tags=["mbti"])
 
@@ -24,7 +28,7 @@ def get_mbti_majors(mbti: str = Query(..., description="MBTI 类型, 如 INTJ"))
         "SELECT * FROM mbti_major_map WHERE mbti_type = ?", (mbti.upper(),)
     )
     if not row:
-        raise HTTPException(404, f"未找到 MBTI 类型: {mbti}")
+        raise HTTPException(404, "未找到对应的 MBTI 类型")
 
     return {
         "type": row["mbti_type"],

@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import type { ProfileData } from "../services/profile";
-import { loadProfile, saveProfile, clearProfile } from "../services/profile";
+import { loadProfile, saveProfile } from "../services/profile";
 
 interface ProfileStore {
   profile: ProfileData | null;
@@ -9,10 +9,9 @@ interface ProfileStore {
   load: () => void;
   update: (data: Partial<ProfileData>) => ProfileData;
   setProfileField: (key: string, value: unknown) => void;
-  clear: () => void;
 }
 
-export const useProfileStore = create<ProfileStore>((set, get) => ({
+export const useProfileStore = create<ProfileStore>((set, _get) => ({
   profile: null,
   loaded: false,
 
@@ -28,14 +27,11 @@ export const useProfileStore = create<ProfileStore>((set, get) => ({
   },
 
   setProfileField: (key, value) =>
-    set((state) => ({
-      profile: state.profile
-        ? { ...state.profile, [key]: value }
-        : ({ [key]: value, updated_at: "" } as ProfileData),
-    })),
-
-  clear: () => {
-    clearProfile();
-    set({ profile: null });
-  },
+    set((state) => {
+      if (state.profile) {
+        return { profile: { ...state.profile, [key]: value } };
+      }
+      const initial: Partial<ProfileData> & { updated_at: string } = { [key]: value, updated_at: "" };
+      return { profile: initial as ProfileData };
+    }),
 }));

@@ -1,3 +1,4 @@
+import secrets
 from pathlib import Path
 from pydantic_settings import BaseSettings
 
@@ -14,6 +15,7 @@ class Settings(BaseSettings):
     PORT: int = 3470
     WORKERS: int = 1
 
+    # 生产环境必须在 .env 中设置具体的允许来源，如 ["https://your-frontend.com"]
     CORS_ORIGINS: list[str] = ["*"]
 
     REQUEST_TIMEOUT: int = 300
@@ -24,10 +26,26 @@ class Settings(BaseSettings):
     LLM_MODEL: str = "qwen3.5-plus"
 
     # 授权码体系 — 逗号分隔的合法授权码列表
-    # 留空则跳过授权码验证（兼容旧版）
+    # 留空则拒绝所有请求（fail-closed）；开发时可用 AUTH_DISABLED=true 绕过
     VALID_AUTH_CODES: str = ""
 
+    # 设为 true 可跳过所有 auth 检查（仅限开发环境）
+    AUTH_DISABLED: bool = False
+
     model_config = {"env_prefix": "TIANQUAN_", "env_file": ".env"}
+
+    def is_auth_code_valid(self, code: str) -> bool:
+        """恒定时间比较验证码是否在有效列表中"""
+        raw = self.VALID_AUTH_CODES.strip()
+        if not raw:
+            return False  # fail-closed: 无配置时拒绝所有
+        valid_codes = [c.strip() for c in raw.split(",") if c.strip()]
+        if not valid_codes:
+            return False
+        for valid in valid_codes:
+            if secrets.compare_digest(code, valid):
+                return True
+        return False
 
 
 settings = Settings()

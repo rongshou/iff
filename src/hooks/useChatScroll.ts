@@ -9,6 +9,7 @@ export function useChatScroll() {
     if (!el) return;
     const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 120;
     if (atBottom) setShowScrollBottom(false);
+    else setShowScrollBottom(true);
   }, []);
 
   const scrollToBottom = () => {

@@ -1,21 +1,31 @@
 """
-天权项目知识库检索优化版 - 基于 FTS5 BM25
+天权项目知识库检索 - 基于 kb_processed（AI 全结构化知识库）
 
-核心改进：
-1. HTML 清洗 + 纯文本提取
-2. 全部文章灌入 FTS5 索引（替代 LIKE 匹配）
-3. 中文分词：在连续中文字符间插入空格，配合 unicode61 分词器
-4. OR 语义 + BM25 排序，标题权重 10x
-5. 返回相关段落片段给 LLM（而非仅标题+120字摘要）
+架构：werss(采集) → kb_pipeline(AI处理) → kb_processed(轻量知识库) → 本模块(搜索)
+
+搜索流程：
+1. 用户查询 → 构造 FTS5 OR 查询
+2. 搜索 kb_processed_fts（BM25 排序）
+3. JOIN kb_processed 获取完整结构化数据（summary, article_type, countries, tags 等）
+4. 过滤 excluded_articles + 广告检测
+5. 返回结构化结果供 chat.py 注入 LLM
+
+降级策略：
+- 如果 kb_processed_fts 不存在/为空 → 尝试旧 articles_fts（过渡期兼容）
+- 如果旧系统也不可用 → 返回空结果
 """
 
+import json
+import logging
 import re
 import time
-from pathlib import Path
 from typing import Any
 
 from ..core.config import settings
-from ..repositories import ArticleRepository, WerssRepository
+from ..repositories import ArticleRepository
+
+
+logger = logging.getLogger(__name__)
 
 
 # ============================================================
@@ -23,7 +33,6 @@ from ..repositories import ArticleRepository, WerssRepository
 # ============================================================
 
 _article_repo: ArticleRepository | None = None
-_werss_repo: WerssRepository | None = None
 
 
 def _get_article_repo() -> ArticleRepository:
@@ -31,13 +40,6 @@ def _get_article_repo() -> ArticleRepository:
     if _article_repo is None:
         _article_repo = ArticleRepository(str(settings.DB_PATH))
     return _article_repo
-
-
-def _get_werss_repo() -> WerssRepository:
-    global _werss_repo
-    if _werss_repo is None:
-        _werss_repo = WerssRepository(str(settings.WERS_DB_PATH))
-    return _werss_repo
 
 
 # ============================================================
@@ -71,49 +73,43 @@ def _space_chinese(text: str) -> str:
     return re.sub(r'([\u4e00-\u9fff])', r' \1 ', text)
 
 
-def _prepare_for_index(text: str, max_length: int = 3000) -> str:
-    """清洗 HTML 并为中文分词做准备，返回可直接索引的文本"""
-    cleaned = _clean_html(text)
-    if not cleaned:
-        return ""
-    # 截断到合理长度（在句子边界）
-    if len(cleaned) > max_length:
-        truncated = cleaned[:max_length]
-        last_boundary = max(
-            truncated.rfind('。'), truncated.rfind('.'),
-            truncated.rfind('！'), truncated.rfind('?'),
-            truncated.rfind('\n'),
-        )
-        if last_boundary > max_length * 0.7:
-            truncated = truncated[:last_boundary + 1]
-        cleaned = truncated
-    # 为中文分词加空格
-    return _space_chinese(cleaned)
+def _escape_fts_term(term: str) -> str:
+    """转义 FTS5 查询词中的特殊字符，防止注入攻击。
+
+    FTS5 MATCH 中以下字符有特殊含义：^ * " ( ) + - ~ AND OR NOT NEAR
+    用双引号包裹每个 term，内部的 " 用 "" 转义。
+    """
+    escaped = term.replace('"', '""')
+    return f'"{escaped}"'
 
 
 def _prepare_query(query: str) -> str:
-    """将用户查询转换为 FTS5 OR 查询语法"""
+    """将用户查询转换为安全的 FTS5 OR 查询语法"""
     # 清洗查询
     cleaned = _clean_html(query)
     # 提取有意义的词：英文单词(>=2字符) + 中文字符
     terms = []
     # 英文词
     en_words = re.findall(r'[a-zA-Z][a-zA-Z0-9]{1,}', cleaned)
-    terms.extend(w.lower() for w in en_words[:5])
+    for w in en_words[:5]:
+        terms.append(_escape_fts_term(w.lower()))
     # 中文字符（每个字作为一个 token）
     cn_chars = re.findall(r'[\u4e00-\u9fff]', cleaned)
-    terms.extend(cn_chars[:10])
-    
+    for c in cn_chars[:10]:
+        terms.append(_escape_fts_term(c))
+
     if not terms:
         # 退化处理：取前几个字符
-        terms = [c for c in cleaned[:5] if c.strip()]
-    
+        for c in cleaned[:5]:
+            if c.strip():
+                terms.append(_escape_fts_term(c))
+
     # 构造 OR 查询
-    return " OR ".join(terms)
+    return " OR ".join(terms) if terms else ""
 
 
 # ============================================================
-# 分类关键词（用于查询理解）
+# 分类关键词（用于查询理解，保留供未来扩展）
 # ============================================================
 
 CATEGORY_KEYWORDS: dict[str, list[str]] = {
@@ -176,172 +172,54 @@ def _extract_keywords(text: str) -> list[str]:
 
 
 # ============================================================
-# FTS5 索引管理
+# FTS5 索引检查
 # ============================================================
 
-_FTS_INIT_DONE: bool = False
-_FTS_INIT_TIME: float = 0
-_FTS_CHECK_INTERVAL: float = 300  # 5 分钟检查一次新文章
+_KB_INIT_DONE: bool = False
+_KB_INIT_TIME: float = 0
+_KB_CHECK_INTERVAL: float = 300  # 5 分钟检查一次
 
 
 def _ensure_fts_index() -> None:
-    """确保 FTS5 索引已建立。只做存在性检查，不做增量同步（同步由外部脚本处理）"""
-    global _FTS_INIT_DONE, _FTS_INIT_TIME
+    """确保知识库索引可用。
+
+    优先检查 kb_processed_fts（新版 AI 结构化知识库）。
+    如果不可用，降级检查旧 articles_fts（过渡期兼容）。
+    不再自动从 werss.db 构建索引 —— 索引由 kb_pipeline.py 负责。
+    """
+    global _KB_INIT_DONE, _KB_INIT_TIME
     now = time.time()
-    
-    if _FTS_INIT_DONE:
+
+    if _KB_INIT_DONE:
         return
-    
+
     try:
         repo = _get_article_repo()
         with repo.get_conn() as conn:
-            fts_exists = repo.fts_table_exists(conn)
-            
-            if fts_exists:
-                fts_count = repo.fts_count(conn)
-                if fts_count > 0:
-                    _FTS_INIT_DONE = True
-                    _FTS_INIT_TIME = now
+            # 优先检查 kb_processed_fts
+            if repo.kb_fts_exists(conn):
+                kb_count = repo.kb_count(conn)
+                if kb_count > 0:
+                    _KB_INIT_DONE = True
+                    _KB_INIT_TIME = now
+                    logger.info("kb_processed ready: %s articles", kb_count)
                     return
-                # 空表，删除后重建
-                repo.drop_fts_table(conn)
-            
-            # 全量构建
-            _build_fts_index(conn)
-        
-        _FTS_INIT_DONE = True
-        _FTS_INIT_TIME = now
+
+            # 降级：检查旧 articles_fts
+            if repo.fts_table_exists(conn):
+                old_count = repo.fts_count(conn)
+                if old_count > 0:
+                    _KB_INIT_DONE = True
+                    _KB_INIT_TIME = now
+                    logger.warning("kb_processed empty, falling back to old articles_fts (%s articles)", old_count)
+                    return
+
+            logger.warning("No knowledge index available. Run kb_pipeline.py to populate kb_processed.")
+
+        _KB_INIT_DONE = True
+        _KB_INIT_TIME = now
     except Exception as e:
-        print(f"[news_knowledge] FTS index init failed: {e}")
-
-
-def _build_fts_index(conn) -> None:
-    """从 werss.db 构建完整的 FTS5 索引（逐条处理，带重试）"""
-    wers_db = Path(settings.WERS_DB_PATH)
-    if not wers_db.exists():
-        print("[news_knowledge] werss.db not found, skipping FTS build")
-        return
-    
-    article_repo = _get_article_repo()
-    werss_repo = _get_werss_repo()
-    
-    # 创建 FTS5 虚拟表（unicode61 分词器）
-    article_repo.create_fts_table(conn)
-    
-    # 先获取全部文章 ID（轻量查询）
-    article_ids = werss_repo.get_article_ids_with_content()
-    
-    # 加载排除列表（只加载一次）
-    excluded_ids: set[str] = set()
-    try:
-        excluded_ids = article_repo.load_excluded_article_ids()
-        if excluded_ids:
-            print(f"[news_knowledge] {len(excluded_ids)} excluded articles will be skipped")
-    except Exception:
-        pass
-
-    inserted = 0
-    skipped = 0
-    for i, aid in enumerate(article_ids):
-        if str(aid) in excluded_ids:
-            skipped += 1
-            continue
-
-        retry = 0
-        while retry < 3:
-            try:
-                row = werss_repo.get_article_by_id(aid)
-                
-                if not row:
-                    break
-                
-                article_id = str(row["id"])
-                title = row.get("title") or ""
-                raw_content = row.get("content") or ""
-                category = row.get("ai_category") or "综合资讯"
-                
-                clean_content = _prepare_for_index(raw_content, max_length=2000)
-                clean_title = _space_chinese(title)
-                
-                if not clean_content.strip():
-                    break
-                
-                article_repo.insert_into_fts(conn, article_id, clean_title, clean_content, category)
-                inserted += 1
-                break
-            except Exception:
-                retry += 1
-                time.sleep(0.5)
-        
-        # 每 100 篇提交一次
-        if (i + 1) % 100 == 0:
-            conn.commit()
-    
-    conn.commit()
-    print(f"[news_knowledge] FTS index built: {inserted}/{len(article_ids)} articles indexed ({skipped} excluded)")
-
-
-def _sync_new_articles_to_fts(conn) -> None:
-    """增量同步新文章到 FTS5（轻量级：只检查文章总数差异）"""
-    wers_db = Path(settings.WERS_DB_PATH)
-    if not wers_db.exists():
-        return
-    
-    article_repo = _get_article_repo()
-    werss_repo = _get_werss_repo()
-    
-    # 快速检查：比较 FTS 索引数量和 werss.db 文章数量
-    fts_count = article_repo.fts_count(conn)
-    
-    try:
-        wers_count = werss_repo.get_article_count_with_content()
-    except Exception:
-        return
-    
-    # 差异不大则跳过（允许少量不同步）
-    if wers_count - fts_count < 10:
-        return
-    
-    # 有较大差异时才做增量同步
-    print(f"[news_knowledge] FTS sync needed: FTS={fts_count}, werss={wers_count}")
-    
-    # 获取 FTS 中已有的 article_id
-    existing_ids = article_repo.list_fts_article_ids(conn)
-    
-    # 从 werss.db 获取新文章（使用游标逐条读取，避免大查询）
-    try:
-        wers_conn, cursor = werss_repo.iterate_articles_with_content()
-        
-        inserted = 0
-        while True:
-            row = cursor.fetchone()
-            if not row:
-                break
-            
-            article_id = str(row[0])
-            if article_id in existing_ids:
-                continue
-            
-            title = row[1] or ""
-            raw_content = row[2] or ""
-            category = row[3] or "综合资讯"
-            
-            clean_content = _prepare_for_index(raw_content, max_length=2000)
-            clean_title = _space_chinese(title)
-            
-            if not clean_content.strip():
-                continue
-            
-            article_repo.insert_or_ignore_into_fts(conn, article_id, clean_title, clean_content, category)
-            inserted += 1
-        
-        wers_conn.close()
-        
-        if inserted > 0:
-            conn.commit()
-            print(f"[news_knowledge] FTS index synced: {inserted} new articles")
-    except Exception as e:
-        print(f"[news_knowledge] FTS sync error: {e}")
+        logger.warning("Index check failed: %s", e)
 
 
 # ============================================================
@@ -364,110 +242,244 @@ def _load_excluded_ids() -> set[str]:
         _EXCLUDED_CACHE_TIME = now
         return _EXCLUDED_CACHE
     except Exception:
+        logger.warning("load_excluded_article_ids failed", exc_info=True)
         return set()
 
 
 # ============================================================
-# 主检索函数 - 基于 FTS5 BM25
+# 主检索函数
 # ============================================================
 
 _SEARCH_CACHE: dict[str, tuple[float, list[dict[str, Any]]]] = {}
 
 
 def search_articles(query: str, limit: int = 8) -> list[dict[str, Any]]:
-    """使用 FTS5 BM25 搜索文章。
-    
+    """搜索知识库文章和院校手册。
+
+    优先从 kb_processed（AI 结构化知识库）搜索，降级到旧 articles_fts。
+
     返回格式：
     - title: 文章标题
-    - category: 分类
-    - description: 简短描述（前120字）
+    - category: 分类（article_type）
+    - description: 简短描述
     - content_snippet: 相关段落片段（用于 LLM 引用）
+    - publish_time: 发布时间戳
+    - quality_score: 质量评分（0-1，仅 kb_processed 有）
     """
     cache_key = f"{query}:{limit}"
     now = time.time()
     cached = _SEARCH_CACHE.get(cache_key)
     if cached and (now - cached[0]) < _CACHE_TTL:
         return cached[1]
-    
-    # 确保 FTS5 索引就绪
+
+    # 确保索引就绪
     _ensure_fts_index()
-    
+
     excluded_ids = _load_excluded_ids()
-    
+
     # 构造 FTS5 查询
     fts_query = _prepare_query(query)
     if not fts_query:
         return []
-    
+
+    results: list[dict] = []
+
     try:
-        rows = _get_article_repo().search_fts(fts_query, limit * 3)
-        
-        # 组装结果
-        results: list[dict] = []
-        seen_ids: set[str] = set()
-        
-        for row in rows:
-            article_id = row["article_id"]
-            if article_id in excluded_ids or article_id in seen_ids:
-                continue
-            seen_ids.add(article_id)
-            
-            # title 和 content 是加了空格的版本，需要清理
-            raw_title = row.get("title") or ""
-            raw_content = row.get("content") or ""
-            category = row.get("ai_category") or "综合资讯"
-            
-            # 去除中文间的空格，恢复原始文本
-            title = re.sub(r'(?<=[\u4e00-\u9fff])\s+(?=[\u4e00-\u9fff])', '', raw_title)
-            
-            # 生成描述和片段
-            clean_content = re.sub(r'(?<=[\u4e00-\u9fff])\s+(?=[\u4e00-\u9fff])', '', raw_content)
-            desc = clean_content[:120] if clean_content else ""
-            snippet = _extract_snippet(clean_content, query, context_chars=300)
-            
-            results.append({
-                "title": title,
-                "category": category,
-                "description": desc,
-                "content_snippet": snippet,
-            })
-            
-            if len(results) >= limit:
-                break
-        
+        repo = _get_article_repo()
+
+        # ── 优先：从 kb_processed_fts 搜索 ──
+        with repo.get_conn() as conn:
+            if repo.kb_fts_exists(conn) and repo.kb_count(conn) > 0:
+                results = _search_kb(fts_query, limit, excluded_ids, conn)
+
+        # ── 降级：旧 articles_fts ──
+        if not results:
+            with repo.get_conn() as conn:
+                if repo.fts_table_exists(conn) and repo.fts_count(conn) > 0:
+                    results = _search_old_fts(fts_query, limit, excluded_ids, conn)
+
+        # 补充手册搜索结果（上限 3 条）
+        if len(results) < limit:
+            handbook_results = _search_handbooks(query, limit=3)
+            for h in handbook_results:
+                if len(results) >= limit:
+                    break
+                results.append(h)
+
         _SEARCH_CACHE[cache_key] = (now, results)
         return results
-        
+
     except Exception as e:
-        print(f"[news_knowledge] FTS search failed: {e}")
-        # 降级到简单 LIKE 搜索
-        return _fallback_search(query, limit, excluded_ids)
+        logger.warning("Search failed: %s", e)
+        return []
+
+
+def _search_kb(fts_query: str, limit: int, excluded_ids: set[str],
+               conn) -> list[dict[str, Any]]:
+    """从 kb_processed_fts 搜索（新版 AI 结构化知识库）。"""
+    repo = _get_article_repo()
+    rows = repo.search_kb_fts(fts_query, limit * 3)
+
+    results: list[dict] = []
+    seen_ids: set[str] = set()
+
+    for row in rows:
+        article_id = row["article_id"]
+        if article_id in excluded_ids or article_id in seen_ids:
+            continue
+        seen_ids.add(article_id)
+
+        title = row.get("title") or ""
+        summary = row.get("summary") or ""
+        article_type = row.get("article_type") or "综合资讯"
+        quality_score = row.get("quality_score") or 0.5
+        publish_time = row.get("publish_time")
+
+        # 跳过广告类型（pipeline 已标记）
+        if article_type == "广告营销":
+            continue
+
+        # 解析 JSON 字段
+        try:
+            countries = json.loads(row.get("countries") or "[]")
+        except (json.JSONDecodeError, TypeError):
+            countries = []
+        try:
+            tags = json.loads(row.get("tags") or "[]")
+        except (json.JSONDecodeError, TypeError):
+            tags = []
+
+        # 使用 AI 生成的 summary 作为内容片段（质量远高于原文截取）
+        snippet = summary if summary else ""
+
+        # 生成描述（summary 前 120 字）
+        desc = summary[:120] if summary else ""
+
+        results.append({
+            "title": title,
+            "category": article_type,
+            "description": desc,
+            "content_snippet": snippet,
+            "publish_time": publish_time,
+            "quality_score": quality_score,
+            "countries": countries,
+            "tags": tags,
+            "source": "kb_processed",
+        })
+
+        if len(results) >= limit:
+            break
+
+    return results
+
+
+def _search_old_fts(fts_query: str, limit: int, excluded_ids: set[str],
+                    conn) -> list[dict[str, Any]]:
+    """从旧 articles_fts 搜索（过渡期降级方案）。"""
+    repo = _get_article_repo()
+    rows = repo.search_fts(fts_query, limit * 3)
+
+    results: list[dict] = []
+    seen_ids: set[str] = set()
+
+    for row in rows:
+        article_id = row["article_id"]
+        if article_id in excluded_ids or article_id in seen_ids:
+            continue
+        seen_ids.add(article_id)
+
+        raw_title = row.get("title") or ""
+        raw_content = row.get("content") or ""
+        category = row.get("ai_category") or "综合资讯"
+
+        # 去除中文间的空格，恢复原始文本
+        title = re.sub(r'(?<=[\u4e00-\u9fff])\s+(?=[\u4e00-\u9fff])', '', raw_title)
+        clean_content = re.sub(r'(?<=[\u4e00-\u9fff])\s+(?=[\u4e00-\u9fff])', '', raw_content)
+
+        desc = clean_content[:120] if clean_content else ""
+        snippet = _extract_snippet(clean_content, fts_query, context_chars=300)
+
+        results.append({
+            "title": title,
+            "category": category,
+            "description": desc,
+            "content_snippet": snippet,
+            "publish_time": None,  # 旧系统无 publish_time
+            "quality_score": 0.5,
+            "source": "articles_fts",
+        })
+
+        if len(results) >= limit:
+            break
+
+    return results
+
+
+def _search_handbooks(query: str, limit: int = 4) -> list[dict[str, Any]]:
+    """搜索 handbook_fts，将手册内容作为知识库结果返回。
+
+    返回格式与 search_articles 兼容：
+    - title: "【手册】{school}"
+    - category: "院校手册"
+    - description: 内容前120字
+    - content_snippet: 相关片段
+    - source: "handbook"
+    """
+    fts_query = _prepare_query(query)
+    if not fts_query:
+        return []
+
+    try:
+        rows = _get_article_repo().search_handbook_fts(fts_query, limit)
+
+        results: list[dict] = []
+        for row in rows:
+            school = row.get("school") or "未知院校"
+            content = row.get("content") or ""
+
+            desc = content[:120] if content else ""
+            snippet = _extract_snippet(content, query, context_chars=300)
+
+            results.append({
+                "title": f"【手册】{school}",
+                "category": "院校手册",
+                "description": desc,
+                "content_snippet": snippet,
+                "source": "handbook",
+            })
+            if len(results) >= limit:
+                break
+
+        return results
+    except Exception as e:
+        logger.warning("Handbook FTS search failed: %s", e)
+        return []
 
 
 def _extract_snippet(content: str, query: str, context_chars: int = 300) -> str:
     """从内容中提取包含查询关键词的相关片段"""
     if not content:
         return ""
-    
+
     # 提取查询中的关键词
     terms = re.findall(r'[\u4e00-\u9fff]{2,}|[a-zA-Z]{2,}', query)
     if not terms:
         return content[:context_chars]
-    
+
     # 查找第一个匹配位置
     best_pos = -1
     for term in terms:
         pos = content.find(term)
         if pos >= 0 and (best_pos == -1 or pos < best_pos):
             best_pos = pos
-    
+
     if best_pos == -1:
         return content[:context_chars]
-    
+
     # 以匹配位置为中心截取
     start = max(0, best_pos - context_chars // 3)
     end = min(len(content), start + context_chars)
-    
+
     # 调整到句子边界
     if start > 0:
         for sep in ['。', '.', '！', '?', '\n', '；', ';']:
@@ -475,56 +487,18 @@ def _extract_snippet(content: str, query: str, context_chars: int = 300) -> str:
             if boundary > 0:
                 start = boundary + 1
                 break
-    
+
     if end < len(content):
         for sep in ['。', '.', '！', '?', '\n', '；', ';']:
             boundary = content.find(sep, end - 30, end + 50)
             if boundary > 0:
                 end = boundary + 1
                 break
-    
+
     snippet = content[start:end].strip()
     if start > 0:
         snippet = "…" + snippet
     if end < len(content):
         snippet = snippet + "…"
-    
+
     return snippet
-
-
-def _fallback_search(query: str, limit: int, excluded_ids: set[str]) -> list[dict[str, Any]]:
-    """降级方案：当 FTS5 搜索失败时，使用 LIKE 查询"""
-    wers_db = Path(settings.WERS_DB_PATH)
-    if not wers_db.exists():
-        return []
-    
-    terms = re.findall(r'[\u4e00-\u9fff]{2,}|[a-zA-Z]{2,}', query)
-    if not terms:
-        return []
-    
-    try:
-        werss_repo = _get_werss_repo()
-        rows = werss_repo.search_fallback(terms, limit)
-        
-        results = []
-        for r in rows:
-            if r["id"] in excluded_ids:
-                continue
-            title = r.get("title") or ""
-            content = _clean_html(r.get("content") or "")
-            category = r.get("ai_category") or "综合资讯"
-            desc = content[:120]
-            snippet = _extract_snippet(content, query, context_chars=300)
-            
-            results.append({
-                "title": title,
-                "category": category,
-                "description": desc,
-                "content_snippet": snippet,
-            })
-            if len(results) >= limit:
-                break
-        
-        return results
-    except Exception:
-        return []

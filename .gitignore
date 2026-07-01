@@ -17,3 +17,12 @@ dist-ssr
 .webhook-secret
 __pycache__/
 *.pyc
+
+# Database runtime files
+*.db
+*.db-shm
+*.db-wal
+*.bak
+*.bak.*
+.omo/
+backup/

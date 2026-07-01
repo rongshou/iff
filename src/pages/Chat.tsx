@@ -23,8 +23,8 @@ export default function ChatPage() {
   const loading = useChatStore((s) => s.loading);
   const error = useChatStore((s) => s.error);
   const collectedInfo = useChatStore((s) => s.collectedInfo);
-  const setLoading = useChatStore((s) => s.setLoading);
-  const setError = useChatStore((s) => s.setError);
+  const setLoading = useChatStore((s) => s.setLoading as React.Dispatch<React.SetStateAction<boolean>>);
+  const setError = useChatStore((s) => s.setError as React.Dispatch<React.SetStateAction<string | null>>);
   const setCollectedInfo = useChatStore((s) => s.setCollectedInfo);
 
   const abortRef = useRef<AbortController | null>(null);

@@ -19,11 +19,10 @@ class VerifyAuthCodeResponse(BaseModel):
 def verify_auth_code(request: VerifyAuthCodeRequest):
     """
     验证授权码是否合法（由运营方分配的有效授权码列表）。
-    如果 VALID_AUTH_CODES 未配置（空字符串），则跳过验证，视为合法。
+    AUTH_DISABLED=true 时（开发模式）任何授权码均视为合法；
+    否则使用 is_auth_code_valid 进行恒定时间比较，fail-closed。
     """
-    raw = settings.VALID_AUTH_CODES.strip()
-    if not raw:
+    if settings.AUTH_DISABLED:
         return VerifyAuthCodeResponse(valid=True)
 
-    valid_codes = [c.strip() for c in raw.split(",") if c.strip()]
-    return VerifyAuthCodeResponse(valid=request.auth_code in valid_codes)
+    return VerifyAuthCodeResponse(valid=settings.is_auth_code_valid(request.auth_code))

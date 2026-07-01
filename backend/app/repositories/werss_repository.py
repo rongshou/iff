@@ -32,7 +32,7 @@ class WerssRepository(Repository):
     def get_article_by_id(self, aid: int) -> Optional[dict]:
         """按 ID 获取单篇文章。"""
         row = self.fetch_one(
-            "SELECT id, title, content, ai_category FROM articles WHERE id = ?",
+            "SELECT id, title, content, ai_category, publish_time FROM articles WHERE id = ?",
             (aid,),
         )
         return dict(row) if row else None
@@ -44,7 +44,7 @@ class WerssRepository(Repository):
         """
         conn = self.get_conn()
         cursor = conn.execute(
-            "SELECT id, title, content, ai_category "
+            "SELECT id, title, content, ai_category, publish_time "
             "FROM articles WHERE content IS NOT NULL AND length(content) > 100"
         )
         return conn, cursor

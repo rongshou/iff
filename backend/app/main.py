@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .api.recommend import router as recommend_router
@@ -8,7 +8,9 @@ from .api.news import router as news_router
 from .api.chat import router as chat_router
 from .api.auth import router as auth_router
 from .api.school import router as school_router
+from .api.knowledge import router as knowledge_router
 from .core.config import settings
+from .core.security import verify_auth
 
 
 def create_app() -> FastAPI:
@@ -16,6 +18,7 @@ def create_app() -> FastAPI:
         title=settings.APP_NAME,
         version=settings.APP_VERSION,
         description="基于真实案例的留学选校推荐引擎",
+        dependencies=[Depends(verify_auth)],
     )
 
     app.add_middleware(
@@ -32,6 +35,7 @@ def create_app() -> FastAPI:
     app.include_router(chat_router)
     app.include_router(auth_router)
     app.include_router(school_router)
+    app.include_router(knowledge_router)
 
     return app
 

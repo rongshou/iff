@@ -67,4 +67,6 @@ class RecommendResult(BaseModel):
     match_summary: MatchSummary
     by_country: list[CountryMatchResult] = []
     pathway_suggestions: list[PathwaySuggestion] = []
+    application_strategy: str = ""
+    background_improvement: str = ""
     generated_at: str = ""

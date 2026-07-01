@@ -3,6 +3,7 @@ from ..utils.gpa import normalize_gpa
 from ..utils.tier import classify_school_tier
 from .case_matcher import match_schools_by_background
 from .pathway_service import find_pathway_suggestions
+from .school_engine import enhance_with_rules, generate_application_strategy, generate_background_improvement
 
 
 def run(profile: dict) -> dict:
@@ -39,6 +40,9 @@ def run(profile: dict) -> dict:
             undergrad_school=undergrad_school,
         )
 
+        # 应用国家插件增强推荐结果
+        match_result = enhance_with_rules(conn, match_result, profile, background)
+
         pathway = find_pathway_suggestions(
             conn=conn,
             study_level=study_level,
@@ -60,5 +64,7 @@ def run(profile: dict) -> dict:
         },
         "by_country": match_result["by_country"],
         "pathway_suggestions": pathway,
+        "application_strategy": generate_application_strategy(background, match_result),
+        "background_improvement": generate_background_improvement(background, match_result),
         "generated_at": "",
     }

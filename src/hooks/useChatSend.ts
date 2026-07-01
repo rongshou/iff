@@ -1,6 +1,7 @@
 import { generateId, ts, SCENE_INFO, looksLikeSchoolRequest, extractInfo, getMissingFields, profileToInfo, infoToDescription } from "../services/chat-helpers";
 import { loadProfile, mergeChatInfo, createChatHistoryItem, addHistoryItem } from "../services/profile";
 import { sendChat, streamChat } from "../services/chat";
+import { logout as authLogout } from "../services/auth";
 import type { ChatMessage } from "../types";
 import type { SceneId } from "../config/scenes";
 
@@ -133,7 +134,12 @@ export function useChatSend(
           const msg = retryErr instanceof Error ? retryErr.message : "";
           let errorMsg = "网络异常，请稍后重试";
           let contentMsg = "抱歉，请求失败，请稍后重试。";
-          if (msg.includes("401") || msg.includes("余额")) {
+          if (msg.includes("授权码") || msg.includes("X-Auth-Code") || msg.includes("401")) {
+            errorMsg = "授权已过期，请重新登录";
+            contentMsg = "授权已过期，请重新登录后再试。";
+            authLogout();
+            setTimeout(() => { window.location.hash = "#/login"; }, 2000);
+          } else if (msg.includes("余额")) {
             errorMsg = "AI 服务暂不可用（余额不足），请联系管理员";
             contentMsg = "AI 服务暂不可用，请联系管理员处理。";
           } else if (msg.includes("500")) {

@@ -21,7 +21,7 @@ const GPA_FORMATS = ["百分制", "4分制", "5分制", "7分制", "9分制", "�
 
 
 export default function ProfilePage() {
-  const profile = useProfileStore((s) => s.profile);
+  const profile = useProfileStore((s) => s.profile) as ProfileData;
   const loadProfileFromStore = useProfileStore((s) => s.load);
   const update = useProfileStore((s) => s.update);
   const setProfileField = useProfileStore((s) => s.setProfileField);
@@ -41,7 +41,7 @@ export default function ProfilePage() {
     setTimeout(() => setSaved(false), 2000);
   };
 
-  const handleField = (key: keyof ProfileData, value: any) => {
+  const handleField = (key: keyof ProfileData, value: unknown) => {
     setProfileField(key, value);
   };
 
@@ -351,9 +351,9 @@ export default function ProfilePage() {
                       <span className="font-semibold text-slate-800">八字</span>
                     </div>
                     <div className="text-sm text-slate-600 space-y-0.5">
-                      <p>四柱: {(tianshu.bazi as any).yearZhu || ""} · {(tianshu.bazi as any).monthZhu || ""} · {(tianshu.bazi as any).dayZhu || ""} · {(tianshu.bazi as any).hourZhu || ""}</p>
-                      <p>日主: {(tianshu.bazi as any).dayMaster || ""}（{(tianshu.bazi as any).dayMasterWx || ""}）</p>
-                      <p>喜用: {((tianshu.bazi as any).xiZhong || []).join(" + ")}</p>
+                      <p>四柱: {tianshu.bazi.yearZhu || ""} · {tianshu.bazi.monthZhu || ""} · {tianshu.bazi.dayZhu || ""} · {tianshu.bazi.hourZhu || ""}</p>
+                      <p>日主: {tianshu.bazi.dayMaster || ""}（{tianshu.bazi.dayMasterWx || ""}）</p>
+                      <p>喜用: {(tianshu.bazi.xiZhong || []).join(" + ")}</p>
                     </div>
                   </div>
                 )}

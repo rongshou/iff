@@ -12,6 +12,8 @@
  * 正常情况下用户进入 Chat 页面时缓存已就绪。
  */
 
+import { getAuthHeaders } from "./auth";
+
 const API_BASE = import.meta.env.VITE_API_BASE || "/api";
 
 type AbbreviationsResponse = {
@@ -26,7 +28,9 @@ export async function loadSchoolAbbreviations(): Promise<Record<string, string[]
   if (cache) return cache;
   if (loadingPromise) return loadingPromise;
   loadingPromise = (async () => {
-    const res = await fetch(`${API_BASE}/school/abbreviations`);
+    const res = await fetch(`${API_BASE}/school/abbreviations`, {
+      headers: { ...getAuthHeaders() },
+    });
     if (!res.ok) throw new Error("获取学校简称映射失败");
     const data: AbbreviationsResponse = await res.json();
     cache = data.abbreviations;

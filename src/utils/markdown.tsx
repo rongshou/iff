@@ -38,13 +38,14 @@ function renderInline(raw: string, keyPrefix: string): React.ReactNode[] {
       // code
       nodes.push(<code key={`${keyPrefix}-c${i++}`}>{m[1].slice(1, -1)}</code>);
     } else if (m[2]) {
-      // link
+      // link — 只允许 http/https/mailto 协议，防止 javascript: XSS
       const text = m[3];
       const url = m[4];
+      const allowed = /^(https?:\/\/|mailto:)/i;
       nodes.push(
         <a
           key={`${keyPrefix}-l${i++}`}
-          href={url}
+          href={allowed.test(url) ? url : "#"}
           target="_blank"
           rel="noreferrer noopener"
         >

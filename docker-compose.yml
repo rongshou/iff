@@ -30,7 +30,7 @@ services:
       TIANQUAN_LLM_BASE_URL: "https://opencode.ai/zen/v1"
       TIANQUAN_LLM_MODEL: "deepseek-v4-flash-free"
       TIANQUAN_LLM_API_KEY: "${TIANQUAN_LLM_API_KEY:?set TIANQUAN_LLM_API_KEY in .env}"
-      TIANQUAN_VALID_AUTH_CODES: "${TIANQUAN_VALID_AUTH_CODES:-88888888}"
+      TIANQUAN_VALID_AUTH_CODES: "${TIANQUAN_VALID_AUTH_CODES:?set TIANQUAN_VALID_AUTH_CODES in .env}"
     volumes:
       - "${ADVISOR_DATA_DIR:-/home/admin/.openclaw/workspace-study-abroad/study-abroad-advisor/data}:/app/data"
       - "${WERSS_DB_PATH:-/home/admin/werss/data/db.db}:/app/data/werss.db"

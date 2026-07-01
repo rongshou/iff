@@ -1,3 +1,5 @@
+import { getAuthHeaders } from "./auth";
+
 const API_BASE = import.meta.env.VITE_API_BASE || "/api";
 
 export interface ChatMessageInput {
@@ -16,7 +18,7 @@ export async function sendChat(
 ): Promise<ChatResponse> {
   const res = await fetch(`${API_BASE}/chat`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...getAuthHeaders() },
     body: JSON.stringify({ messages, stream }),
   });
   if (!res.ok) {
@@ -35,7 +37,7 @@ export async function streamChat(
 ): Promise<void> {
   const res = await fetch(`${API_BASE}/chat`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...getAuthHeaders() },
     body: JSON.stringify({ messages, stream: true }),
     signal,
   });

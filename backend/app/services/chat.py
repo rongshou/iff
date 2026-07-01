@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import json
+import logging
 import httpx
 from typing import Any, TYPE_CHECKING
 from ..core.config import settings
 from ..core.database import get_db
 from .news_knowledge import search_articles
+from .essay_knowledge import is_essay_query, build_essay_context
 from .recommend import run as run_recommend
 from .chat_prompts import (
     SYSTEM_PROMPT,
@@ -21,6 +23,9 @@ from .chat_utils import (
 if TYPE_CHECKING:
     # 仅用于类型标注；运行时由 _stream_response 内部按需 import，避免模块加载时引入 fastapi 依赖
     from fastapi.responses import StreamingResponse
+
+
+logger = logging.getLogger(__name__)
 
 
 
@@ -135,6 +140,10 @@ def load_context_from_history(messages: list[dict]) -> tuple[str, dict | None]:
                 "部分来源于第三方机构，请审慎判断，辨别客观数据与商业推广）："
             ]
             ad_skipped = 0
+            # 按时间排序：优先近期文章（时间降权）
+            import time as _time
+            now_ts = _time.time()
+            scored_articles = []
             for a in articles:
                 snippet = a.get("content_snippet") or a.get("description") or ""
                 title = a.get("title", "").strip()
@@ -145,16 +154,41 @@ def load_context_from_history(messages: list[dict]) -> tuple[str, dict | None]:
                 # 跳过标题行，避免文章感
                 if title and snippet.startswith(title):
                     snippet = snippet[len(title):].strip()
-                if snippet:
-                    lines.append(f"\n- {snippet}")
-                if len(lines) >= 6:  # 最多 5 条非广告内容
-                    break
+                if not snippet:
+                    continue
+                # 时间降权：6个月内的文章优先
+                pub_time = a.get("publish_time")
+                if pub_time:
+                    age_days = (now_ts - pub_time) / 86400
+                    if age_days > 365:
+                        continue  # 超过1年的文章不注入
+                scored_articles.append((snippet, pub_time or 0))
+
+            # 按发布时间降序排列，取最新的5条
+            scored_articles.sort(key=lambda x: x[1], reverse=True)
+            for snippet, _ in scored_articles[:5]:
+                lines.append(f"\n- {snippet}")
             if ad_skipped > 0:
                 lines.append(f"\n（注：另有 {ad_skipped} 条推广内容已过滤）")
             if len(lines) > 1:
                 parts.append(" ".join(lines))
     except Exception:
-        pass
+        logger.warning("load_article_context failed", exc_info=True)
+
+    # ====================================================================
+    # 1b. 注入文书辅导知识（当问题涉及文书写作时）
+    # ====================================================================
+    try:
+        if is_essay_query(last_user):
+            essay_ctx = build_essay_context(last_user)
+            if essay_ctx:
+                parts.append(
+                    "【文书辅导知识库】\n"
+                    "以下为文书写作相关参考信息，请以顾问身份自然融入回复，不要提及'文库''资料'等词。\n"
+                    + essay_ctx
+                )
+    except Exception:
+        logger.warning("load_essay_context failed", exc_info=True)
 
     # ====================================================================
     # 2. 判断用户意图：选校相关 vs 通用问答
@@ -203,7 +237,7 @@ def load_context_from_history(messages: list[dict]) -> tuple[str, dict | None]:
                 # 把结构化结果透传给前端，用于渲染 PathwaySection 等结构化卡片
                 recommend_payload = result
             except Exception:
-                pass
+                logger.warning("load_recommend_context failed", exc_info=True)
     else:
         # --- 通用模式（文书、签证等）：通用信息收集 ---
         parts.append(GENERIC_GATHERING_INSTRUCTION)

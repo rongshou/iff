@@ -306,8 +306,9 @@ def _query_cases(
         keywords = _expand_major_keywords(target_major)
         major_conds = []
         for kw in keywords:
-            major_conds.append("c.admitted_major LIKE ?")
-            params.append(f"%{kw}%")
+            safe_kw = kw.replace("%", r"\%").replace("_", r"\_")
+            major_conds.append("c.admitted_major LIKE ? ESCAPE '\\'")
+            params.append(f"%{safe_kw}%")
         conditions.append(f"({' OR '.join(major_conds)})")
 
     where = " AND ".join(conditions) if conditions else "1=1"
@@ -329,7 +330,7 @@ def _expand_countries(conn: sqlite3.Connection, countries: list[str]) -> list[st
     country_map = {}
     all_db_countries = _get_repo().expand_countries()
     for cntry in all_db_countries:
-        cn = r["country"]
+        cn = cntry
         if cn:
             country_map[cn] = cn
 

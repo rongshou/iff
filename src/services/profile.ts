@@ -6,7 +6,7 @@
  *   iff_history  → 所有查询/测评记录的时间线
  */
 
-import type { ChatMessage, MBTIMajorResult } from "../types";
+import type { ChatMessage } from "../types";
 
 /* ==================== 类型定义 ==================== */
 
@@ -32,6 +32,18 @@ export interface ProfileData {
   updated_at: string;
 }
 
+export interface BaziData {
+  yearZhu?: string;
+  monthZhu?: string;
+  dayZhu?: string;
+  hourZhu?: string;
+  dayMaster?: string;
+  dayMasterWx?: string;
+  xiZhong?: string[];
+  yongShen?: string;
+  comments?: string;
+}
+
 export interface TianshuData {
   student: {
     name: string;
@@ -42,7 +54,7 @@ export interface TianshuData {
     birthHour: number;
     grade: string;
   };
-  bazi?: Record<string, unknown>;
+  bazi?: BaziData;
   ziwei?: Record<string, unknown>;
   mbti?: {
     type: string;
@@ -105,15 +117,12 @@ export function saveProfile(profile: Partial<ProfileData>): ProfileData {
     ...profile,
     updated_at: new Date().toISOString(),
   };
-  localStorage.setItem(PROFILE_KEY, JSON.stringify(merged));
+  try {
+    localStorage.setItem(PROFILE_KEY, JSON.stringify(merged));
+  } catch (e) {
+    console.error("Failed to save profile:", e);
+  }
   return merged;
-}
-
-export function updateProfileField<K extends keyof ProfileData>(
-  key: K,
-  value: ProfileData[K],
-): ProfileData {
-  return saveProfile({ [key]: value });
 }
 
 export function clearProfile(): void {
@@ -185,57 +194,32 @@ export function addHistoryItem(item: Omit<HistoryItem, "id" | "created_at">): Hi
   if (history.length > MAX_HISTORY) {
     history.length = MAX_HISTORY;
   }
-  localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+  try {
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+  } catch (e) {
+    console.error("Failed to save history:", e);
+  }
   return newItem;
 }
 
 export function deleteHistoryItem(id: string): void {
   const history = loadHistory();
   const filtered = history.filter((h) => h.id !== id);
-  localStorage.setItem(HISTORY_KEY, JSON.stringify(filtered));
+  try {
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(filtered));
+  } catch (e) {
+    console.error("Failed to save history:", e);
+  }
 }
 
 export function clearHistory(): void {
   localStorage.removeItem(HISTORY_KEY);
 }
 
-export function getHistoryByType(type: HistoryType): HistoryItem[] {
-  return loadHistory().filter((h) => h.type === type);
-}
-
 /* ==================== 工具 ==================== */
 
 function generateId(): string {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
-}
-
-/** 创建 MBTI 历史记录 */
-export function createMBTIHistoryItem(
-  mbtiResult: MBTIMajorResult,
-  answers?: Record<number, string>,
-): Omit<HistoryItem, "id" | "created_at"> {
-  return {
-    type: "mbti",
-    system: "tianquan",
-    data: { result: mbtiResult, answers },
-    summary: `${mbtiResult.type} · ${mbtiResult.name}`,
-    subtitle: `推荐: ${mbtiResult.top_majors.slice(0, 3).join("/")}`,
-  };
-}
-
-/** 创建天枢报告历史记录 */
-export function createTianshuHistoryItem(
-  student: Record<string, unknown>,
-  results: Record<string, unknown>,
-  summary: string,
-): Omit<HistoryItem, "id" | "created_at"> {
-  return {
-    type: "tianshu_report",
-    system: "tianshu",
-    data: { student, results },
-    summary: summary || "综合测评报告",
-    subtitle: `${String(student.name || "匿名")} · ${String(student.grade || "")}`,
-  };
 }
 
 /** 创建对话历史记录 */

@@ -1,4 +1,4 @@
-// Tianshu deploy webhook — triggered by GitHub Actions via nginx proxy
+// Tianquan deploy webhook — triggered by GitHub Actions via nginx proxy
 import { createServer } from 'node:http';
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { randomBytes } from 'node:crypto';
@@ -7,6 +7,7 @@ import { execSync } from 'node:child_process';
 const PORT = 7800;
 const SECRET_FILE = '/home/admin/tianquan/.webhook-secret';
 const CWD = '/home/admin/tianquan';
+const BRANCH = 'merge-advisor';
 
 // Load secret from file (create one if missing)
 function loadSecret() {
@@ -41,14 +42,22 @@ createServer((req, res) => {
   res.write('[webhook] deploy triggered...\n');
 
   try {
-    res.write('> git pull origin master\n');
-    res.write(execSync('git pull origin master 2>&1', { cwd: CWD, timeout: 30_000, encoding: 'utf-8' }));
+    res.write(`> git checkout ${BRANCH} && git pull origin ${BRANCH}\n`);
+    res.write(execSync(`git checkout ${BRANCH} && git pull origin ${BRANCH} 2>&1`, {
+      cwd: CWD, timeout: 30_000, encoding: 'utf-8',
+    }));
 
     res.write('> npm run build --silent 2>&1\n');
-    res.write(execSync('npm run build --silent 2>&1', { cwd: CWD, timeout: 180_000, encoding: 'utf-8' }));
+    res.write(execSync('npm run build --silent 2>&1', {
+      cwd: CWD, timeout: 180_000, encoding: 'utf-8',
+    }));
 
-    res.write('> docker restart tianquan-nginx\n');
-    execSync('docker restart tianquan-nginx 2>&1', { timeout: 15_000, encoding: 'utf-8' });
+    // Copy built dist into running nginx container (no restart needed for static files)
+    res.write('> docker cp dist to nginx container\n');
+    res.write(execSync(
+      'docker cp dist/. tianquan-nginx:/usr/share/nginx/html/ 2>&1',
+      { timeout: 15_000, encoding: 'utf-8' },
+    ));
 
     res.write('[webhook] done\n');
   } catch (err) {

@@ -1,11 +1,13 @@
 /**
  * 本地授权管理 — 基于用户名+授权码验证
- * 默认授权码: 88888888
+ *
+ * TODO(security): auth_code 目前保存在 localStorage，可被 XSS 读取。
+ * 更安全的方案是改用 httpOnly + Secure + SameSite cookie 由后端下发会话，
+ * 但这需要后端会话支持，超出本次改动范围。
  */
 import { loadProfile, saveProfile } from "./profile";
 
 const AUTH_KEY = "iff_auth";
-const DEFAULT_AUTH_CODE = "88888888";
 const SESSION_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000; // 1 周
 
 export interface AuthSession {
@@ -27,14 +29,19 @@ export function login(username: string, code: string): { ok: boolean; error?: st
   if (!profile || !profile.username) {
     saveProfile({ username: trimmedUser, auth_code: trimmedCode });
     const session: AuthSession = { loggedIn: true, username: trimmedUser, timestamp: Date.now() };
-    localStorage.setItem(AUTH_KEY, JSON.stringify(session));
+    try {
+      localStorage.setItem(AUTH_KEY, JSON.stringify(session));
+    } catch (e) {
+      console.error("Failed to save auth session:", e);
+    }
     return { ok: true };
   }
 
   // 已有档案 → 正常验证绑定的用户名和授权码
   const validUsername = profile.username;
-  const validCode = profile.auth_code || DEFAULT_AUTH_CODE;
+  const validCode = profile.auth_code;
 
+  if (!validCode) return { ok: false, error: "授权码未绑定，请联系管理员" };
   if (trimmedUser !== validUsername) return { ok: false, error: "用户名不正确" };
   if (trimmedCode !== validCode) return { ok: false, error: "授权码不正确" };
 
@@ -43,7 +50,11 @@ export function login(username: string, code: string): { ok: boolean; error?: st
     username: trimmedUser,
     timestamp: Date.now(),
   };
-  localStorage.setItem(AUTH_KEY, JSON.stringify(session));
+  try {
+    localStorage.setItem(AUTH_KEY, JSON.stringify(session));
+  } catch (e) {
+    console.error("Failed to save auth session:", e);
+  }
   return { ok: true };
 }
 
@@ -66,6 +77,31 @@ export function isAuthenticated(): boolean {
   } catch {
     return false;
   }
+}
+
+/**
+ * 获取当前用户的授权码，用于 X-Auth-Code 请求头。
+ */
+export function getAuthCode(): string {
+  try {
+    const raw = localStorage.getItem("iff_profile");
+    if (!raw) return "";
+    const profile = JSON.parse(raw);
+    return profile.auth_code || "";
+  } catch {
+    return "";
+  }
+}
+
+/**
+ * 生成包含授权码的请求头（X-Auth-Code），供所有需认证的 API 调用使用。
+ *
+ * 始终返回带 X-Auth-Code 键的对象（即便值为空），防止 Vite/ESBuild
+ * 在 production build 中因空对象展开优化将 auth header 整条剥离。
+ */
+export function getAuthHeaders(): Record<string, string> {
+  const code = getAuthCode();
+  return { "X-Auth-Code": code };
 }
 
 export function getAuthUsername(): string {

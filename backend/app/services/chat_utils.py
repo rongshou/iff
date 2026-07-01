@@ -477,7 +477,7 @@ def _format_recommend_result(result: dict) -> str:
             continue
         lines.append(f"\n【{country}】同背景录取 {country_result.get('matched_cases', 0)} 案例:")
 
-        # 按档位分组展示（三维评分：冲刺/匹配/安全）
+        # 按档位分组展示（冲刺/匹配/安全）
         chance_groups: dict[str, list] = {"冲刺": [], "匹配": [], "安全": [], "未知": []}
         for s in schools:
             chance = s.get("admission_chance", "未知")
@@ -500,10 +500,9 @@ def _format_recommend_result(result: dict) -> str:
                 gap = s.get("gpa_gap")
                 qs_str = f" QS#{qs}" if qs else ""
                 p50_str = f" | 录取GPA中位数 {p50}" if p50 else ""
-                score_str = f" | 三维评分 {score}" if score else ""
                 gap_str = f" | 需提分 {gap}百分点可进匹配档" if chance == "冲刺" and gap else ""
                 lines.append(
-                    f"    - {name}{qs_str} | {cases} 例{p50_str}{score_str}{gap_str}"
+                    f"    - {name}{qs_str} | {cases} 例{p50_str}{gap_str}"
                 )
 
     lines.append("")

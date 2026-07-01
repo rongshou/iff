@@ -498,11 +498,19 @@ def _format_recommend_result(result: dict) -> str:
                 p50 = s.get("gpa_p50")
                 score = s.get("admission_score", 0)
                 gap = s.get("gpa_gap")
+                majors = s.get("majors", [])
                 qs_str = f" QS#{qs}" if qs else ""
                 p50_str = f" | 录取GPA中位数 {p50}" if p50 else ""
                 gap_str = f" | 需提分 {gap}百分点可进匹配档" if chance == "冲刺" and gap else ""
+                majors_str = ""
+                if majors:
+                    shown = majors[:3]
+                    more = len(majors) - 3
+                    majors_str = f" | 录取专业: {'/'.join(shown)}"
+                    if more > 0:
+                        majors_str += f" 等{more}个专业"
                 lines.append(
-                    f"    - {name}{qs_str} | {cases} 例{p50_str}{gap_str}"
+                    f"    - {name}{qs_str} | {cases} 例{p50_str}{majors_str}{gap_str}"
                 )
 
     lines.append("")

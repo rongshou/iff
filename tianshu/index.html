@@ -27,9 +27,11 @@
   }
 
   if (!isAuthenticated()) {
-    var currentPath = window.location.pathname + window.location.hash;
-    var redirect = encodeURIComponent(currentPath);
-    window.location.replace("/tianquan/#/login?redirect=" + redirect);
+    // 动态推导登录路径：将当前路径中的 /tianshu/ 替换为 /tianquan/
+    // 同时兼容本地开发 (/tianshu/) 和 GitHub Pages (/iff/tianshu/)
+    var loginBase = window.location.pathname.replace(/\/tianshu(\/|$)/, '/tianquan/');
+    var redirect = encodeURIComponent(window.location.pathname + window.location.hash);
+    window.location.replace(loginBase + '#/login?redirect=' + redirect);
   }
 })();
 </script>

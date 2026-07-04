@@ -23,8 +23,8 @@ class Settings(BaseSettings):
     LLM_PROVIDER: str = "dashscope"
     LLM_API_KEY: str = ""
     LLM_BASE_URL: str = "https://dashscope.aliyuncs.com/compatible-mode/v1"
-    LLM_MODEL: str = "deepseek-v4-flash"
-    LLM_FALLBACK_MODEL: str = ""
+    LLM_MODEL: str = "minimax-m2.7"
+    LLM_FALLBACK_MODEL: str = "minimax-m2.7"
 
     # 授权码体系 — 逗号分隔的合法授权码列表
     # 留空则拒绝所有请求（fail-closed）；开发时可用 AUTH_DISABLED=true 绕过

@@ -487,3 +487,200 @@ API 代理配置在 `vite.config.ts`：`/api` → `http://localhost:3470`。
 | `/home/admin/tianquan/nginx.conf` | Nginx 配置 |
 | `/home/admin/tianquan/docker-compose.yml` | Docker 编排 |
 | `/home/admin/tianquan/Dockerfile` | nginx 容器构建
+
+---
+---
+
+## 十、LLM 配置与优化 {#ten}
+
+### 10.1 模型选择
+
+| 项 | 配置值 | 说明 |
+|---|--------|------|
+| Provider | `opencode` | 仅支持 OpenCode API |
+| Base URL | `https://opencode.ai/zen/v1` | ⚠️ `/zen/go/v1` 不支持 free 模型 |
+| 主模型 | `deepseek-v4-flash-free` | 免费模型，无余额限制 |
+| 后备模型 | `deepseek-v4-flash-free` | 主模型 401/429/5xx 自动切换 |
+
+**配置位置**：`docker-compose.yml`（环境变量） + `backend/app/core/config.py`（默认值）
+
+### 10.2 推荐结果缓存
+
+**文件**：`backend/app/services/recommend.py`
+
+减少同 profile 反复触发推荐引擎带来的高延迟：
+
+| 项 | 值 |
+|---|-----|
+| 缓存键 | profile 的 SHA256（排除 null 字段，排序序列化） |
+| TTL | 300 秒（5 分钟） |
+| 最大条目 | 64 条（超限淘汰最旧） |
+| 存储 | 进程内内存（dict，单容器适用） |
+
+```python
+def _profile_key(profile: dict) -> str:
+    """忽略 dynamic 字段，稳定排序后 hash"""
+    relevant = {k: v for k, v in profile.items() if v is not None}
+    raw = json.dumps(relevant, sort_keys=True, ensure_ascii=False)
+    return hashlib.sha256(raw.encode()).hexdigest()
+```
+
+### 10.3 推荐触发关键词
+
+**文件**：`backend/app/services/chat.py`
+
+vs 旧版（旧版 1 个列表，含 18 个词，任何一词命中即触发）
+
+**新版**：
+> 2016-01-01 v0.14 split into STRONG (12) + WEAK (9)；不再硬等所有字段齐全才触发
+
+```python
+# 强信号：含任一即触发选校推荐
+STRONG_RECOMMEND_KEYWORDS = [
+    "选校", "选校定位", "学校推荐", "推荐学校", "匹配学校",
+    "定位", "冲刺", "保底", "主申",
+    "录取概率", "录取案例",
+    "留学选校",
+]
+
+# 弱信号：需要至少命中 2 个才触发
+WEAK_RECOMMEND_KEYWORDS = [
+    "GPA", "gpa", "均分", "绩点", "分数",
+    "留学申请", "申请留学",
+    "录取", "申请",
+]
+```
+
+同时新增 `NON_RECOMMEND_KEYWORDS` 排除名单（文书/签证等场景不触发推荐）：
+
+```python
+NON_RECOMMEND_KEYWORDS = [
+    "文书","PS","个人陈述","简历","CV","推荐信","推荐人",
+    "签证","F-1","Tier 4","I-20","面签","签证材料",
+]
+```
+
+### 10.4 max_tokens 调整
+
+| 场景 | 旧值 | 新值 | 理由 |
+|------|------|------|------|
+| LLM response | 8192 | 2048 | free 模型 8192 返回极慢；16s→6s |
+| 推荐回复 | 8192 | 2048 | 同理由 |
+
+### 10.5 Fallback 重试逻辑
+
+旧版：单次请求失败立即抛异常。
+
+新版：主模型失败（HTTP 401/402/429/500/502/503）时自动切换到后备模型重试一次：
+
+```python
+for attempt in range(2):
+    resp = await client.post(url, json=payload, headers=headers)
+    if resp.is_success:
+        return data
+    if attempt == 0 and fallback_model and resp.status_code in (401, 402, 429, 500, 502, 503):
+        payload["model"] = fallback_model
+        continue
+    resp.raise_for_status()
+```
+
+### 10.6 常见问题
+
+**Q: 为什么 /zen/go/v1 不行？**
+A: `/zen/go/v1` 是 OpenCode 的 CLI 路由，只支持带余额的付费模型。free 模型（`*-free`）只在 `/zen/v1` 可用。
+
+**Q: 免费模型慢怎么办？**
+A: 当前 `deepseek-v4-flash-free` 非流式单次约 6-15s。可选的优化方向：
+- 使用流式响应（前端 `stream=true`）
+- 进一步降低 `max_tokens`
+- 增大推荐缓存 TTL
+
+---
+
+## 十一、天枢（tianshu）登录保护
+
+**文件**：
+- `tianshu/index.html` — 内联 auth 检查脚本
+- `src/pages/Login.tsx` — 登录页 redirect 参数处理
+- `src/services/auth.ts` — `isAuthenticated()` 共享函数（React 端使用）
+
+### 11.1 保护机制
+
+天枢是独立静态页面（纯 HTML/JS，不依赖 React），无法使用 React 的 `AuthGuard`。因此在其 `index.html` `<head>` 中内联了独立的 auth 检查逻辑：
+
+```javascript
+// 检查 localStorage.iff_auth，与 React 端同 key
+var AUTH_KEY = "iff_auth";
+var SESSION_MAX_AGE = 7 * 24 * 60 * 60 * 1000;
+
+function isAuthenticated() {
+    var raw = localStorage.getItem(AUTH_KEY);
+    if (!raw) return false;
+    var data = JSON.parse(raw);
+    if (data.loggedIn !== true) return false;
+    if (Date.now() - data.timestamp > SESSION_MAX_AGE) {
+        localStorage.removeItem(AUTH_KEY);
+        return false;
+    }
+    return true;
+}
+
+if (!isAuthenticated()) {
+    var redirect = encodeURIComponent(window.location.pathname + window.location.hash);
+    window.location.replace("/tianquan/#/login?redirect=" + redirect);
+}
+```
+
+### 11.2 Redirect 流程
+
+```
+用户访问 /tianshu/ → no auth → window.location.replace 到
+  /tianquan/#/login?redirect=%2Ftianshu%2F
+    → 用户在天权登录
+      → Login.tsx 检测 redirect 参数
+        → 外部路径（非 /tianquan/ 开头）→ window.location.href = redirectTo
+        → SPA 内部路径 → navigate(redirectTo, { replace: true })
+```
+
+### 11.3 共享会话
+
+天枢和天权共享同一个 `localStorage`（同源 `localhost:8080`），因此天枢登录后天权自动可用，反之亦然。会话有效期 7 天，与天权一致。
+
+### 11.4 pre-commit 自动构建
+
+修改 `tianshu/index.html` 或 `src/` 下的文件后，git commit 时会自动触发：
+
+```bash
+# .git/hooks/pre-commit（内部行为）
+npm run build    # 构建产物到 dist/
+```
+
+构建产物（`dist/tianshu/`、`dist/tianquan/`）被 `.gitignore` 忽略，只供 Docker 镜像和 GitHub Actions 使用。
+
+---
+
+## 十二、数据库维护 {#twelve}
+
+### 12.1 数据库概览
+
+| 数据库 | 路径 | 用途 |
+|--------|------|------|
+| advisor.db | `backend/data/advisor.db` | 应用数据库（cases、schools、excluded_articles、FTS 等 61 张表） |
+| werss.db | `/home/admin/werss/data/db.db` | 源文章库（只读挂载） |
+
+### 12.2 备份与恢复
+
+备份位置：`/home/admin/tianquan/backup/advisor/data/advisor.db`
+
+恢复方法：
+```bash
+cp /home/admin/tianquan/backup/advisor/data/advisor.db /home/admin/tianquan/backend/data/advisor.db
+docker compose restart tianquan-backend
+```
+
+### 12.3 已知问题
+
+| 问题 | 表现 | 恢复 |
+|------|------|------|
+| `database disk image is malformed` | 所有 SQLite 操作失败 | 从备份恢复 |
+| WAL 日志未正确 checkpoint | 容器意外停止导致 `-shm`/`-wal` 残留 | 删除 `*.db-shm` `*.db-wal` 后用 PRAGMA integrity_check 验证 |

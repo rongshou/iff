@@ -147,6 +147,37 @@ export async function extractInfo(text: string): Promise<Record<string, string>>
   const mVisa = text.match(/F-1|Tier 4|学生签/);
   if (mVisa) info.visaType = mVisa[0];
 
+  // --- 兜底：简短回答（用户直接说 "计算机" / "金融" / "CS" 等）---
+  // 仅在以上规则都没提取到 major/targetMajor 时触发
+  if (!info.major && !info.targetMajor) {
+    const trimmed = text.trim();
+    // 2~30 字，只含中文/英文/数字/连字符，无标点/换行
+    if (trimmed.length >= 2 && trimmed.length <= 30 && /^[\u4e00-\u9fffA-Za-z0-9\s\-+]+$/.test(trimmed)) {
+      // 排除国家/地区名、学校名
+      const notMajor = new Set([
+        ...Object.values(COUNTRY_ALIASES),
+        "本科","硕士","博士","申请","留学","选校",
+      ]);
+      if (!notMajor.has(trimmed) && !/(大学|学院)$/.test(trimmed) && !/^\d+$/.test(trimmed)) {
+        // 如果能匹配到已知的专业分类关键词，当成目前专业
+        const MAJOR_CATEGORIES = [
+          "计算机","金融","商科","工程","教育","传媒","法律","医学","数学","艺术",
+          "CS","EE","BA","DS","MBA","LLM",
+          "经济","会计","管理","市场","营销","心理","社会","历史","哲学","文学",
+          "物理","化学","生物","材料","机械","电子","电气","土木","建筑",
+          "护理","药学","公卫","统计","应数","纯数","交互","设计","时尚",
+          "英语","翻译","日语","法语","德语","小语种",
+        ];
+        const lower = trimmed.toLowerCase();
+        const isKnownMajor = MAJOR_CATEGORIES.some(cat => lower.includes(cat.toLowerCase()) || cat.toLowerCase().includes(lower));
+        if (isKnownMajor || trimmed.length <= 6) {
+          // 短词或匹配到已知专业类别 → 作为目前专业
+          info.major = trimmed;
+        }
+      }
+    }
+  }
+
   return info;
 }
 

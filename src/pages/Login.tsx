@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { login } from "../services/auth";
 import { verifyAuthCode } from "../services/api";
 
@@ -9,6 +9,8 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const redirectTo = searchParams.get("redirect") || "/";
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,7 +41,12 @@ export default function LoginPage() {
     setLoading(false);
 
     if (result.ok) {
-      navigate("/", { replace: true });
+      // redirect 指向外部路径（如 /tianshu/）时用 window.location 跳转
+      if (redirectTo.startsWith("/") && !redirectTo.startsWith("/tianquan/")) {
+        window.location.href = redirectTo;
+      } else {
+        navigate(redirectTo, { replace: true });
+      }
     } else {
       setError(result.error || "登录失败");
     }

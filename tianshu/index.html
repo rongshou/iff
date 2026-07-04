@@ -4,6 +4,35 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>天枢 · 学生综合特质测评与生涯规划工具</title>
+<script>
+// ===== 登录检查（与天权共享 localStorage 会话） =====
+(function() {
+  var AUTH_KEY = "iff_auth";
+  var SESSION_MAX_AGE = 7 * 24 * 60 * 60 * 1000; // 7 天
+
+  function isAuthenticated() {
+    try {
+      var raw = localStorage.getItem(AUTH_KEY);
+      if (!raw) return false;
+      var data = JSON.parse(raw);
+      if (data.loggedIn !== true) return false;
+      if (Date.now() - data.timestamp > SESSION_MAX_AGE) {
+        localStorage.removeItem(AUTH_KEY);
+        return false;
+      }
+      return true;
+    } catch(e) {
+      return false;
+    }
+  }
+
+  if (!isAuthenticated()) {
+    var currentPath = window.location.pathname + window.location.hash;
+    var redirect = encodeURIComponent(currentPath);
+    window.location.replace("/tianquan/#/login?redirect=" + redirect);
+  }
+})();
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">

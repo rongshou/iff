@@ -129,7 +129,8 @@ def load_context_from_history(messages: list[dict]) -> tuple[str, dict | None]:
           仅当选校意图且 profile 完整且推荐引擎成功时非 None；其余情况为 None。
         - 前端可据此渲染 PathwaySection，无需依赖 LLM 在 Markdown 回复里转述。
     """
-    parts = [SYSTEM_PROMPT]
+    import datetime as _dt
+    parts = [f"【当前日期】{_dt.date.today().isoformat()}\n\n{SYSTEM_PROMPT}"]
     recommend_payload: dict | None = None
 
     user_msgs = [m for m in messages if m["role"] == "user"]

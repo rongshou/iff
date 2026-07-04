@@ -34,6 +34,9 @@ echo "=== tianshu ==="
 mkdir -p dist/tianshu
 cp tianshu/index.html tianshu/*.js tianshu/VERSION dist/tianshu/
 
+echo "=== .nojekyll (GitHub Pages) ==="
+touch dist/.nojekyll
+
 echo "=== build complete ==="
 ls -la dist/
 echo "---"

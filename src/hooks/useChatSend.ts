@@ -1,4 +1,4 @@
-import { generateId, ts, SCENE_INFO, looksLikeSchoolRequest, extractInfo, getMissingFields, profileToInfo, infoToDescription } from "../services/chat-helpers";
+import { generateId, ts, SCENE_INFO, looksLikeSchoolRequest, extractInfo, getMissingFields, profileToInfo } from "../services/chat-helpers";
 import { loadProfile, mergeChatInfo, createChatHistoryItem, addHistoryItem } from "../services/profile";
 import { sendChat, streamChat } from "../services/chat";
 import { logout as authLogout } from "../services/auth";
@@ -218,17 +218,8 @@ export function useChatSend(
       if (missing.length === 0 && !collectedInfo[activeScene]) {
         setCollectedInfo((prev: Record<SceneId, Record<string, string>>) => ({ ...prev, [activeScene]: newInfo }));
         mergeChatInfo(newInfo);
-        const desc = infoToDescription(newInfo);
-        // 保持用户原文不变，追加结构化描述作为上下文（Option B）
-        const enrichedMsg: ChatMessage = {
-          id: userMsg.id,
-          role: "user" as const,
-          content: `${content}\n\n（已知信息：${desc}）`,
-          timestamp: ts(),
-        };
-        updateSceneMessages((prev: ChatMessage[]) => [...prev.slice(0, -1), enrichedMsg]);
-        const finalMessages = [...updatedMessages.slice(0, -1), enrichedMsg];
-        await doSendToAI(finalMessages);
+        // 不修改用户消息，原文直发
+        await doSendToAI(updatedMessages);
         return;
       }
 
@@ -238,15 +229,8 @@ export function useChatSend(
           setCollectedInfo((prev: Record<SceneId, Record<string, string>>) => ({ ...prev, [activeScene]: newInfo }));
           mergeChatInfo(newInfo);
         }
-        const desc = infoToDescription(newInfo);
-        const enrichedMsg: ChatMessage = {
-          id: userMsg.id,
-          role: "user",
-          content: `${content}\n\n（已知信息：${desc}）`,
-          timestamp: ts(),
-        };
-        updateSceneMessages((prev: ChatMessage[]) => [...prev.slice(0, -1), enrichedMsg]);
-        await doSendToAI([...updatedMessages.slice(0, -1), enrichedMsg]);
+        // 不修改用户消息，原文直发
+        await doSendToAI(updatedMessages);
         return;
       }
 
@@ -293,20 +277,8 @@ export function useChatSend(
 
       setCollectedInfo((prev: Record<SceneId, Record<string, string>>) => ({ ...prev, [activeScene]: newInfo }));
       mergeChatInfo(newInfo);
-      const desc = infoToDescription(newInfo);
-      updateSceneMessages((prev: ChatMessage[]) => [
-        ...prev.slice(0, -1),
-        {
-          id: userMsg.id,
-          role: "user" as const,
-          content: `我提供的信息如下：\n${desc}\n\n我的问题是：${content}\n\n请根据以上信息帮我分析。`,
-          timestamp: ts(),
-        },
-      ]);
-      await doSendToAI([
-        ...updatedMessages.slice(0, -1),
-        { id: userMsg.id, role: "user" as const, content: `我提供的信息如下：\n${desc}\n\n我的问题是：${content}\n\n请根据以上信息帮我分析。`, timestamp: ts() },
-      ]);
+      // 不修改用户消息，原文直发
+      await doSendToAI(updatedMessages);
       return;
     }
 

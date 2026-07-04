@@ -222,7 +222,7 @@ export function useChatSend(
         const infoMsg: ChatMessage = {
           id: generateId(),
           role: "user" as const,
-          content: `我提供的信息如下：\n${desc}\n\n请根据以上信息帮我分析。`,
+          content: `我提供的信息如下：\n${desc}\n\n我的问题是：${content}\n\n请根据以上信息帮我分析。`,
           timestamp: ts(),
         };
         updateSceneMessages((prev: ChatMessage[]) => [...prev.slice(0, -1), infoMsg]);
@@ -254,6 +254,21 @@ export function useChatSend(
     }
 
     if (activeScene === "school" && collectedInfo[activeScene]) {
+      // AI 已经回复过 → 进入正常多轮问答，不再重新提取信息
+      const aiReplied = messages.some(m => m.role === "assistant");
+      if (aiReplied) {
+        // 继续补充新提取的信息（如有）
+        const currentInfo = collectedInfo[activeScene] || {};
+        const newInfo = { ...currentInfo, ...(await extractInfo(content)) };
+        const hasNewInfo = Object.keys(newInfo).length > Object.keys(currentInfo).length;
+        if (hasNewInfo) {
+          setCollectedInfo((prev: Record<SceneId, Record<string, string>>) => ({ ...prev, [activeScene]: newInfo }));
+          mergeChatInfo(newInfo);
+        }
+        await doSendToAI(updatedMessages);
+        return;
+      }
+
       const currentInfo = collectedInfo[activeScene] || {};
       const fields = SCENE_INFO[activeScene];
       const newInfo = { ...currentInfo, ...(await extractInfo(content)) };
@@ -283,13 +298,13 @@ export function useChatSend(
         {
           id: userMsg.id,
           role: "user" as const,
-          content: `我提供的信息如下：\n${desc}\n\n请根据以上信息帮我分析。`,
+          content: `我提供的信息如下：\n${desc}\n\n我的问题是：${content}\n\n请根据以上信息帮我分析。`,
           timestamp: ts(),
         },
       ]);
       await doSendToAI([
         ...updatedMessages.slice(0, -1),
-        { id: userMsg.id, role: "user" as const, content: `我提供的信息如下：\n${desc}\n\n请根据以上信息帮我分析。`, timestamp: ts() },
+        { id: userMsg.id, role: "user" as const, content: `我提供的信息如下：\n${desc}\n\n我的问题是：${content}\n\n请根据以上信息帮我分析。`, timestamp: ts() },
       ]);
       return;
     }

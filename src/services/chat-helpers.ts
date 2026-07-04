@@ -18,6 +18,14 @@ export function generateId() {
 
 export const ts = () => Date.now();
 
+/* ---------- 非专业内容过滤（防止"时间怎么安排"之类被误当成专业名） ---------- */
+
+const NON_MAJOR_PREFIX_RE = /^(时间|安排|规划|怎么|如何|推荐|建议|什么|哪些|哪所|是否|需要|可以|准备|开始|申请|选校|这|那|方向|留学|国家|学校|大学|学院|怎么样)/;
+
+function isLikelyNonMajor(text: string): boolean {
+  return NON_MAJOR_PREFIX_RE.test(text);
+}
+
 /* =========================================================================
  * 信息收集（首次消息的字段完整性检查）
  * ========================================================================= */
@@ -97,25 +105,29 @@ export async function extractInfo(text: string): Promise<Record<string, string>>
   const mGpa = text.match(/(?:GPA|均分|绩点)\s*[:：]?\s*([\d.]+(?:\s*\/\s*[\d.]+)?)/i);
   if (mGpa) info.gpa = mGpa[1];
 
-  // --- 学校（简称优先，再查 "大学/学院" 全名）---
+  // --- 学校（简称优先 → 全称 → 正则兜底提取 "XX大学/XX学院"）---
   const SCHOOL_ABBREV = await getSchoolAbbrevMap();
+  // 1. 简称匹配（如"北邮"）
   for (const [abbr, full] of Object.entries(SCHOOL_ABBREV)) {
     if (text.includes(abbr)) {
       info.school = full;
       break;
     }
   }
+  // 2. 全称匹配（如"北京邮电大学" — "北邮"不是它的连续子串，不会命中上面）
   if (!info.school) {
-    const mSchool = text.match(/(?:大学|学院)/);
-    if (mSchool) {
-      const parts = text.split(/[\s\n\r]+/);
-      for (const p of parts) {
-        if (/大学|学院/.test(p)) {
-          const idx = parts.indexOf(p);
-          info.school = (idx > 0 ? parts[idx - 1] + " " : "") + p;
-          break;
-        }
+    for (const full of Object.values(SCHOOL_ABBREV)) {
+      if (text.includes(full)) {
+        info.school = full;
+        break;
       }
+    }
+  }
+  // 3. 正则兜底：提取中文 + "大学"或"学院"，不依赖空格分词，避免吞下 scene 前缀
+  if (!info.school) {
+    const mSchool = text.match(/([\u4e00-\u9fff]{2,10}(?:大学|学院))/);
+    if (mSchool) {
+      info.school = mSchool[1];
     }
   }
 
@@ -136,7 +148,15 @@ export async function extractInfo(text: string): Promise<Record<string, string>>
   // --- 目前专业 — 先移除"目标专业xxx"避免误匹配，再匹配多种自然表达 ---
   const textForMajor = text.replace(/目标专业[：:是为]?\s*[^，。,.!！?？\n]{1,30}/g, "");
   let mMajor = textForMajor.match(/(?:本科|在读|目前)[\s]*(?:读|学|专业)[：:是为]?\s*([^，。,.!！?？\n]{2,30})/);
-  if (!mMajor) mMajor = textForMajor.match(/专业[：:是为]?\s*([^，。,.!！?？\n]{2,30})/);
+  if (!mMajor) {
+    const mTemp = textForMajor.match(/专业[：:是为]?\s*([^，。,.!！?？\n]{2,30})/);
+    if (mTemp) {
+      const candidate = mTemp[1].trim();
+      if (!isLikelyNonMajor(candidate)) {
+        mMajor = mTemp;
+      }
+    }
+  }
   if (!mMajor) mMajor = textForMajor.match(/(?:读|学)\s*([^，。,.!！?？\n]{2,30})/);
   if (!mMajor) mMajor = textForMajor.match(/([^，。,.!！?？\s\n]{2,8})专业(?!课|课目|课表|课成绩|课老师)/);
   if (mMajor && !info.major) info.major = mMajor[1].trim();
@@ -170,7 +190,7 @@ export async function extractInfo(text: string): Promise<Record<string, string>>
         ];
         const lower = trimmed.toLowerCase();
         const isKnownMajor = MAJOR_CATEGORIES.some(cat => lower.includes(cat.toLowerCase()) || cat.toLowerCase().includes(lower));
-        if (isKnownMajor || trimmed.length <= 6) {
+        if (isKnownMajor || (trimmed.length <= 6 && !isLikelyNonMajor(trimmed))) {
           // 短词或匹配到已知专业类别 → 作为目前专业
           info.major = trimmed;
         }
@@ -189,7 +209,9 @@ export function getMissingFields(info: Record<string, string>, fields: InfoField
 export function profileToInfo(profile: NonNullable<ReturnType<typeof loadProfile>>): Record<string, string> {
   const info: Record<string, string> = {};
   if (profile.school) info.school = profile.school;
-  if (profile.original_major) info.major = profile.original_major;
+  if (profile.original_major && !isLikelyNonMajor(profile.original_major)) {
+    info.major = profile.original_major;
+  }
   if (profile.gpa_score != null) {
     const fmt = profile.gpa_format ? `/${profile.gpa_format}` : "";
     info.gpa = `${profile.gpa_score}${fmt}`;

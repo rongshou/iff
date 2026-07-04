@@ -219,14 +219,15 @@ export function useChatSend(
         setCollectedInfo((prev: Record<SceneId, Record<string, string>>) => ({ ...prev, [activeScene]: newInfo }));
         mergeChatInfo(newInfo);
         const desc = infoToDescription(newInfo);
-        const infoMsg: ChatMessage = {
-          id: generateId(),
+        // 保持用户原文不变，追加结构化描述作为上下文（Option B）
+        const enrichedMsg: ChatMessage = {
+          id: userMsg.id,
           role: "user" as const,
-          content: `我提供的信息如下：\n${desc}\n\n我的问题是：${content}\n\n请根据以上信息帮我分析。`,
+          content: `${content}\n\n（已知信息：${desc}）`,
           timestamp: ts(),
         };
-        updateSceneMessages((prev: ChatMessage[]) => [...prev.slice(0, -1), infoMsg]);
-        const finalMessages = [...updatedMessages.slice(0, -1), infoMsg];
+        updateSceneMessages((prev: ChatMessage[]) => [...prev.slice(0, -1), enrichedMsg]);
+        const finalMessages = [...updatedMessages.slice(0, -1), enrichedMsg];
         await doSendToAI(finalMessages);
         return;
       }

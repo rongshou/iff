@@ -133,7 +133,9 @@ export function clearProfile(): void {
 export function mergeChatInfo(info: Record<string, string>): void {
   const mapped: Partial<ProfileData> = {};
   if (info.school) mapped.school = info.school;
-  if (info.major) mapped.original_major = info.major;
+  if (info.major && !/^(时间|安排|规划|怎么|如何|推荐|建议|什么|哪些|哪所|是否|需要|可以|准备|开始|申请|选校|这|那|方向|留学|国家|学校|大学|学院|怎么样)/.test(info.major)) {
+    mapped.original_major = info.major;
+  }
   if (info.gpa) {
     const parsed = parseGpaInput(info.gpa);
     if (parsed) {

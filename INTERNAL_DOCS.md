@@ -499,8 +499,8 @@ API 代理配置在 `vite.config.ts`：`/api` → `http://localhost:3470`。
 |---|--------|------|
 | Provider | `opencode` | 仅支持 OpenCode API |
 | Base URL | `https://opencode.ai/zen/v1` | ⚠️ `/zen/go/v1` 不支持 free 模型 |
-| 主模型 | `deepseek-v4-flash-free` | 免费模型，无余额限制 |
-| 后备模型 | `deepseek-v4-flash-free` | 主模型 401/429/5xx 自动切换 |
+| 主模型 | `mimo-v2.5-free` | 推理模型，~4s 响应，负载较低 |
+| 后备模型 | `mimo-v2.5-free` | 主模型 401/429/5xx 自动切换 |
 
 **配置位置**：`docker-compose.yml`（环境变量） + `backend/app/core/config.py`（默认值）
 

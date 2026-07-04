@@ -30,17 +30,17 @@ WERS_DB_PATH = "/home/admin/werss/data/db.db"
 ADVISOR_DB_PATH = "/home/admin/tianquan/backend/data/advisor.db"
 
 # LLM 配置（与 tianquan .env 一致）
-LLM_BASE_URL = "https://opencode.ai/zen/v1"
+LLM_BASE_URL = "https://opencode.ai/zen/go/v1"
 LLM_API_KEY = "sk-J7OYUgPKmRT3pcOD8W3Vld7YiEu1G1fVhBPHlGBHeWB8dPOWh0aSpCtTIR9jpPUn"
-LLM_MODEL = "deepseek-v4-flash-free"
+LLM_MODEL = "deepseek-v4-flash"
 
 # 处理参数
-MAX_CONTENT_LENGTH = 3000     # 发送给 AI 的最大字符数
+MAX_CONTENT_LENGTH = 2000     # 发送给 AI 的最大字符数
 MIN_CLEAN_LENGTH = 200        # 清洗后最少字数
 MIN_CHINESE_RATIO = 0.25      # 中文字符最低占比
 MAX_ARTICLE_AGE_DAYS = 730    # 文章最大年龄（2年）
 BATCH_SIZE = 5                # 每批处理数量
-REQUEST_INTERVAL = 3.0        # 请求间隔（秒），避免限流
+REQUEST_INTERVAL = 1.5        # 请求间隔（秒），避免限流
 MAX_RETRIES = 3               # 最大重试次数
 RETRY_BASE_DELAY = 5.0        # 重试基础延迟（秒）
 
@@ -262,48 +262,69 @@ def init_kb_tables(conn):
     print("Knowledge base tables initialized")
 
 
-def get_unprocessed_articles(werss_conn, kb_conn, limit=0, reprocess=False):
-    """获取未处理的文章（游标方式，避免大查询 OOM）。"""
-    # 获取已处理的 ID
-    processed = set()
-    rows = kb_conn.execute("SELECT article_id FROM kb_process_state").fetchall()
-    processed = {r[0] for r in rows}
+def article_generator(werss_conn, kb_conn, limit=0, reprocess=False):
+    """逐条生成未处理文章（生成器，避免大 content 撑爆内存）。"""
+    processed_ids = set()
+    if not reprocess:
+        rows = kb_conn.execute("SELECT article_id FROM kb_process_state").fetchall()
+        processed_ids = {r[0] for r in rows}
 
-    target = limit if limit > 0 else 999999
-    result = []
-    batch_size = 5  # 每次只取 20 条
-    offset = 0
+    total_fetched = 0
+    cursor_id = None
+    target = max(limit, 0) or 999999
+    BATCH_SIZE = 10
 
-    while len(result) < target:
-        query = """
-            SELECT id, title, content, ai_category, publish_time, url, mp_id
-            FROM articles
-            WHERE content IS NOT NULL
-            ORDER BY publish_time DESC
-            LIMIT ? OFFSET ?
-        """
-        rows = werss_conn.execute(query, (batch_size, offset)).fetchall()
+    while total_fetched < target:
+        if cursor_id:
+            rows = werss_conn.execute(
+                """SELECT id, title, ai_category, publish_time, url, mp_id
+                   FROM articles
+                   WHERE content IS NOT NULL AND id < ?
+                   ORDER BY id DESC
+                   LIMIT ?""",
+                (cursor_id, BATCH_SIZE)
+            ).fetchall()
+        else:
+            rows = werss_conn.execute(
+                """SELECT id, title, ai_category, publish_time, url, mp_id
+                   FROM articles
+                   WHERE content IS NOT NULL
+                   ORDER BY id DESC
+                   LIMIT ?""",
+                (BATCH_SIZE,)
+            ).fetchall()
+
         if not rows:
-            break  # 没有更多文章了
+            break
 
         for row in rows:
             aid = str(row[0])
-            if aid not in processed or reprocess:
-                result.append({
+            if aid not in processed_ids:
+                # 只对真正要处理的文章加载 content
+                content_row = werss_conn.execute(
+                    "SELECT content FROM articles WHERE id=?", (row[0],)
+                ).fetchone()
+                content = content_row[0] if content_row else ""
+
+                yield {
                     "id": aid,
                     "title": row[1] or "",
-                    "content": row[2] or "",
-                    "ai_category": row[3] or "综合资讯",
-                    "publish_time": row[4],
-                    "url": row[5] or "",
-                    "mp_id": row[6] or "",
-                })
-                if len(result) >= target:
+                    "content": content or "",
+                    "ai_category": row[2] or "综合资讯",
+                    "publish_time": row[3],
+                    "url": row[4] or "",
+                    "mp_id": row[5] or "",
+                }
+                total_fetched += 1
+                if total_fetched >= target:
                     break
 
-        offset += batch_size
-
-    return result
+        cursor_id = rows[-1][0]  # 最后一个 id 作为游标
+        
+        # 如果这一批全部已处理，继续下一批
+        all_processed = all(str(r[0]) in processed_ids for r in rows)
+        if all_processed and len(rows) < BATCH_SIZE:
+            break
 
 
 def save_processed(kb_conn, article, structured, clean_text):
@@ -393,22 +414,16 @@ def process_articles(limit=0, reprocess=False):
     kb_conn.row_factory = sqlite3.Row
     init_kb_tables(kb_conn)
 
-    # 获取待处理文章
-    articles = get_unprocessed_articles(werss_conn, kb_conn, limit=limit, reprocess=reprocess)
-    total = len(articles)
-    print(f"\nFound {total} articles to process")
-
-    if total == 0:
-        print("Nothing to do.")
-        return
+    # 获取待处理文章（生成器）
+    gen = article_generator(werss_conn, kb_conn, limit=limit, reprocess=reprocess)
 
     processed = 0
     skipped = 0
     errors = 0
 
-    for i, article in enumerate(articles):
+    for i, article in enumerate(gen):
         title = article["title"][:50]
-        print(f"\n[{i+1}/{total}] Processing: {title}...")
+        print(f"\n[{i+1}] Processing: {title}...")
 
         # 1. 清洗 HTML
         clean_text = clean_html(article["content"])
@@ -449,12 +464,13 @@ def process_articles(limit=0, reprocess=False):
         time.sleep(REQUEST_INTERVAL)
 
     # 汇总
+    total_processed = processed + skipped + errors
     print(f"\n{'='*50}")
     print(f"Processing complete:")
     print(f"  Processed: {processed}")
     print(f"  Skipped:   {skipped}")
     print(f"  Errors:    {errors}")
-    print(f"  Total:     {total}")
+    print(f"  Total:     {total_processed}")
 
     werss_conn.close()
     kb_conn.close()

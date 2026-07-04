@@ -21,7 +21,8 @@ const GPA_FORMATS = ["百分制", "4分制", "5分制", "7分制", "9分制", "�
 
 
 export default function ProfilePage() {
-  const profile = useProfileStore((s) => s.profile) as ProfileData;
+  const profile = useProfileStore((s) => s.profile) as ProfileData | null;
+  const loaded = useProfileStore((s) => s.loaded);
   const loadProfileFromStore = useProfileStore((s) => s.load);
   const update = useProfileStore((s) => s.update);
   const setProfileField = useProfileStore((s) => s.setProfileField);
@@ -35,8 +36,35 @@ export default function ProfilePage() {
     setHistory(loadHistory());
   }, []);
 
+  /* profile 尚未加载完成时显示占位 */
+  if (!loaded) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <p className="text-slate-400 text-sm">加载中…</p>
+      </div>
+    );
+  }
+
+  /* profile 为空时使用空对象兜底，避免 null.tianshu 崩溃 */
+  const safeProfile = (profile ?? {
+    username: "",
+    email: "",
+    auth_code: "",
+    school: "",
+    original_major: "",
+    gpa_score: null,
+    gpa_format: "",
+    target_countries: [],
+    study_level: "",
+    target_major: "",
+    ielts: null,
+    toefl: null,
+    gre: null,
+    updated_at: "",
+  }) as ProfileData;
+
   const handleSave = () => {
-    if (profile) update(profile);
+    update(safeProfile);
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
   };
@@ -46,7 +74,7 @@ export default function ProfilePage() {
   };
 
   const handleCountry = (c: string) => {
-    const current = profile.target_countries || [];
+    const current = safeProfile.target_countries || [];
     const next = current.includes(c)
       ? current.filter((x) => x !== c)
       : [...current, c];
@@ -64,7 +92,7 @@ export default function ProfilePage() {
     setHistory([]);
   };
 
-  const tianshu = profile.tianshu;
+  const tianshu = safeProfile.tianshu;
   const hasHistory = history.length > 0;
   const historyCounts = {
     mbti: history.filter((h) => h.type === "mbti").length,
@@ -115,7 +143,7 @@ export default function ProfilePage() {
             <label className="flex flex-col text-sm text-slate-600">
               用户名
               <input
-                value={profile.username || ""}
+                value={safeProfile.username || ""}
                 onChange={(e) => handleField("username", e.target.value)}
                 placeholder="你的昵称"
                 className="mt-1 px-3 py-2 border border-slate-200 rounded-lg text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400"
@@ -125,7 +153,7 @@ export default function ProfilePage() {
             <label className="flex flex-col text-sm text-slate-600">
               邮箱
               <input
-                value={profile.email || ""}
+                value={safeProfile.email || ""}
                 onChange={(e) => handleField("email", e.target.value)}
                 placeholder="your@email.com"
                 type="email"
@@ -136,14 +164,14 @@ export default function ProfilePage() {
             <label className="flex flex-col text-sm text-slate-600">
               授权码
               <div className="mt-1 px-3 py-2 border border-slate-200 rounded-lg text-slate-800 text-sm bg-slate-50 select-all">
-                {profile.auth_code || "（未设置）"}
+                {safeProfile.auth_code || "（未设置）"}
               </div>
             </label>
             {/* 学校 */}
             <label className="flex flex-col text-sm text-slate-600">
               学校
               <input
-                value={profile.school || ""}
+                value={safeProfile.school || ""}
                 onChange={(e) => handleField("school", e.target.value)}
                 placeholder="例如 北京邮电大学"
                 className="mt-1 px-3 py-2 border border-slate-200 rounded-lg text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400"
@@ -153,7 +181,7 @@ export default function ProfilePage() {
             <label className="flex flex-col text-sm text-slate-600">
               专业
               <input
-                value={profile.original_major || ""}
+                value={safeProfile.original_major || ""}
                 onChange={(e) => handleField("original_major", e.target.value)}
                 placeholder="例如 通信工程"
                 className="mt-1 px-3 py-2 border border-slate-200 rounded-lg text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400"
@@ -165,7 +193,7 @@ export default function ProfilePage() {
               <input
                 type="number"
                 step="0.01"
-                value={profile.gpa_score ?? ""}
+                value={safeProfile.gpa_score ?? ""}
                 onChange={(e) => handleField("gpa_score", e.target.value ? parseFloat(e.target.value) : null)}
                 placeholder="例如 82"
                 className="mt-1 px-3 py-2 border border-slate-200 rounded-lg text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400"
@@ -175,7 +203,7 @@ export default function ProfilePage() {
             <label className="flex flex-col text-sm text-slate-600">
               GPA 格式
               <select
-                value={profile.gpa_format || ""}
+                value={safeProfile.gpa_format || ""}
                 onChange={(e) => handleField("gpa_format", e.target.value)}
                 className="mt-1 px-3 py-2 border border-slate-200 rounded-lg text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400 bg-white"
               >
@@ -189,7 +217,7 @@ export default function ProfilePage() {
             <label className="flex flex-col text-sm text-slate-600">
               申请阶段
               <select
-                value={profile.study_level || ""}
+                value={safeProfile.study_level || ""}
                 onChange={(e) => handleField("study_level", e.target.value)}
                 className="mt-1 px-3 py-2 border border-slate-200 rounded-lg text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400 bg-white"
               >
@@ -203,7 +231,7 @@ export default function ProfilePage() {
             <label className="flex flex-col text-sm text-slate-600">
               目标专业
               <input
-                value={profile.target_major || ""}
+                value={safeProfile.target_major || ""}
                 onChange={(e) => handleField("target_major", e.target.value)}
                 placeholder="例如 计算机 / 金融"
                 className="mt-1 px-3 py-2 border border-slate-200 rounded-lg text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400"
@@ -214,7 +242,7 @@ export default function ProfilePage() {
               <span className="mb-1.5">目标国家/地区</span>
               <div className="flex flex-wrap gap-1.5">
                 {COUNTRIES.map((c) => {
-                  const active = (profile.target_countries || []).includes(c);
+                  const active = (safeProfile.target_countries || []).includes(c);
                   return (
                     <button
                       key={c}
@@ -237,7 +265,7 @@ export default function ProfilePage() {
               <input
                 type="number"
                 step="0.5"
-                value={profile.ielts ?? ""}
+                value={safeProfile.ielts ?? ""}
                 onChange={(e) => handleField("ielts", e.target.value ? parseFloat(e.target.value) : null)}
                 placeholder="例如 7.0"
                 className="mt-1 px-3 py-2 border border-slate-200 rounded-lg text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400"
@@ -247,7 +275,7 @@ export default function ProfilePage() {
               TOEFL 成绩
               <input
                 type="number"
-                value={profile.toefl ?? ""}
+                value={safeProfile.toefl ?? ""}
                 onChange={(e) => handleField("toefl", e.target.value ? parseInt(e.target.value) : null)}
                 placeholder="例如 100"
                 className="mt-1 px-3 py-2 border border-slate-200 rounded-lg text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400"

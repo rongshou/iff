@@ -98,14 +98,23 @@ def _is_profile_complete(profile: dict) -> bool:
     return len(_get_missing_fields(profile)) == 0
 
 
-# 关键词：用于判断用户意图（选校推荐 vs 通用问答）
-# 注意：避免被"推荐信"这类词组误触发
-RECOMMEND_KEYWORDS = [
+# ---------------------------------------------------------------------------
+# 推荐引擎触发条件（收紧版，避免无关对话误触发）
+# ---------------------------------------------------------------------------
+
+# 强信号：含任一即触发选校推荐
+STRONG_RECOMMEND_KEYWORDS = [
     "选校", "选校定位", "学校推荐", "推荐学校", "匹配学校",
     "定位", "冲刺", "保底", "主申",
-    "GPA", "gpa", "均分", "绩点",
     "录取概率", "录取案例",
-    "留学申请", "申请留学", "留学选校",
+    "留学选校",
+]
+
+# 弱信号：需要至少命中 2 个才触发（或与强信号叠加时按 1 个计算）
+WEAK_RECOMMEND_KEYWORDS = [
+    "GPA", "gpa", "均分", "绩点", "分数",
+    "留学申请", "申请留学",
+    "录取", "申请",
 ]
 
 # 排除词：包含这些词时不视为选校意图
@@ -193,11 +202,24 @@ def load_context_from_history(messages: list[dict]) -> tuple[str, dict | None]:
     # ====================================================================
     # 2. 判断用户意图：选校相关 vs 通用问答
     # ====================================================================
-    all_user_text = " ".join(m["content"] for m in user_msgs)
-    is_recommend_intent = (
-        any(k in all_user_text for k in RECOMMEND_KEYWORDS)
-        and not any(e in all_user_text for e in RECOMMEND_EXCLUDE)
-    )
+    # 优先按最新一条消息判断——如果用户刚问的是文书/签证，就不走选校推荐
+    NON_RECOMMEND_KEYWORDS = [
+        "文书","PS","个人陈述","简历","CV","推荐信","推荐人",
+        "写作","怎么写","怎么写好","如何写","怎么写好",
+        "签证","F-1","Tier 4","I-20","面签","签证材料",
+    ]
+    if any(k in last_user for k in NON_RECOMMEND_KEYWORDS):
+        is_recommend_intent = False
+    else:
+        all_user_text = " ".join(m["content"] for m in user_msgs)
+        if any(e in all_user_text for e in RECOMMEND_EXCLUDE):
+            is_recommend_intent = False
+        else:
+            # 强信号：含任一即视为选校意图
+            strong_hit = any(k in all_user_text for k in STRONG_RECOMMEND_KEYWORDS)
+            # 弱信号：需要至少命中 2 个
+            weak_hits = sum(1 for k in WEAK_RECOMMEND_KEYWORDS if k in all_user_text)
+            is_recommend_intent = strong_hit or weak_hits >= 2
 
     if is_recommend_intent:
         # --- 选校模式：做 5 字段完整性检查 ---
@@ -267,18 +289,38 @@ async def call_llm(messages: list[dict], stream: bool = False) -> tuple[str, dic
         "model": model,
         "messages": req_messages,
         "temperature": 0.7,
-        "max_tokens": 8192,
+        "max_tokens": 2048,
         "stream": stream,
     }
 
     if stream:
         return _stream_response(url, headers, payload, recommend_payload)
 
-    async with httpx.AsyncClient(timeout=httpx.Timeout(180.0)) as client:
-        resp = await client.post(url, json=payload, headers=headers)
+    fallback_model = settings.LLM_FALLBACK_MODEL
+    attempted_models = [model]
+
+    for attempt in range(2):
+        async with httpx.AsyncClient(timeout=httpx.Timeout(180.0)) as client:
+            resp = await client.post(url, json=payload, headers=headers)
+
+        if resp.is_success:
+            data = resp.json()
+            return data["choices"][0]["message"]["content"], recommend_payload
+
+        # 非成功响应 — 检查是否需要切备用模型
+        if attempt == 0 and fallback_model and resp.status_code in (401, 402, 429, 500, 502, 503):
+            logger.warning(
+                "Primary model %s failed (HTTP %d), falling back to %s",
+                model, resp.status_code, fallback_model,
+            )
+            payload["model"] = fallback_model
+            attempted_models.append(fallback_model)
+            continue
+
         resp.raise_for_status()
-        data = resp.json()
-        return data["choices"][0]["message"]["content"], recommend_payload
+
+    # 不应到达此处
+    raise RuntimeError(f"All models failed: {attempted_models}")
 
 
 def _stream_response(url: str, headers: dict, payload: dict, recommend_payload: dict | None = None) -> StreamingResponse:

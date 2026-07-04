@@ -28,8 +28,8 @@ services:
       TIANQUAN_WERS_DB_PATH: "/app/data/werss.db"
       TIANQUAN_LLM_PROVIDER: "opencode"
       TIANQUAN_LLM_BASE_URL: "https://opencode.ai/zen/v1"
-      TIANQUAN_LLM_MODEL: "deepseek-v4-flash-free"
-      TIANQUAN_LLM_FALLBACK_MODEL: "deepseek-v4-flash-free"
+      TIANQUAN_LLM_MODEL: "mimo-v2.5-free"
+      TIANQUAN_LLM_FALLBACK_MODEL: "mimo-v2.5-free"
       TIANQUAN_LLM_API_KEY: "${TIANQUAN_LLM_API_KEY:?set TIANQUAN_LLM_API_KEY in .env}"
       TIANQUAN_VALID_AUTH_CODES: "${TIANQUAN_VALID_AUTH_CODES:?set TIANQUAN_VALID_AUTH_CODES in .env}"
     volumes:

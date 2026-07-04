@@ -678,6 +678,13 @@ cp /home/admin/tianquan/backup/advisor/data/advisor.db /home/admin/tianquan/back
 docker compose restart tianquan-backend
 ```
 
+> ⚠️ **恢复后务必重跑排名更新脚本**，否则 QS/US News 排名会回退到旧版本：
+> ```bash
+> python3 /home/admin/tianquan/scripts/rankings/update_qs_2027.py
+> python3 /home/admin/tianquan/scripts/rankings/update_usnews.py
+> ```
+> 这两个脚本同时更新 live DB 和备份 DB，确保数据一致。
+
 ### 12.3 已知问题
 
 | 问题 | 表现 | 恢复 |

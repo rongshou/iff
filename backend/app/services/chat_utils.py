@@ -494,12 +494,20 @@ def _format_recommend_result(result: dict) -> str:
             for s in group:
                 name = s.get("name", "")
                 qs = s.get("qs_rank")
+                usnews = s.get("usnews_rank")
                 cases = s.get("matched_cases", 0)
                 p50 = s.get("gpa_p50")
                 score = s.get("admission_score", 0)
                 gap = s.get("gpa_gap")
                 majors = s.get("majors", [])
-                qs_str = f" QS#{qs}" if qs else ""
+                
+                if country == "美国" and usnews:
+                    rank_str = f" USNews#{usnews}"
+                elif qs:
+                    rank_str = f" QS#{qs}"
+                else:
+                    rank_str = ""
+                
                 p50_str = f" | 录取GPA中位数 {p50}" if p50 else ""
                 gap_str = f" | 需提分 {gap}百分点可进匹配档" if chance == "冲刺" and gap else ""
                 majors_str = ""
@@ -510,7 +518,7 @@ def _format_recommend_result(result: dict) -> str:
                     if more > 0:
                         majors_str += f" 等{more}个专业"
                 lines.append(
-                    f"    - {name}{qs_str} | {cases} 例{p50_str}{majors_str}{gap_str}"
+                    f"    - {name}{rank_str} | {cases} 例{p50_str}{majors_str}{gap_str}"
                 )
 
     lines.append("")

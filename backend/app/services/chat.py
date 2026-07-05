@@ -277,7 +277,8 @@ async def call_llm(messages: list[dict], stream: bool = False) -> tuple[str, dic
     if not api_key:
         return "抱歉，AI 对话功能尚未配置。请联系管理员设置 LLM_API_KEY。", None
 
-    system_msg, recommend_payload = load_context_from_history(messages)
+    import asyncio
+    system_msg, recommend_payload = await asyncio.to_thread(load_context_from_history, messages)
 
     req_messages = [{"role": "system", "content": system_msg}] + messages
 

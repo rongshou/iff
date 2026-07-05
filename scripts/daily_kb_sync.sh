@@ -10,7 +10,7 @@ LOG="$LOG_DIR/kb_pipeline_$(date +%Y%m%d).log"
 echo "=== KB Pipeline Sync $(date) ===" >> "$LOG"
 
 # 每次最多处理 100 篇（避免跑太久）
-python3 -u scripts/kb_pipeline.py --limit 100 >> "$LOG" 2>&1
+python3 -u scripts/kb_pipeline.py --limit 500 >> "$LOG" 2>&1
 
 echo "=== Done $(date) ===" >> "$LOG"
 

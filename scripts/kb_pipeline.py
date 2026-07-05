@@ -484,13 +484,22 @@ def show_stats():
         total = kb_conn.execute("SELECT COUNT(*) FROM kb_process_state").fetchone()[0]
         done = kb_conn.execute("SELECT COUNT(*) FROM kb_process_state WHERE status='done'").fetchone()[0]
         skipped = kb_conn.execute("SELECT COUNT(*) FROM kb_process_state WHERE status='skipped'").fetchone()[0]
-        pending = total - done - skipped
+        # 查询 werss.db 总文章数（不检查 content，避免全表扫描）
+        try:
+            import sqlite3 as _sqlite3
+            _wc = _sqlite3.connect(WERS_DB_PATH)
+            werss_total = _wc.execute("SELECT COUNT(*) FROM articles").fetchone()[0]
+            _wc.close()
+            real_pending = max(0, werss_total - total)
+        except Exception:
+            real_pending = "?"
+            werss_total = "?"
 
         print(f"\n=== 知识库处理状态 ===")
-        print(f"已处理:   {done}")
-        print(f"已跳过:   {skipped}")
-        print(f"待处理:   {pending}")
-        print(f"总计:     {total}")
+        print(f"已入库:     {done}")
+        print(f"已跳过:     {skipped}")
+        print(f"已跟踪:     {total}")
+        print(f"待处理:     ~{real_pending}  (werss总文章: {werss_total})")
 
         if done > 0:
             print(f"\n=== 文章类型分布 ===")

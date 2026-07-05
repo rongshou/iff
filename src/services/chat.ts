@@ -80,5 +80,28 @@ export async function streamChat(
       }
     }
   }
+
+  // Flush decoder and process any remaining content in the buffer
+  buffer += decoder.decode();
+  if (buffer.trim()) {
+    const lines = buffer.split("\n");
+    for (const line of lines) {
+      if (line.startsWith("data: ")) {
+        const data = line.slice(6).trim();
+        if (data === "[DONE]") {
+          onDone();
+          return;
+        }
+        try {
+          const obj = JSON.parse(data);
+          if (obj.content) onChunk(obj.content);
+          if (obj.reasoning && onReasoning) onReasoning(obj.reasoning);
+        } catch {
+          // skip invalid JSON
+        }
+      }
+    }
+  }
+
   onDone();
 }

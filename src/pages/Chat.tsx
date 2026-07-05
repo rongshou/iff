@@ -98,7 +98,7 @@ export default function ChatPage() {
     lastAssistant && !loading && lastAssistant.content && !lastAssistant.content.startsWith("抱歉");
 
   return (
-    <div className="min-h-screen chat-bg flex flex-col">
+    <div className="h-screen chat-bg flex flex-col overflow-hidden">
       <div className="max-w-3xl w-full mx-auto flex-1 flex flex-col px-4 sm:px-6 py-4 sm:py-6">
         {/* ---------- 顶部标题栏 ---------- */}
         <header

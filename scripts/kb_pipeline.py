@@ -31,8 +31,8 @@ ADVISOR_DB_PATH = "/home/admin/tianquan/backend/data/advisor.db"
 
 # LLM 配置（与 tianquan .env 一致）
 LLM_BASE_URL = "https://opencode.ai/zen/go/v1"
-LLM_API_KEY = "sk-J7OYUgPKmRT3pcOD8W3Vld7YiEu1G1fVhBPHlGBHeWB8dPOWh0aSpCtTIR9jpPUn"
-LLM_MODEL = "qwen3.6-plus"
+LLM_API_KEY = "sk-1ctYojVxgodzjiQBt0dFyKbJ6HIfvPzzk8ZLtgBhkyEDZ3yGrYdheG1JGwDIVw6N"
+LLM_MODEL = "deepseek-v4-flash"
 
 # 处理参数
 MAX_CONTENT_LENGTH = 2000     # 发送给 AI 的最大字符数

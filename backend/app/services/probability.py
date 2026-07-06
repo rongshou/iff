@@ -1,5 +1,6 @@
 """真实录取概率评分服务 - 基于 17.6 万案例的百分位数据"""
 
+import sqlite3
 from typing import Optional
 
 from ..core.database import get_connection
@@ -9,6 +10,7 @@ def get_school_percentiles(school_name: str, tier_label: str) -> Optional[dict]:
     """
     获取某学校在某层次下的真实 GPA 百分位
     优先级: school::tier > school > 404
+    表不存在时优雅降级，返回 None
     """
     conn = get_connection()
     try:
@@ -30,6 +32,9 @@ def get_school_percentiles(school_name: str, tier_label: str) -> Optional[dict]:
         if row:
             return dict(row)
 
+        return None
+    except sqlite3.OperationalError:
+        # 表可能尚未创建（school_percentiles / country_gpa_benchmark）
         return None
     finally:
         conn.close()
@@ -79,6 +84,8 @@ def get_country_gpa_benchmark(country: str, gpa_range: str) -> Optional[dict]:
         ).fetchone()
         if row:
             return dict(row)
+        return None
+    except sqlite3.OperationalError:
         return None
     finally:
         conn.close()

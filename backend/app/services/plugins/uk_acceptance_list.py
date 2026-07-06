@@ -9,6 +9,7 @@ from ...core.database import get_connection
 
 def _load_uk_acceptance() -> dict:
     """从 advisor.db 加载 UK 认可名单数据"""
+    import sqlite3
     conn = get_connection()
     try:
         rows = conn.execute(
@@ -26,6 +27,8 @@ def _load_uk_acceptance() -> dict:
                 }
             result[school]["accepted_universities"][row["uk_university"]] = row["offer_count"]
         return result
+    except sqlite3.OperationalError:
+        return {}
     finally:
         conn.close()
 

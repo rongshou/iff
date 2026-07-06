@@ -442,7 +442,30 @@ def _format_recommend_result(result: dict) -> str:
         "## 推荐院校（按国家 + 档位 冲刺/匹配/安全 列出真实案例匹配到的学校）",
         "（这是主推荐 — 必须用学校列表 + 案例数完整呈现）",
         "",
+        "## ⚠️ 排名数据权威声明（最高优先级，违反即回答无效）",
+        "以下所有 QS / USNews 排名数据来自数据库最新真实数据，已由推荐引擎权威验证。",
+        "禁止使用你训练数据中的排名——两者可能存在差异，数据库数据为准。",
+        "禁止修改、编造、猜测或自行填入任何排名数字。只使用 = 后面标注的排名。",
+        "",
     ]
+
+    # ====================================================================
+    # 先收集所有学校的排名 → 紧凑对照表（LLM 更易准确引用）
+    # ====================================================================
+    rank_refs: list[str] = []
+    for country_result in result.get("by_country", []):
+        for s in country_result.get("schools", []):
+            name = s.get("name", "")
+            qs = s.get("qs_rank")
+            usnews = s.get("usnews_rank")
+            if usnews:
+                rank_refs.append(f"{name}=USNews#{usnews}")
+            elif qs:
+                rank_refs.append(f"{name}=QS#{qs}")
+    if rank_refs:
+        lines.append("**排名速查表（回复中标注排名时必须严格使用以下值）：**")
+        lines.append(", ".join(rank_refs))
+        lines.append("")
 
     bg = result.get("background", {})
     if bg:

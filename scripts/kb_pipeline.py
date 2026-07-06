@@ -32,7 +32,7 @@ ADVISOR_DB_PATH = "/home/admin/tianquan/backend/data/advisor.db"
 # LLM 配置（与 tianquan .env 一致）
 LLM_BASE_URL = "https://opencode.ai/zen/go/v1"
 LLM_API_KEY = "sk-J7OYUgPKmRT3pcOD8W3Vld7YiEu1G1fVhBPHlGBHeWB8dPOWh0aSpCtTIR9jpPUn"
-LLM_MODEL = "deepseek-v4-flash"
+LLM_MODEL = "qwen3.6-plus"
 
 # 处理参数
 MAX_CONTENT_LENGTH = 2000     # 发送给 AI 的最大字符数
@@ -40,7 +40,7 @@ MIN_CLEAN_LENGTH = 200        # 清洗后最少字数
 MIN_CHINESE_RATIO = 0.25      # 中文字符最低占比
 MAX_ARTICLE_AGE_DAYS = 730    # 文章最大年龄（2年）
 BATCH_SIZE = 5                # 每批处理数量
-REQUEST_INTERVAL = 1.5        # 请求间隔（秒），避免限流
+REQUEST_INTERVAL = 0.5        # 请求间隔（秒），避免限流
 MAX_RETRIES = 3               # 最大重试次数
 RETRY_BASE_DELAY = 5.0        # 重试基础延迟（秒）
 
@@ -92,6 +92,26 @@ def check_quality(text_clean, publish_time=None):
             return False, "outdated"
 
     return True, "ok"
+
+
+# 广告预过滤关键词（标题匹配即跳过，不调 LLM，节省 API 调用）
+AD_TITLE_PATTERNS = [
+    r"实习信息汇总",
+    r"实习.*汇总",
+    r"5\.\d+实习",   # "5.13实习" pattern
+    r"6\.\d+实习",
+    r"7\.\d+实习",
+]
+
+def pre_filter_ad(title):
+    # type: (str) -> bool
+    """标题级别广告预过滤。返回 True 表示判定为广告，应跳过。"""
+    if not title:
+        return False
+    for pattern in AD_TITLE_PATTERNS:
+        if re.search(pattern, title):
+            return True
+    return False
 
 
 # =====================================================================
@@ -425,6 +445,13 @@ def process_articles(limit=0, reprocess=False):
         title = article["title"][:50]
         print(f"\n[{i+1}] Processing: {title}...")
 
+        # 0. 标题级广告预过滤（不调 LLM，直接跳过）
+        if pre_filter_ad(article["title"]):
+            print(f"  Skipped: ad_title_pattern")
+            save_skipped(kb_conn, article["id"], "ad_title_pattern")
+            skipped += 1
+            continue
+
         # 1. 清洗 HTML
         clean_text = clean_html(article["content"])
 
@@ -484,13 +511,22 @@ def show_stats():
         total = kb_conn.execute("SELECT COUNT(*) FROM kb_process_state").fetchone()[0]
         done = kb_conn.execute("SELECT COUNT(*) FROM kb_process_state WHERE status='done'").fetchone()[0]
         skipped = kb_conn.execute("SELECT COUNT(*) FROM kb_process_state WHERE status='skipped'").fetchone()[0]
-        pending = total - done - skipped
+        # 查询 werss.db 总文章数（不检查 content，避免全表扫描）
+        try:
+            import sqlite3 as _sqlite3
+            _wc = _sqlite3.connect(WERS_DB_PATH)
+            werss_total = _wc.execute("SELECT COUNT(*) FROM articles").fetchone()[0]
+            _wc.close()
+            real_pending = max(0, werss_total - total)
+        except Exception:
+            real_pending = "?"
+            werss_total = "?"
 
         print(f"\n=== 知识库处理状态 ===")
-        print(f"已处理:   {done}")
-        print(f"已跳过:   {skipped}")
-        print(f"待处理:   {pending}")
-        print(f"总计:     {total}")
+        print(f"已入库:     {done}")
+        print(f"已跳过:     {skipped}")
+        print(f"已跟踪:     {total}")
+        print(f"待处理:     ~{real_pending}  (werss总文章: {werss_total})")
 
         if done > 0:
             print(f"\n=== 文章类型分布 ===")

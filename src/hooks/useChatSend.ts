@@ -1,3 +1,4 @@
+import { useRef } from "react";
 import { generateId, ts, SCENE_INFO, looksLikeSchoolRequest, extractInfo, getMissingFields, profileToInfo } from "../services/chat-helpers";
 import { loadProfile, mergeChatInfo, createChatHistoryItem, addHistoryItem } from "../services/profile";
 import { sendChat, streamChat } from "../services/chat";
@@ -32,6 +33,7 @@ export function useChatSend(
   atBottomRef: React.MutableRefObject<boolean>,
 ) {
   const messages = scenes[activeScene] || [];
+  const sendingRef = useRef(false);
 
   const updateSceneMessages = (updater: (prev: ChatMessage[]) => ChatMessage[]) => {
     setScenes((prev: SceneState) => ({ ...prev, [activeScene]: updater(prev[activeScene]) }));
@@ -107,8 +109,8 @@ export function useChatSend(
           }));
         }
       );
-    } catch (e: unknown) {
-      if (e instanceof DOMException && e.name === "AbortError") {
+    } catch (e: any) {
+      if (e?.name === "AbortError") {
         setScenes((prev: SceneState) => ({
           ...prev,
           [activeScene]: prev[activeScene].map((m: ChatMessage) =>
@@ -162,60 +164,126 @@ export function useChatSend(
       }
     } finally {
       setLoading(false);
-      abortRef.current = null;
+      sendingRef.current = false;
+      if (abortRef.current === controller) {
+        abortRef.current = null;
+      }
       inputRef.current?.focus();
     }
   };
 
   const handleSend = async (text?: string) => {
     const content = (text ?? input).trim();
-    if (!content || loading) return;
+    if (!content || loading || sendingRef.current) return;
+    sendingRef.current = true;
     setError(null);
 
-    const userMsg: ChatMessage = {
-      id: generateId(),
-      role: "user",
-      content,
-      timestamp: ts(),
-    };
+    try {
+      const userMsg: ChatMessage = {
+        id: generateId(),
+        role: "user",
+        content,
+        timestamp: ts(),
+      };
 
-    const updatedMessages = [...messages, userMsg];
-    updateSceneMessages(() => updatedMessages);
-    setInput("");
-    setLoading(true);
-    atBottomRef.current = true;
+      const updatedMessages = [...messages, userMsg];
+      updateSceneMessages((prev) => [...prev, userMsg]);
+      setInput("");
+      setLoading(true);
+      atBottomRef.current = true;
 
-    const isSchoolRequest = activeScene === "school" && looksLikeSchoolRequest(content);
-    if (isSchoolRequest) {
-      const currentInfo = collectedInfo[activeScene] || {};
-      const fields = SCENE_INFO[activeScene];
+      const isSchoolRequest = activeScene === "school" && looksLikeSchoolRequest(content);
+      if (isSchoolRequest) {
+        const currentInfo = collectedInfo[activeScene] || {};
+        const fields = SCENE_INFO[activeScene];
 
-      let baseInfo: Record<string, string> = {};
-      if (!collectedInfo[activeScene] || Object.keys(currentInfo).length === 0) {
-        const profile = loadProfile();
-        if (profile) baseInfo = profileToInfo(profile);
-      }
+        let baseInfo: Record<string, string> = {};
+        if (!collectedInfo[activeScene] || Object.keys(currentInfo).length === 0) {
+          const profile = loadProfile();
+          if (profile) baseInfo = profileToInfo(profile);
+        }
 
-      const newInfo = { ...baseInfo, ...currentInfo, ...(await extractInfo(content)) };
-      const missing = getMissingFields(newInfo, fields);
+        const newInfo = { ...baseInfo, ...currentInfo, ...(await extractInfo(content)) };
+        const missing = getMissingFields(newInfo, fields);
 
-      if (!collectedInfo[activeScene] && missing.length > 0) {
-        const nextField = missing[0];
-        setCollectedInfo((prev: Record<SceneId, Record<string, string>>) => ({ ...prev, [activeScene]: newInfo }));
-        updateSceneMessages((prev: ChatMessage[]) => [
-          ...prev,
-          {
-            id: generateId(),
-            role: "assistant",
-            content: `收到您提供的信息，但还有一些不清楚的地方，需要跟您进一步确认：\n\n**${nextField.prompt}**\n\n提示：${nextField.hint}`,
-            timestamp: ts(),
-          },
-        ]);
-        setLoading(false);
+        if (!collectedInfo[activeScene] && missing.length > 0) {
+          const nextField = missing[0];
+          setCollectedInfo((prev: Record<SceneId, Record<string, string>>) => ({ ...prev, [activeScene]: newInfo }));
+          updateSceneMessages((prev: ChatMessage[]) => [
+            ...prev,
+            {
+              id: generateId(),
+              role: "assistant",
+              content: `收到您提供的信息，但还有一些不清楚的地方，需要跟您进一步确认：\n\n**${nextField.prompt}**\n\n提示：${nextField.hint}`,
+              timestamp: ts(),
+            },
+          ]);
+          setLoading(false);
+          sendingRef.current = false;
+          return;
+        }
+
+        if (missing.length === 0 && !collectedInfo[activeScene]) {
+          setCollectedInfo((prev: Record<SceneId, Record<string, string>>) => ({ ...prev, [activeScene]: newInfo }));
+          mergeChatInfo(newInfo);
+          // 不修改用户消息，原文直发
+          await doSendToAI(updatedMessages);
+          return;
+        }
+
+        if (collectedInfo[activeScene] && Object.keys(collectedInfo[activeScene]).length > 0) {
+          const hasNewInfo = Object.keys(newInfo).length > Object.keys(currentInfo).length;
+          if (hasNewInfo) {
+            setCollectedInfo((prev: Record<SceneId, Record<string, string>>) => ({ ...prev, [activeScene]: newInfo }));
+            mergeChatInfo(newInfo);
+          }
+          // 不修改用户消息，原文直发
+          await doSendToAI(updatedMessages);
+          return;
+        }
+
+        await doSendToAI(updatedMessages);
         return;
       }
 
-      if (missing.length === 0 && !collectedInfo[activeScene]) {
+      if (activeScene === "school" && collectedInfo[activeScene]) {
+        // AI 已经回复过 → 进入正常多轮问答，不再重新提取信息
+        const aiReplied = messages.some(m => m.role === "assistant");
+        if (aiReplied) {
+          // 继续补充新提取的信息（如有）
+          const currentInfo = collectedInfo[activeScene] || {};
+          const newInfo = { ...currentInfo, ...(await extractInfo(content)) };
+          const hasNewInfo = Object.keys(newInfo).length > Object.keys(currentInfo).length;
+          if (hasNewInfo) {
+            setCollectedInfo((prev: Record<SceneId, Record<string, string>>) => ({ ...prev, [activeScene]: newInfo }));
+            mergeChatInfo(newInfo);
+          }
+          await doSendToAI(updatedMessages);
+          return;
+        }
+
+        const currentInfo = collectedInfo[activeScene] || {};
+        const fields = SCENE_INFO[activeScene];
+        const newInfo = { ...currentInfo, ...(await extractInfo(content)) };
+        const missing = getMissingFields(newInfo, fields);
+
+        if (missing.length > 0) {
+          const nextField = missing[0];
+          setCollectedInfo((prev: Record<SceneId, Record<string, string>>) => ({ ...prev, [activeScene]: newInfo }));
+          updateSceneMessages((prev: ChatMessage[]) => [
+            ...prev,
+            {
+              id: generateId(),
+              role: "assistant",
+              content: `好的，还差最后几项：\n\n**${nextField.prompt}**\n\n提示：${nextField.hint}`,
+              timestamp: ts(),
+            },
+          ]);
+          setLoading(false);
+          sendingRef.current = false;
+          return;
+        }
+
         setCollectedInfo((prev: Record<SceneId, Record<string, string>>) => ({ ...prev, [activeScene]: newInfo }));
         mergeChatInfo(newInfo);
         // 不修改用户消息，原文直发
@@ -223,66 +291,13 @@ export function useChatSend(
         return;
       }
 
-      if (collectedInfo[activeScene] && Object.keys(collectedInfo[activeScene]).length > 0) {
-        const hasNewInfo = Object.keys(newInfo).length > Object.keys(currentInfo).length;
-        if (hasNewInfo) {
-          setCollectedInfo((prev: Record<SceneId, Record<string, string>>) => ({ ...prev, [activeScene]: newInfo }));
-          mergeChatInfo(newInfo);
-        }
-        // 不修改用户消息，原文直发
-        await doSendToAI(updatedMessages);
-        return;
-      }
-
       await doSendToAI(updatedMessages);
-      return;
+    } catch (err) {
+      console.error("handleSend failed:", err);
+      setError(err instanceof Error ? err.message : "请求处理失败");
+      setLoading(false);
+      sendingRef.current = false;
     }
-
-    if (activeScene === "school" && collectedInfo[activeScene]) {
-      // AI 已经回复过 → 进入正常多轮问答，不再重新提取信息
-      const aiReplied = messages.some(m => m.role === "assistant");
-      if (aiReplied) {
-        // 继续补充新提取的信息（如有）
-        const currentInfo = collectedInfo[activeScene] || {};
-        const newInfo = { ...currentInfo, ...(await extractInfo(content)) };
-        const hasNewInfo = Object.keys(newInfo).length > Object.keys(currentInfo).length;
-        if (hasNewInfo) {
-          setCollectedInfo((prev: Record<SceneId, Record<string, string>>) => ({ ...prev, [activeScene]: newInfo }));
-          mergeChatInfo(newInfo);
-        }
-        await doSendToAI(updatedMessages);
-        return;
-      }
-
-      const currentInfo = collectedInfo[activeScene] || {};
-      const fields = SCENE_INFO[activeScene];
-      const newInfo = { ...currentInfo, ...(await extractInfo(content)) };
-      const missing = getMissingFields(newInfo, fields);
-
-      if (missing.length > 0) {
-        const nextField = missing[0];
-        setCollectedInfo((prev: Record<SceneId, Record<string, string>>) => ({ ...prev, [activeScene]: newInfo }));
-        updateSceneMessages((prev: ChatMessage[]) => [
-          ...prev,
-          {
-            id: generateId(),
-            role: "assistant",
-            content: `好的，还差最后几项：\n\n**${nextField.prompt}**\n\n提示：${nextField.hint}`,
-            timestamp: ts(),
-          },
-        ]);
-        setLoading(false);
-        return;
-      }
-
-      setCollectedInfo((prev: Record<SceneId, Record<string, string>>) => ({ ...prev, [activeScene]: newInfo }));
-      mergeChatInfo(newInfo);
-      // 不修改用户消息，原文直发
-      await doSendToAI(updatedMessages);
-      return;
-    }
-
-    await doSendToAI(updatedMessages);
   };
 
   return { handleSend, handleStop, handleClear, handleClearAll };

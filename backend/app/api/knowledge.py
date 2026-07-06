@@ -1,7 +1,10 @@
 """知识库管理 API —— 排除文章、统计、重建索引、批量操作。"""
 import time
 import sqlite3
+import logging
 from datetime import datetime
+
+logger = logging.getLogger(__name__)
 from fastapi import APIRouter, Query, Body
 from typing import Optional
 from pydantic import BaseModel
@@ -175,8 +178,8 @@ def bulk_exclude(req: BulkExcludeRequest):
                     (article_id, reason, title[:200], now),
                 )
                 excluded_count += 1
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning("Insert into excluded_articles failed: %s", e, exc_info=True)
 
     finally:
         werss_conn.close()
@@ -225,15 +228,15 @@ def knowledge_stats():
             "COUNT(*) as cnt FROM kb_processed GROUP BY tier"
         )
         kb_quality_dist = {r["tier"]: r["cnt"] for r in quality_rows}
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning("Query kb_processed stats failed: %s", e, exc_info=True)
 
     # ── 旧 FTS 索引统计（过渡期）──
     old_fts_count = 0
     try:
         old_fts_count = repo.fts_count()
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning("Query fts_count failed: %s", e, exc_info=True)
 
     # ── 处理状态统计（kb_pipeline 产出）──
     process_state = {}
@@ -242,8 +245,8 @@ def knowledge_stats():
             "SELECT status, COUNT(*) as cnt FROM kb_process_state GROUP BY status"
         )
         process_state = {r["status"]: r["cnt"] for r in state_rows}
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning("Query kb_process_state failed: %s", e, exc_info=True)
 
     # ── 排除文章统计 ──
     exc_row = repo.fetch_one("SELECT COUNT(*) as cnt FROM excluded_articles")
@@ -259,8 +262,8 @@ def knowledge_stats():
     try:
         handbook_row = repo.fetch_one("SELECT COUNT(*) as cnt FROM handbook_fts")
         handbook_count = handbook_row["cnt"] if handbook_row else 0
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning("Query handbook_fts failed: %s", e, exc_info=True)
 
     # ── 文书知识库统计 ──
     essay_stats = {}
@@ -268,7 +271,8 @@ def knowledge_stats():
         try:
             row = repo.fetch_one(f"SELECT COUNT(*) as cnt FROM {tbl}")
             essay_stats[tbl] = row["cnt"] if row else 0
-        except Exception:
+        except Exception as e:
+            logger.warning("Query essay stats for table %s failed: %s", tbl, e, exc_info=True)
             essay_stats[tbl] = 0
 
     return {

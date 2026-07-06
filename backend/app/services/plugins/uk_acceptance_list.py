@@ -10,21 +10,24 @@ from ...core.database import get_connection
 def _load_uk_acceptance() -> dict:
     """从 advisor.db 加载 UK 认可名单数据"""
     conn = get_connection()
-    rows = conn.execute(
-        "SELECT undergrad_school, uk_university, offer_count, total_uk_offers, unique_unis "
-        "FROM uk_acceptance_lists ORDER BY undergrad_school"
-    ).fetchall()
-    result: dict = {}
-    for row in rows:
-        school = row["undergrad_school"]
-        if school not in result:
-            result[school] = {
-                "accepted_universities": {},
-                "total_uk_offers": row["total_uk_offers"],
-                "unique_unis": row["unique_unis"],
-            }
-        result[school]["accepted_universities"][row["uk_university"]] = row["offer_count"]
-    return result
+    try:
+        rows = conn.execute(
+            "SELECT undergrad_school, uk_university, offer_count, total_uk_offers, unique_unis "
+            "FROM uk_acceptance_lists ORDER BY undergrad_school"
+        ).fetchall()
+        result: dict = {}
+        for row in rows:
+            school = row["undergrad_school"]
+            if school not in result:
+                result[school] = {
+                    "accepted_universities": {},
+                    "total_uk_offers": row["total_uk_offers"],
+                    "unique_unis": row["unique_unis"],
+                }
+            result[school]["accepted_universities"][row["uk_university"]] = row["offer_count"]
+        return result
+    finally:
+        conn.close()
 
 
 _UK_ACCEPTANCE = _load_uk_acceptance()

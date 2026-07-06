@@ -98,32 +98,21 @@ export default function ChatPage() {
     lastAssistant && !loading && lastAssistant.content && !lastAssistant.content.startsWith("抱歉");
 
   return (
-    <div className="min-h-screen chat-bg flex flex-col">
-      <div className="max-w-3xl w-full mx-auto flex-1 flex flex-col px-4 sm:px-6 py-4 sm:py-6">
-        {/* ---------- 顶部标题栏 ---------- */}
-        <header
-          className={`flex items-center justify-between transition-all ${
-            isEmpty ? "mb-4 sm:mb-5" : "mb-3 sm:mb-4"
-          }`}
-        >
+    <div className="h-screen chat-bg flex flex-col overflow-hidden">
+      <div className="max-w-3xl w-full mx-auto flex-1 flex flex-col px-4 sm:px-6 py-0 sm:py-2">
+        {/* ---------- IFF 品牌渐变顶栏 ---------- */}
+        <div className="brand-stripe nav-glass -mx-4 sm:-mx-6 px-4 sm:px-6 py-2 flex items-center gap-3">
           <div className="flex items-center gap-2 min-w-0">
-            <span className="inline-block w-1 h-5 rounded-full bg-gradient-to-b from-indigo-500 to-purple-500 shrink-0" />
-            <h1
-              className={`font-bold text-slate-900 transition-all truncate ${
-                isEmpty ? "text-xl sm:text-2xl" : "text-base sm:text-lg"
-              }`}
-            >
-AI 留学智能问答
-            </h1>
-            <span className="hidden sm:inline text-slate-300">·</span>
-            <span className="hidden sm:inline text-slate-500 text-sm truncate">
-              {scene.label}
+            <span className="brand-mark shrink-0">IFF</span>
+            <span className="brand-sep shrink-0" />
+            <span className="brand-meta truncate">
+              智能留学平台 · <b>{scene.label}</b>
             </span>
           </div>
-          <div className="flex items-center gap-1 shrink-0">
+          <div className="flex items-center gap-1 ml-auto shrink-0">
             <Link
               to="/"
-              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium text-indigo-600 bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 transition-all whitespace-nowrap"
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11.5px] font-medium text-indigo-600 bg-white/80 border border-indigo-200 hover:bg-indigo-100 transition-all whitespace-nowrap"
               title="首页"
             >
               <span>🏠</span>
@@ -131,7 +120,7 @@ AI 留学智能问答
             </Link>
             <Link
               to="/profile"
-              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium text-slate-400 border border-slate-200 hover:text-indigo-600 hover:border-indigo-300 hover:bg-indigo-50 transition-all whitespace-nowrap"
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11.5px] font-medium text-slate-500 border border-slate-200 bg-white/60 hover:text-indigo-600 hover:border-indigo-300 hover:bg-white transition-all whitespace-nowrap"
               title="我的档案"
             >
               <span>📁</span>
@@ -139,7 +128,7 @@ AI 留学智能问答
             </Link>
             <a
               href="../tianshu/"
-              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium text-slate-400 border border-slate-200 hover:text-indigo-600 hover:border-indigo-300 hover:bg-indigo-50 transition-all whitespace-nowrap"
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11.5px] font-medium text-slate-500 border border-slate-200 bg-white/60 hover:text-purple-600 hover:border-purple-300 hover:bg-white transition-all whitespace-nowrap"
               title="切换到天枢测评"
             >
               <span>🧭</span>
@@ -149,22 +138,44 @@ AI 留学智能问答
               <>
                 <button
                   onClick={handleClear}
-                  className="text-xs sm:text-sm text-slate-500 hover:text-red-600 px-2.5 py-1.5 rounded-lg hover:bg-red-50 transition-colors flex items-center gap-1"
+                  className="text-[11.5px] text-slate-500 hover:text-red-600 px-2.5 py-1 rounded-lg hover:bg-red-50 transition-colors flex items-center gap-1"
                   title="只清空当前场景的对话"
                 >
-                  <span className="text-sm leading-none">🗑</span>
+                  <span className="leading-none">🗑</span>
                   <span className="hidden sm:inline">清空本场景</span>
                   <span className="sm:hidden">清空</span>
                 </button>
                 <button
                   onClick={handleClearAll}
-                  className="text-xs sm:text-sm text-slate-400 hover:text-red-600 px-2.5 py-1.5 rounded-lg hover:bg-red-50 transition-colors"
+                  className="text-[11.5px] text-slate-400 hover:text-red-600 px-2.5 py-1 rounded-lg hover:bg-red-50 transition-colors"
                   title="清空所有对话"
                 >
                   全部清空
                 </button>
               </>
             )}
+          </div>
+        </div>
+
+        {/* ---------- 页面标题 ---------- */}
+        <header
+          className={`flex items-center justify-between transition-all pt-3 sm:pt-4 ${
+            isEmpty ? "mb-3 sm:mb-4" : "mb-2 sm:mb-3"
+          }`}
+        >
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="inline-block w-1 h-5 rounded-full bg-gradient-to-b from-indigo-500 to-purple-500 shrink-0" />
+            <h1
+              className={`font-bold text-slate-900 transition-all truncate ${
+                isEmpty ? "text-xl sm:text-2xl" : "text-base sm:text-lg"
+              }`}
+            >
+              {scene.icon} {scene.label}
+            </h1>
+            <span className="hidden sm:inline text-slate-300">·</span>
+            <span className="hidden sm:inline text-slate-500 text-[13px] truncate">
+              AI 智能问答
+            </span>
           </div>
         </header>
 
@@ -270,6 +281,19 @@ AI 留学智能问答
 
         {/* ---------- 输入区 ---------- */}
         <div className="mt-3 sm:mt-4">
+          {/* 场景信息条：仅在非空时显示，对话上下文 */}
+          {!isEmpty && (
+            <div className="scene-strip">
+              <div className="scene-icon">{scene.icon}</div>
+              <div className="scene-text">
+                当前场景：<b>{scene.label}</b> · 切换 Tab 不会串上下文
+              </div>
+              <div className="scene-status">
+                <span className="pulse" />
+                <span>{scene.id === "school" ? "案例匹配中" : scene.id === "essay" ? "文书准备中" : "材料梳理中"}</span>
+              </div>
+            </div>
+          )}
           <div className="bg-white border border-slate-200 rounded-2xl shadow-sm focus-within:border-indigo-400 focus-within:ring-2 focus-within:ring-indigo-100 transition-all">
             <textarea
               ref={inputRef}

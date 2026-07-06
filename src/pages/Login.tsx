@@ -53,15 +53,36 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 flex items-center justify-center px-4">
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 flex items-center justify-center px-4 py-8">
       <div className="w-full max-w-sm">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 text-white text-base font-bold shadow-lg shadow-indigo-200 mb-4">
+          <div
+            className="inline-flex items-center justify-center rounded-2xl text-white font-bold shadow-lg mb-4"
+            style={{
+              width: 72,
+              height: 72,
+              fontSize: 15,
+              letterSpacing: "0.12em",
+              background: "linear-gradient(135deg, #6366f1 0%, #a855f7 50%, #ec4899 100%)",
+              boxShadow: "0 12px 28px -8px rgba(99,102,241,0.45)",
+            }}
+          >
             IFF
           </div>
-          <h1 className="text-2xl font-bold text-slate-900">AI留学规划与生涯规划工具</h1>
-          <p className="text-sm text-slate-500 mt-2">首次登录即绑定，后续使用相同凭据登录</p>
+          <h1 className="text-2xl font-bold text-slate-900">AI 留学规划与生涯规划工具</h1>
+          <p
+            style={{
+              marginTop: 6,
+              fontSize: 12,
+              letterSpacing: "0.12em",
+              color: "#6366f1",
+              fontWeight: 600,
+            }}
+          >
+            INTELLIGENT FOREIGN EDUCATION FRONTIER
+          </p>
+          <p className="text-[13px] text-slate-500 mt-3">首次登录即绑定，后续使用相同凭据登录</p>
         </div>
 
         {/* Form */}

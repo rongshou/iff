@@ -277,7 +277,8 @@ async def call_llm(messages: list[dict], stream: bool = False) -> tuple[str, dic
     if not api_key:
         return "抱歉，AI 对话功能尚未配置。请联系管理员设置 LLM_API_KEY。", None
 
-    system_msg, recommend_payload = load_context_from_history(messages)
+    import asyncio
+    system_msg, recommend_payload = await asyncio.to_thread(load_context_from_history, messages)
 
     req_messages = [{"role": "system", "content": system_msg}] + messages
 
@@ -290,7 +291,7 @@ async def call_llm(messages: list[dict], stream: bool = False) -> tuple[str, dic
         "model": model,
         "messages": req_messages,
         "temperature": 0.7,
-        "max_tokens": 4096,
+        "max_tokens": settings.LLM_MAX_TOKENS,
         "stream": stream,
     }
 
@@ -345,6 +346,13 @@ def _stream_response(url: str, headers: dict, payload: dict, recommend_payload: 
                             reasoning = delta.get("reasoning_content", "")
                             if reasoning:
                                 yield f"data: {json.dumps({'reasoning': reasoning})}\n\n"
+                            
+                            # 拦截长度限制截断，友好提示用户继续
+                            finish_reason = obj["choices"][0].get("finish_reason")
+                            if finish_reason == "length":
+                                msg_text = "\n\n_（⚠️ 回复因长度限制被截断，您可以回复“继续”让 AI 接着写）_\n"
+                                msg_data = json.dumps({"content": msg_text})
+                                yield f"data: {msg_data}\n\n"
                         except (json.JSONDecodeError, KeyError, IndexError):
                             continue
                 # 在 [DONE] 之前下发结构化推荐结果（含 pathway_suggestions），

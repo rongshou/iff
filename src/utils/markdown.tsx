@@ -13,12 +13,11 @@
 import React from "react";
 
 function escapeHtml(s: string) {
-  return s
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
+  // React 默认会自动对所有文本子节点进行安全转义，防止 XSS 注入。
+  // 如果在此处将 &, ", ' 转义为 &amp;, &quot;, &#39;，React 会将它们作为普通文本渲染
+  // 导致页面上直接显示出 raw 实体代码（例如：&quot;主申+搭配&quot;）。
+  // 因此，直接返回原字符串即可，React 保证其绝对安全与正确显示。
+  return s;
 }
 
 /** 把已转义字符串按内联规则二次处理为 React 节点 */

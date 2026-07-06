@@ -11,25 +11,28 @@ def get_school_percentiles(school_name: str, tier_label: str) -> Optional[dict]:
     优先级: school::tier > school > 404
     """
     conn = get_connection()
-    cur = conn.cursor()
+    try:
+        cur = conn.cursor()
 
-    # 精确匹配 school::tier
-    row = cur.execute(
-        "SELECT * FROM school_percentiles WHERE school_name=? AND tier_label=?",
-        (school_name, tier_label),
-    ).fetchone()
-    if row:
-        return dict(row)
+        # 精确匹配 school::tier
+        row = cur.execute(
+            "SELECT * FROM school_percentiles WHERE school_name=? AND tier_label=?",
+            (school_name, tier_label),
+        ).fetchone()
+        if row:
+            return dict(row)
 
-    # 回退到 school 不限 tier
-    row = cur.execute(
-        "SELECT * FROM school_percentiles WHERE school_name=? AND tier_label=''",
-        (school_name,),
-    ).fetchone()
-    if row:
-        return dict(row)
+        # 回退到 school 不限 tier
+        row = cur.execute(
+            "SELECT * FROM school_percentiles WHERE school_name=? AND tier_label=''",
+            (school_name,),
+        ).fetchone()
+        if row:
+            return dict(row)
 
-    return None
+        return None
+    finally:
+        conn.close()
 
 
 def classify_admission_chance(
@@ -69,13 +72,16 @@ def classify_admission_chance(
 def get_country_gpa_benchmark(country: str, gpa_range: str) -> Optional[dict]:
     """获取某国家某GPA段的平均QS排名基准"""
     conn = get_connection()
-    row = conn.execute(
-        "SELECT * FROM country_gpa_benchmark WHERE country=? AND gpa_range=?",
-        (country, gpa_range),
-    ).fetchone()
-    if row:
-        return dict(row)
-    return None
+    try:
+        row = conn.execute(
+            "SELECT * FROM country_gpa_benchmark WHERE country=? AND gpa_range=?",
+            (country, gpa_range),
+        ).fetchone()
+        if row:
+            return dict(row)
+        return None
+    finally:
+        conn.close()
 
 
 def gpa_to_range_label(gpa_percent: float) -> str:

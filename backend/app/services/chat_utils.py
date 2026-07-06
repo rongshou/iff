@@ -170,6 +170,17 @@ _MAJOR_STOPWORDS = {
 
 
 def _parse_major(text: str) -> str | None:
+    # 模式0: 常见英文缩写 + 硕士/专业/方向
+    _EN_ABBREV = {"CS": "计算机科学", "EE": "电子工程", "ECE": "电子与计算机工程",
+                  "DS": "数据科学", "AI": "人工智能", "ML": "机器学习",
+                  "BA": "商业分析", "FE": "金融工程", "MFE": "金融工程",
+                  "SE": "软件工程", "IT": "信息技术", "MIS": "信息系统管理",
+                  "HCI": "人机交互", "NLP": "自然语言处理", "CV": "计算机视觉",
+                  "STAT": "统计学", "MATH": "数学", "PHY": "物理学",
+                  "BIO": "生物学", "CHEM": "化学", "CSR": "企业社会责任"}
+    m = re.search(rf"\b({'|'.join(_EN_ABBREV.keys())})\b\s*(?:硕士|专业|方向|申请|留学)?", text)
+    if m:
+        return _EN_ABBREV[m.group(1)]
     # 模式1: 专业|方向 : XXX (到标点或空格结束)
     m = re.search(r"(?:专业|方向)\s*[:：]\s*([^\s，。,.!？?]+)", text)
     if m:
@@ -454,14 +465,18 @@ def _format_recommend_result(result: dict) -> str:
     # ====================================================================
     rank_refs: list[str] = []
     for country_result in result.get("by_country", []):
+        country = country_result.get("country", "")
+        is_us = country == "美国"
         for s in country_result.get("schools", []):
             name = s.get("name", "")
             qs = s.get("qs_rank")
             usnews = s.get("usnews_rank")
-            if usnews:
+            if is_us and usnews:
                 rank_refs.append(f"{name}=USNews#{usnews}")
             elif qs:
                 rank_refs.append(f"{name}=QS#{qs}")
+            elif usnews:
+                rank_refs.append(f"{name}=USNews#{usnews}")
     if rank_refs:
         lines.append("**排名速查表（回复中标注排名时必须严格使用以下值）：**")
         lines.append(", ".join(rank_refs))

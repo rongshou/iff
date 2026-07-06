@@ -12,71 +12,106 @@ export default function EmptyState({
   onPick,
   onSceneChange,
 }: EmptyStateProps) {
+  // 当前场景卡片：先渲染在最前
+  const orderedScenes: Scene[] = [
+    scene,
+    ...SCENES.filter((s) => s.id !== scene.id),
+  ];
+
   return (
-    <div className="flex-1 flex flex-col justify-center">
-      {/* Hero */}
-      <div className="text-center mb-6 sm:mb-8">
-        <div className="inline-flex items-center justify-center w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 text-white text-2xl sm:text-3xl font-bold shadow-lg shadow-indigo-200 mb-4">
-          {scene.icon}
+    <div className="flex-1 flex flex-col justify-center min-h-0">
+      {/* ========== 品牌头部 ========== */}
+      <div className="empty-hero">
+        <div className="hero-logo">IFF</div>
+        <div className="hero-title">{scene.greeting}</div>
+        <div className="hero-sub">{scene.intro}</div>
+        <div className="hero-stats">
+          <span><span className="num">17.6万</span> 真实案例</span>
+          <span style={{ color: "#cbd5e1" }}>·</span>
+          <span><span className="num">24h</span> 持续更新</span>
+          <span style={{ color: "#cbd5e1" }}>·</span>
+          <span><span className="num">3维</span> 评分模型</span>
         </div>
-        <h2 className="text-xl sm:text-2xl font-bold text-slate-900 mb-2">
-          {scene.greeting}
-        </h2>
-        <p className="text-slate-500 text-sm sm:text-base max-w-md mx-auto leading-relaxed">
-          {scene.intro}
-        </p>
       </div>
 
-      {/* 使用说明 */}
+      {/* ========== 选校原理说明 ========== */}
       {scene.id === "school" && (
-        <div className="mx-auto max-w-xl w-full mb-5 bg-indigo-50/70 border border-indigo-100 rounded-xl px-4 py-3 text-sm text-slate-700 leading-relaxed">
-          <div className="font-semibold text-indigo-800 mb-1">🎯 推荐原理</div>
-          <ul className="space-y-1 list-disc list-inside marker:text-indigo-400">
-            <li><strong>基于 17 万+ 真实录取案例</strong>的相似背景匹配引擎，不靠 AI 猜</li>
-            <li>按 <strong>GPA容差 + 学校层次 + 专业方向</strong> 三层过滤，找到和你最像的往届申请者</li>
-            <li>综合 <strong>GPA 匹配 · 学校排名 · 案例数量</strong> 三维分析，分 <strong>冲刺 / 匹配 / 安全</strong> 三档</li>
-            <li>每所学校都显示匹配案例数和录取 GPA 中位数，数据透明可验证</li>
+        <div className="mx-auto max-w-3xl w-full mb-5 bg-gradient-to-br from-indigo-50/80 to-purple-50/60 border border-indigo-100 rounded-xl px-4 py-3 text-[13px] text-slate-700 leading-relaxed">
+          <div className="flex items-center gap-1.5 mb-1.5">
+            <span className="text-base">🎯</span>
+            <span className="font-semibold text-indigo-800">推荐原理</span>
+          </div>
+          <ul className="space-y-0.5 list-disc list-inside marker:text-indigo-400">
+            <li>基于 <strong>17 万+ 真实录取案例</strong> 的相似背景匹配，不靠 AI 猜</li>
+            <li>按 <strong>GPA 容差 + 学校层次 + 专业方向</strong> 三层过滤</li>
+            <li>综合 <strong>GPA · 排名 · 案例数</strong> 三维分析，分 <strong>冲刺 / 匹配 / 安全</strong> 三档</li>
           </ul>
-          <p className="mt-2 text-indigo-600/80 text-xs">告诉我你的 GPA、学校、专业和目标国家即可开始。也可以直接点击下方快捷问题 👇</p>
         </div>
       )}
 
-      {/* 场景入口提示 */}
-      <div className="text-center mb-5">
-        <div className="inline-flex flex-wrap items-center justify-center gap-1 text-xs text-slate-400">
-          <span>也可以聊聊</span>
-          {SCENES.filter((s) => s.id !== scene.id).map((s, i, arr) => (
-            <span key={s.id}>
-              <button
-                onClick={() => onSceneChange(s.id)}
-                className="text-indigo-600 hover:underline font-medium"
-              >
+      {/* ========== 场景卡片宫格 ========== */}
+      <div className="mx-auto max-w-3xl w-full grid grid-cols-1 sm:grid-cols-3 gap-3">
+        {orderedScenes.map((s) => {
+          const isCurrent = s.id === scene.id;
+          return (
+            <div
+              key={s.id}
+              className={`scene-card ${isCurrent ? "ring-1 ring-indigo-200 border-indigo-200" : ""}`}
+            >
+              <div className="sc-icon">{s.icon}</div>
+              <div className="sc-label">
                 {s.label}
-              </button>
-              {i < arr.length - 1 && <span className="mx-0.5">·</span>}
-            </span>
-          ))}
-        </div>
+                {isCurrent && (
+                  <span
+                    className="ml-1.5 inline-block align-middle text-[10px] font-medium px-1.5 py-0.5 rounded-full"
+                    style={{
+                      background: "rgba(99,102,241,0.10)",
+                      color: "#4f46e5",
+                      letterSpacing: "0.04em",
+                    }}
+                  >
+                    当前
+                  </span>
+                )}
+              </div>
+              <div className="sc-hint">
+                {s.id === "school" && "选校定位 · GPA 匹配"}
+                {s.id === "essay" && "PS / CV / 推荐信"}
+                {s.id === "visa" && "F-1 / Tier 4 / 材料"}
+              </div>
+              {!isCurrent && (
+                <button
+                  onClick={() => onSceneChange(s.id)}
+                  className="sc-arrow"
+                  aria-label={`切换到${s.label}`}
+                  title="切换场景"
+                >
+                  →
+                </button>
+              )}
+
+              {/* 快捷问题 - 只在当前场景展开 */}
+              {isCurrent && (
+                <div className="sc-prompts">
+                  {s.quickPrompts.map((p) => (
+                    <button
+                      key={p.text}
+                      onClick={() => onPick(p.text)}
+                      className="sc-prompt"
+                    >
+                      <span className="pi">{p.icon}</span>
+                      <span className="flex-1 line-clamp-2">{p.text}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
 
-      {/* 快捷问题 —— 点击填到输入框（不直接发送），让用户自己修改后再发 */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-xl mx-auto w-full">
-        {scene.quickPrompts.map((p) => (
-          <button
-            key={p.text}
-            onClick={() => onPick(p.text)}
-            className="lift text-left px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm text-slate-700 flex items-start gap-2 group"
-          >
-            <span className="text-lg shrink-0">{p.icon}</span>
-            <span className="leading-relaxed flex-1">{p.text}</span>
-            <span className="text-xs text-slate-400 group-hover:text-indigo-500 transition-colors shrink-0 mt-0.5">
-              →
-            </span>
-          </button>
-        ))}
-      </div>
-      <p className="text-[11px] text-slate-400 text-center mt-3 max-w-xl mx-auto">
-        点击上方问题会填到输入框，可修改后再发送
+      <p className="text-[11px] text-slate-400 text-center mt-4">
+        点击快捷问题会填到输入框，可修改后再发送
       </p>
     </div>
   );

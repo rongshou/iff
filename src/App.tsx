@@ -38,14 +38,18 @@ export default function App() {
       <footer
         style={{
           textAlign: "center",
-          padding: "24px 0 16px",
+          padding: "12px 0 16px",
           fontSize: 11,
           color: "#94a3b8",
           lineHeight: 1.8,
         }}
       >
-        <div style={{ fontWeight: 600, color: "#b45309", fontSize: 12 }}>提示：我们只提供工具，生成的内容仅供参考，请自主做出判断、选择和决策。</div>
-        <div style={{ marginTop: 4 }}>{VERSION}</div>
+        <div style={{ fontWeight: 600, color: "#b45309", fontSize: 12 }}>
+          ⚠ 我们只提供工具，生成的内容仅供参考，请自主做出判断、选择和决策。
+        </div>
+        <div style={{ marginTop: 4, opacity: 0.7 }}>
+          IFF · 智能留学平台 · {VERSION}
+        </div>
       </footer>
     </>
   );

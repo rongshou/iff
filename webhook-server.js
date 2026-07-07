@@ -7,7 +7,7 @@ import { execSync } from 'node:child_process';
 const PORT = 7800;
 const SECRET_FILE = '/home/admin/tianquan/.webhook-secret';
 const CWD = '/home/admin/tianquan';
-const BRANCH = 'merge-advisor';
+const BRANCH = 'master';
 
 // Load secret from file (create one if missing)
 function loadSecret() {
@@ -52,7 +52,14 @@ createServer((req, res) => {
       cwd: CWD, timeout: 180_000, encoding: 'utf-8',
     }));
 
-    // Copy built dist into running nginx container (no restart needed for static files)
+    // Clean old files in nginx container html dir, then copy fresh dist
+    // (avoids hash-suffixed asset accumulation across deploys)
+    res.write('> docker exec rm old html dir\n');
+    res.write(execSync(
+      'docker exec tianquan-nginx sh -c "rm -rf /usr/share/nginx/html/*" 2>&1',
+      { timeout: 15_000, encoding: 'utf-8' },
+    ));
+
     res.write('> docker cp dist to nginx container\n');
     res.write(execSync(
       'docker cp dist/. tianquan-nginx:/usr/share/nginx/html/ 2>&1',

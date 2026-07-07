@@ -41,8 +41,10 @@ export default function LoginPage() {
     setLoading(false);
 
     if (result.ok) {
-      // redirect 指向外部路径（如 /tianshu/）时用 window.location 跳转
-      if (redirectTo.startsWith("/") && !redirectTo.startsWith("/tianquan/")) {
+      // 仅跨应用路径（如 /tianshu/）用 window.location 全页跳转
+      // 其余路径（包括 SPA 默认 "/"）由 HashRouter navigate 处理
+      const EXTERNAL_PREFIXES: string[] = ["/tianshu/"];
+      if (EXTERNAL_PREFIXES.some((p) => redirectTo.startsWith(p))) {
         window.location.href = redirectTo;
       } else {
         navigate(redirectTo, { replace: true });

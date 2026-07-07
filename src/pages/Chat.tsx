@@ -98,8 +98,8 @@ export default function ChatPage() {
     lastAssistant && !loading && lastAssistant.content && !lastAssistant.content.startsWith("抱歉");
 
   return (
-    <div className="h-screen chat-bg flex flex-col overflow-hidden">
-      <div className="max-w-3xl w-full mx-auto flex-1 flex flex-col px-4 sm:px-6 py-0 sm:py-2">
+    <div className="h-screen chat-bg flex flex-col">
+      <div className="max-w-3xl w-full mx-auto flex-1 flex flex-col min-h-0 px-4 sm:px-6 py-0 sm:py-2">
         {/* ---------- IFF 品牌渐变顶栏 ---------- */}
         <div className="brand-stripe nav-glass -mx-4 sm:-mx-6 px-4 sm:px-6 py-2 flex items-center gap-3">
           <div className="flex items-center gap-2 min-w-0">
@@ -216,15 +216,17 @@ export default function ChatPage() {
 
         {/* ---------- 主体区域 ---------- */}
         {isEmpty ? (
-          <EmptyState
-            scene={scene}
-            onPick={(t) => {
-              // 点击快捷问题：填到输入框，不直接发送，让用户自己修改后再发
-              setInput(t);
-              setTimeout(() => inputRef.current?.focus(), 0);
-            }}
-            onSceneChange={setActiveScene}
-          />
+          <div className="flex-1 overflow-y-auto thin-scrollbar pb-2">
+            <EmptyState
+              scene={scene}
+              onPick={(t) => {
+                // 点击快捷问题：填到输入框，不直接发送，让用户自己修改后再发
+                setInput(t);
+                setTimeout(() => inputRef.current?.focus(), 0);
+              }}
+              onSceneChange={setActiveScene}
+            />
+          </div>
         ) : (
           <div
             ref={scrollRef}

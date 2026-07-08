@@ -50,7 +50,8 @@ jobs:
           cp landing/index.html dist/index.html
           cp dist/index.html dist/404.html
         env:
-          BASE_URL: /iff/
+          # GitHub Pages serves from /iff/tianquan/ (build moves dist/* → dist/tianquan/)
+          BASE_URL: /iff/tianquan/
 
       - name: Build tianshu
         run: |

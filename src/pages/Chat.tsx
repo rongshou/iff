@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useMemo } from "react";
-import { Link } from "react-router-dom";
 import type { ChatMessage } from "../types";
 import MessageBubble from "../components/MessageBubble";
+import BrandNav from "../components/BrandNav";
 import { SCENES } from "../config/scenes";
 import type { SceneId } from "../config/scenes";
 import { useChatInput } from "../hooks/useChatInput";
@@ -100,62 +100,35 @@ export default function ChatPage() {
   return (
     <div className="h-screen chat-bg flex flex-col">
       <div className="max-w-3xl w-full mx-auto flex-1 flex flex-col min-h-0 px-4 sm:px-6 py-0 sm:py-2">
-        {/* ---------- IFF 品牌渐变顶栏 ---------- */}
-        <div className="brand-stripe nav-glass -mx-4 sm:-mx-6 px-4 sm:px-6 py-2 flex items-center gap-3">
-          <div className="flex items-center gap-2 min-w-0">
-            <span className="brand-mark shrink-0">IFF</span>
-            <span className="brand-sep shrink-0" />
-            <span className="brand-meta truncate">
-              智能留学平台 · <b>{scene.label}</b>
-            </span>
-          </div>
-          <div className="flex items-center gap-1 ml-auto shrink-0">
-            <Link
-              to="/"
-              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11.5px] font-medium text-indigo-600 bg-white/80 border border-indigo-200 hover:bg-indigo-100 transition-all whitespace-nowrap"
-              title="首页"
-            >
-              <span>🏠</span>
-              <span>首页</span>
-            </Link>
-            <Link
-              to="/profile"
-              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11.5px] font-medium text-slate-500 border border-slate-200 bg-white/60 hover:text-indigo-600 hover:border-indigo-300 hover:bg-white transition-all whitespace-nowrap"
-              title="我的档案"
-            >
-              <span>📁</span>
-              <span>档案</span>
-            </Link>
-            <a
-              href="../tianshu/"
-              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11.5px] font-medium text-slate-500 border border-slate-200 bg-white/60 hover:text-purple-600 hover:border-purple-300 hover:bg-white transition-all whitespace-nowrap"
-              title="切换到天枢测评"
-            >
-              <span>🧭</span>
-              <span>天枢</span>
-            </a>
-            {totalMessages > 0 && (
-              <>
-                <button
-                  onClick={handleClear}
-                  className="text-[11.5px] text-slate-500 hover:text-red-600 px-2.5 py-1 rounded-lg hover:bg-red-50 transition-colors flex items-center gap-1"
-                  title="只清空当前场景的对话"
-                >
-                  <span className="leading-none">🗑</span>
-                  <span className="hidden sm:inline">清空本场景</span>
-                  <span className="sm:hidden">清空</span>
-                </button>
-                <button
-                  onClick={handleClearAll}
-                  className="text-[11.5px] text-slate-400 hover:text-red-600 px-2.5 py-1 rounded-lg hover:bg-red-50 transition-colors"
-                  title="清空所有对话"
-                >
-                  全部清空
-                </button>
-              </>
-            )}
-          </div>
-        </div>
+        {/* ---------- 共用顶栏（BrandNav）---------- */}
+        <BrandNav
+          brandName="IFF"
+          brandSubtitle="智能留学平台"
+          sceneLabel={scene.label}
+          links={[
+            { label: "首页", icon: "🏠", to: "/", active: true },
+            { label: "档案", icon: "📁", to: "/profile" },
+            { label: "天枢", icon: "🧭", href: "../tianshu/", variant: "accent" },
+          ]}
+          actions={
+            totalMessages > 0
+              ? [
+                  {
+                    label: "清空本场景",
+                    icon: "🗑",
+                    onClick: handleClear,
+                    hideTextOnMobile: true,
+                    title: "只清空当前场景的对话",
+                  },
+                  {
+                    label: "全部清空",
+                    onClick: handleClearAll,
+                    title: "清空所有对话",
+                  },
+                ]
+              : []
+          }
+        />
 
         {/* ---------- 页面标题 ---------- */}
         <header

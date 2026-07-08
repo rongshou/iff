@@ -58,7 +58,8 @@ jobs:
           # Use vite build directly (skip tsc -b; BrandNav.tsx from parent dir
           # causes TS module resolution to fail in sub-project context.
           # Vite's esbuild handles cross-directory TS imports correctly.)
-          npx vite build
+          # Override base to /iff/tianshu/ (GitHub Pages sits under /iff/)
+          npx vite build --base /iff/tianshu/
           cd ..
           mkdir -p dist/tianshu
           cp -r tianshu/dist/* dist/tianshu/

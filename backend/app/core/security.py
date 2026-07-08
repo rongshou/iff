@@ -14,6 +14,12 @@ async def verify_auth(
     request: Request,
     x_auth_code: str = Header(default="", alias=AUTH_HEADER),
 ) -> bool:
+    # CORS preflight: OPTIONS requests are handled by CORSMiddleware
+    # before route handlers, but FastAPI global dependencies may still run.
+    # Skip auth for all OPTIONS (browser preflight) requests.
+    if request.method == "OPTIONS":
+        return True
+
     # Skip auth for health and verify-auth-code endpoints
     if request.url.path in AUTH_BYPASS_PATHS:
         return True

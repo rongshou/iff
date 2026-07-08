@@ -15,14 +15,18 @@ from .core.security import verify_auth
 
 
 class PrivateNetworkMiddleware:
-    """Allow public web pages (GitHub Pages) to access Tailscale private network APIs.
+    """Handle Chrome Private Network Access preflight requests.
     
-    Chrome's Private Network Access policy blocks requests from public origins
-    to private IP ranges (100.x.x.x = Tailscale). This header tells the browser
-    that the server explicitly allows such cross-network access.
+    Chrome's PNA policy blocks public pages (GitHub Pages) from accessing
+    private network APIs (Tailscale 100.x.x.x). This middleware intercepts
+    OPTIONS preflight requests with the PNA header and returns proper CORS
+    headers before Starlette's CORSMiddleware rejects them.
     
-    Must be added AFTER CORSMiddleware so CORS preflight headers are already set.
+    Must be OUTERMOST (added first) to run before CORSMiddleware.
     """
+    PNA_HEADER_REQUEST = b"access-control-request-private-network"
+    PNA_HEADER_RESPONSE = b"access-control-allow-private-network"
+    
     def __init__(self, app: ASGIApp):
         self.app = app
 
@@ -31,14 +35,42 @@ class PrivateNetworkMiddleware:
             await self.app(scope, receive, send)
             return
 
-        async def send_with_pna(message):
-            if message["type"] == "http.response.start":
-                headers = list(message.get("headers", []))
-                headers.append((b"access-control-allow-private-network", b"true"))
-                message["headers"] = headers
-            await send(message)
+        # Check if this is a PNA preflight request
+        headers = dict(scope.get("headers", []))
+        is_preflight = scope["method"] == "OPTIONS" and headers.get(self.PNA_HEADER_REQUEST) == b"true"
+        
+        if not is_preflight:
+            # Pass through: add PNA header to all responses
+            async def send_with_pna(message):
+                if message["type"] == "http.response.start":
+                    msg_headers = list(message.get("headers", []))
+                    msg_headers.append((self.PNA_HEADER_RESPONSE, b"true"))
+                    message["headers"] = msg_headers
+                await send(message)
+            await self.app(scope, receive, send_with_pna)
+            return
 
-        await self.app(scope, receive, send_with_pna)
+        # Handle PNA preflight: return 200 with all required CORS+PNA headers
+        origin = headers.get(b"origin", b"*").decode()
+        req_method = headers.get(b"access-control-request-method", b"GET, POST, OPTIONS").decode()
+        req_headers = headers.get(b"access-control-request-headers", b"*").decode()
+
+        await send({
+            "type": "http.response.start",
+            "status": 200,
+            "headers": [
+                (b"access-control-allow-origin", origin.encode()),
+                (b"access-control-allow-methods", req_method.encode()),
+                (b"access-control-allow-headers", req_headers.encode()),
+                (self.PNA_HEADER_RESPONSE, b"true"),
+                (b"access-control-max-age", b"86400"),
+                (b"content-length", b"0"),
+            ],
+        })
+        await send({
+            "type": "http.response.body",
+            "body": b"",
+        })
 
 
 def create_app() -> FastAPI:
@@ -49,6 +81,7 @@ def create_app() -> FastAPI:
         dependencies=[Depends(verify_auth)],
     )
 
+    # CORSMiddleware added first (inner layer) — handles standard CORS
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.CORS_ORIGINS,
@@ -56,7 +89,9 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
-    # Must be added AFTER CORSMiddleware so CORS headers are already set
+    # PrivateNetworkMiddleware added last (outer layer) — intercepts
+    # PNA preflight BEFORE CORSMiddleware can reject it.
+    # Starlette add_middleware wraps: last added = outermost.
     app.add_middleware(PrivateNetworkMiddleware)
 
     app.include_router(recommend_router)

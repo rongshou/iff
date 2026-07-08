@@ -3,6 +3,10 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "workspaces": [
+    ".",
+    "tianshu"
+  ],
   "scripts": {
     "dev": "vite",
     "build": "bash scripts/build-prod.sh",

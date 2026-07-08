@@ -32,8 +32,8 @@ cp dist/index.html dist/404.html
 
 echo "=== tianshu ==="
 # 步骤 2：tianshu 也走 Vite 构建（输出到 tianshu/dist/）
-cd tianshu && pnpm install 2>&1 | tail -3
-pnpm build 2>&1
+# 依赖由根目录的 npm install (workspaces) 统一安装，无需重复装
+cd tianshu && pnpm build 2>&1
 cd ..
 mkdir -p dist/tianshu
 cp -r tianshu/dist/* dist/tianshu/

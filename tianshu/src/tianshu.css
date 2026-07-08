@@ -1,0 +1,213 @@
+/* 天枢测评 - 样式（sub-3.1）
+ * 从旧 index.html 提取核心样式，适配 React 组件结构
+ */
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: "PingFang SC", "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif;
+  line-height: 1.6;
+  color: #2c3e50;
+  background: linear-gradient(135deg, #f5f7fa 0%, #e8eef5 100%);
+  min-height: 100vh;
+}
+
+.tianshu-app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.tianshu-main {
+  max-width: 960px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 24px 20px;
+  flex: 1;
+}
+
+.tianshu-content {
+  margin-top: 20px;
+}
+
+.tianshu-footer {
+  text-align: center;
+  padding: 24px 20px;
+  color: #94a3b8;
+  font-size: 12px;
+}
+
+/* ========== 进度条 ========== */
+.step-progress {
+  list-style: none;
+  display: flex;
+  gap: 8px;
+  padding: 12px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  overflow-x: auto;
+}
+
+.step-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #94a3b8;
+  background: #f8fafc;
+  cursor: not-allowed;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.step-pill.done {
+  color: #a855f7;
+  background: rgba(168, 85, 247, 0.08);
+  cursor: pointer;
+}
+
+.step-pill.done:hover {
+  background: rgba(168, 85, 247, 0.14);
+}
+
+.step-pill.active {
+  color: #fff;
+  background: linear-gradient(135deg, #a855f7 0%, #ec4899 100%);
+  box-shadow: 0 4px 12px rgba(168, 85, 247, 0.32);
+  cursor: default;
+}
+
+.step-emoji {
+  font-size: 15px;
+}
+
+/* ========== 步骤卡片占位 ========== */
+.step-card-placeholder {
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+  padding: 32px 40px;
+}
+
+.step-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.step-num {
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 10px;
+  background: rgba(168, 85, 247, 0.12);
+  color: #a855f7;
+  border-radius: 6px;
+  letter-spacing: 0.05em;
+}
+
+.step-header h2 {
+  font-size: 20px;
+  color: #1e293b;
+  font-weight: 600;
+}
+
+.step-body {
+  padding: 20px 0;
+}
+
+.step-description {
+  color: #475569;
+  font-size: 14px;
+  line-height: 1.7;
+  margin-bottom: 20px;
+}
+
+.migration-badge {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 16px 20px;
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  border-radius: 10px;
+  border: 1px solid #fbbf24;
+  color: #78350f;
+}
+
+.migration-badge span {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.migration-badge small {
+  font-size: 12px;
+  opacity: 0.8;
+}
+
+.step-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid #f1f5f9;
+}
+
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 20px;
+  background: #f8fafc;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-secondary:hover {
+  background: #e2e8f0;
+  color: #1e293b;
+}
+
+/* ========== 响应式 ========== */
+@media (max-width: 640px) {
+  .tianshu-main {
+    padding: 16px 12px;
+  }
+
+  .step-card-placeholder {
+    padding: 20px 18px;
+  }
+
+  .step-header h2 {
+    font-size: 17px;
+  }
+
+  .step-progress {
+    padding: 8px;
+    gap: 4px;
+  }
+
+  .step-pill {
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+
+  .step-label {
+    display: none;
+  }
+
+  .step-pill.active .step-label {
+    display: inline;
+  }
+}

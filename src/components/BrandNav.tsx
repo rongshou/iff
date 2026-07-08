@@ -1,66 +1,126 @@
 /**
- * BrandNav - 共用顶部导航栏（步骤 1）
+ * BrandNav — 共用浮岛式导航栏
  *
- * 设计原则：
- * - 通过 props 接收所有可变数据（品牌名/色/链接），组件本身保持中性
- * - tianshu 和 tianquan 各自传入自己的色值和跳转目标
- * - 当前版本（步骤 1）只用于 tianquan
- * - 步骤 2/3 会扩展：tianshu 通过静态生成的 HTML+CSS 副本引入
+ * 设计语言：
+ * - 浮岛式：脱离页面顶部，圆角胶囊悬浮
+ * - 毛玻璃：backdrop-blur + saturate 半透明背景
+ * - 品牌标记：渐变文字 logo + 分隔线 + 副标题
+ * - 导航链接：药丸形按钮，hover 微交互（缩放 + 颜色渐变）
  */
 
 import type { CSSProperties } from "react";
 
+// ── 轻量 SVG 图标（替代 emoji）──
+
+function HomeIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 12L12 3l9 9" />
+      <path d="M9 21V12h6v9" />
+    </svg>
+  );
+}
+
+function CompassIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10" />
+      <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" />
+    </svg>
+  );
+}
+
+function UserIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+      <circle cx="12" cy="7" r="4" />
+    </svg>
+  );
+}
+
+function ArchiveIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 8v13H3V8" />
+      <path d="M1 3h22v5H1z" />
+      <path d="M10 12h4" />
+    </svg>
+  );
+}
+
+function GlobeIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10" />
+      <path d="M2 12h20" />
+      <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+    </svg>
+  );
+}
+
+function TrashIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="3 6 5 6 21 6" />
+      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+    </svg>
+  );
+}
+
+const ICON_MAP: Record<string, React.FC> = {
+  home: HomeIcon,
+  compass: CompassIcon,
+  user: UserIcon,
+  archive: ArchiveIcon,
+  globe: GlobeIcon,
+  trash: TrashIcon,
+};
+
+// ── 类型 ──
+
 export interface BrandNavLink {
-  /** 显示文字 */
   label: string;
-  /** emoji 或图标字符 */
-  icon?: string;
-  /** 跳转路径（react-router 用 to，其他用 href） */
-  to?: string;
+  icon?: string;   // key from ICON_MAP, e.g. "home"
   href?: string;
-  /** 当前是否激活（用于主样式区分） */
+  to?: string;      // react-router
   active?: boolean;
-  /** 主题色变体（'primary' | 'accent'） */
   variant?: "primary" | "accent";
-  /** 标题属性 */
   title?: string;
 }
 
 export interface BrandNavAction {
-  /** 按钮文字 */
   label: string;
-  /** emoji 图标 */
   icon?: string;
-  /** 点击处理 */
   onClick: () => void;
-  /** 移动端是否隐藏文字（只显示 icon） */
   hideTextOnMobile?: boolean;
-  /** 标题属性 */
   title?: string;
 }
 
 export interface BrandNavProps {
-  /** 品牌名（方形 logo 里的字母，如 IFF / TIA） */
   brandName: string;
-  /** 品牌副标题（"智能留学平台" 或 "综合特质测评"） */
   brandSubtitle: string;
-  /** 当前场景名（如 "选校定位"，没有就传 undefined） */
   sceneLabel?: string;
-  /** 跳转链接（首页/档案/天枢 等） */
   links?: BrandNavLink[];
-  /** 操作按钮（清空等） */
   actions?: BrandNavAction[];
-  /** Logo 渐变色（CSS background），默认 indigo→purple */
+  /** CSS gradient for the logo text */
   brandGradient?: string;
-  /** 分隔符渐变色 */
+  /** Separator gradient */
   brandSepColor?: string;
-  /** 顶层额外 className（默认含 brand-stripe 渐变背景） */
-  className?: string;
 }
 
-const DEFAULT_GRADIENT =
-  "linear-gradient(135deg, #6366f1 0%, #a855f7 50%, #ec4899 100%)";
+// ── 默认值 ──
+
+const DEFAULT_GRADIENT = "linear-gradient(135deg, #6366f1 0%, #a855f7 50%, #ec4899 100%)";
 const DEFAULT_SEP = "linear-gradient(180deg, #6366f1, #a855f7)";
+
+// ── 组件 ──
 
 export default function BrandNav({
   brandName,
@@ -70,77 +130,88 @@ export default function BrandNav({
   actions = [],
   brandGradient = DEFAULT_GRADIENT,
   brandSepColor = DEFAULT_SEP,
-  className = "brand-stripe",
 }: BrandNavProps) {
   const logoStyle: CSSProperties = { background: brandGradient };
   const sepStyle: CSSProperties = { background: brandSepColor };
 
   return (
-    <div className={`${className} nav-glass -mx-4 sm:-mx-6 px-3 sm:px-4 py-1.5 flex items-center gap-2 sm:gap-3`}>
-      {/* 左侧品牌区 */}
-      <div className="flex items-center gap-2 min-w-0">
-        <span className="brand-mark shrink-0" style={logoStyle}>
+    <nav
+      className="nav-float"
+      role="navigation"
+      aria-label="主导航"
+    >
+      {/* ── 左侧：品牌区 ── */}
+      <div className="nav-brand">
+        <span className="nav-logo" style={logoStyle}>
           {brandName}
         </span>
-        <span className="brand-sep shrink-0" style={sepStyle} />
-        <span className="brand-meta truncate">
+        <span className="nav-sep" style={sepStyle} />
+        <span className="nav-meta">
           {brandSubtitle}
           {sceneLabel && (
             <>
-              {" · "}
+              <span className="nav-meta-sep">·</span>
               <b>{sceneLabel}</b>
             </>
           )}
         </span>
       </div>
 
-      {/* 右侧链接区 */}
-      <div className="flex items-center gap-1 ml-auto shrink-0">
+      {/* ── 右侧：导航链接 ── */}
+      <div className="nav-links">
         {links.map((link, i) => {
-          const baseClass =
-            "inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11.5px] font-medium transition-all whitespace-nowrap";
-          const variantClass = link.active
-            ? "text-indigo-600 bg-white/80 border border-indigo-200 hover:bg-indigo-100"
-            : link.variant === "accent"
-            ? "text-slate-500 border border-slate-200 bg-white/60 hover:text-purple-600 hover:border-purple-300 hover:bg-white"
-            : "text-slate-500 border border-slate-200 bg-white/60 hover:text-indigo-600 hover:border-indigo-300 hover:bg-white";
+          const IconComp = link.icon ? ICON_MAP[link.icon] : null;
+          const isActive = link.active;
+          const isAccent = link.variant === "accent";
+
+          const pillClass = [
+            "nav-pill",
+            isActive && "nav-pill--active",
+            isAccent && "nav-pill--accent",
+          ].filter(Boolean).join(" ");
 
           const href = link.to || link.href;
-          const Comp: any = href ? "a" : "button";
+          const Tag = href ? "a" : "button";
 
           return (
-            <Comp
+            <Tag
               key={i}
-              {...(href ? { href } : { type: "button" })}
-              className={`${baseClass} ${variantClass}`}
+              {...(href ? { href } : { type: "button" as const })}
+              className={pillClass}
               title={link.title || link.label}
+              {...(isActive ? { "aria-current": "page" as const } : {})}
             >
-              {link.icon && <span className="inline-block w-3.5 h-3.5 leading-none text-[13px] text-center align-middle">{link.icon}</span>}
-              <span>{link.label}</span>
-            </Comp>
+              {IconComp && (
+                <span className="nav-pill-icon"><IconComp /></span>
+              )}
+              <span className="nav-pill-label">{link.label}</span>
+            </Tag>
           );
         })}
 
-        {/* 操作按钮 */}
-        {actions.map((action, i) => (
-          <button
-            key={i}
-            onClick={action.onClick}
-            className="text-[11.5px] text-slate-500 hover:text-red-600 px-2.5 py-1 rounded-lg hover:bg-red-50 transition-colors flex items-center gap-1"
-            title={action.title || action.label}
-          >
-            {action.icon && <span className="inline-block w-3.5 h-3.5 leading-none text-[13px] text-center align-middle">{action.icon}</span>}
-            {action.hideTextOnMobile ? (
-              <>
-                <span className="hidden sm:inline">{action.label}</span>
-                <span className="sm:hidden">{action.icon || ""}</span>
-              </>
-            ) : (
-              <span>{action.label}</span>
-            )}
-          </button>
-        ))}
+        {/* ── 操作按钮 ── */}
+        {actions.map((action, i) => {
+          const IconComp = action.icon ? ICON_MAP[action.icon] : null;
+          return (
+            <button
+              key={i}
+              onClick={action.onClick}
+              className="nav-action"
+              title={action.title || action.label}
+            >
+              {IconComp && <span className="nav-action-icon"><IconComp /></span>}
+              {action.hideTextOnMobile ? (
+                <>
+                  <span className="hidden sm:inline">{action.label}</span>
+                  <span className="sm:hidden">{IconComp && <IconComp />}</span>
+                </>
+              ) : (
+                <span>{action.label}</span>
+              )}
+            </button>
+          );
+        })}
       </div>
-    </div>
+    </nav>
   );
 }

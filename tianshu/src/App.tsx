@@ -22,19 +22,18 @@ export default function App() {
   return (
     <TianshuProvider>
       <div className="tianshu-app">
-        {/* 共用顶栏 - 天枢品牌色（紫色变体） */}
+        {/* ── 浮岛导航（天枢品牌色）── */}
         <BrandNav
           brandName="TIA"
           brandSubtitle="综合特质测评与生涯规划"
           links={[
-            { label: "首页", icon: "🏠", href: "/tianquan/", variant: "primary" },
-            { label: "天权", icon: "🌐", href: "/tianquan/", variant: "primary" },
-            { label: "档案", icon: "📁", href: "/tianquan/profile" },
-            { label: "旧测评", icon: "📜", href: "/tianshu/legacy/", variant: "accent" },
+            { label: "首页", icon: "home", href: "/tianquan/", variant: "primary" },
+            { label: "天权", icon: "globe", href: "/tianquan/", variant: "primary" },
+            { label: "档案", icon: "user", href: "/tianquan/profile" },
+            { label: "旧测评", icon: "archive", href: "/tianshu/legacy/", variant: "accent" },
           ]}
           brandGradient="linear-gradient(135deg, #a855f7 0%, #ec4899 50%, #f59e0b 100%)"
           brandSepColor="linear-gradient(180deg, #a855f7, #ec4899)"
-          className="brand-stripe"
         />
 
         {/* 测评主体 */}

@@ -100,22 +100,22 @@ export default function ChatPage() {
   return (
     <div className="h-screen chat-bg flex flex-col">
       <div className="max-w-3xl w-full mx-auto flex-1 flex flex-col min-h-0 px-4 sm:px-6 py-0 sm:py-2">
-        {/* ---------- 共用顶栏（BrandNav）---------- */}
+        {/* ── 浮岛导航 ── */}
         <BrandNav
           brandName="IFF"
           brandSubtitle="智能留学平台"
           sceneLabel={scene.label}
           links={[
-            { label: "首页", icon: "🏠", href: "/tianquan/", active: true },
-            { label: "档案", icon: "📁", href: "/tianquan/profile" },
-            { label: "天枢", icon: "🧭", href: "/tianshu/", variant: "accent" },
+            { label: "首页", icon: "home", href: "/tianquan/", active: true },
+            { label: "档案", icon: "user", href: "/tianquan/profile" },
+            { label: "天枢", icon: "compass", href: "/tianshu/", variant: "accent" },
           ]}
           actions={
             totalMessages > 0
               ? [
                   {
-                    label: "清空本场景",
-                    icon: "🗑",
+                    label: "清空",
+                    icon: "trash",
                     onClick: handleClear,
                     hideTextOnMobile: true,
                     title: "只清空当前场景的对话",

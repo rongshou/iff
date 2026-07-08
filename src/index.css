@@ -116,43 +116,215 @@ body {
   box-shadow: none;
 }
 
-/* 顶栏毛玻璃 */
-.nav-glass {
-  background: rgba(255, 255, 255, 0.75);
-  backdrop-filter: saturate(180%) blur(12px);
-  -webkit-backdrop-filter: saturate(180%) blur(12px);
-  border-bottom: 1px solid rgba(226, 232, 240, 0.7);
+/* ── 浮岛式导航栏（Floating Pill Nav）── */
+
+.nav-float {
+  position: sticky;
+  top: 12px;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 16px;
+  margin: 0 auto;
+  max-width: max-content;
+  min-width: min(100% - 32px, 720px);
+
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: saturate(180%) blur(16px);
+  -webkit-backdrop-filter: saturate(180%) blur(16px);
+  border: 1px solid rgba(226, 232, 240, 0.6);
+  border-radius: 9999px;
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.04),
+    0 6px 20px -8px rgba(99, 102, 241, 0.12);
+  transition: box-shadow 0.3s ease, border-color 0.3s ease;
 }
 
-/* IFF 品牌渐变条 */
-.brand-stripe {
-  background: linear-gradient(90deg,
-    rgba(99, 102, 241, 0.10) 0%,
-    rgba(168, 85, 247, 0.10) 50%,
-    rgba(236, 72, 153, 0.10) 100%);
-  border-bottom: 1px solid rgba(99, 102, 241, 0.12);
+/* scroll shadow — subtle lift when scrolled */
+.nav-float.is-scrolled {
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.04),
+    0 8px 28px -8px rgba(99, 102, 241, 0.18);
+  border-color: rgba(199, 210, 254, 0.5);
 }
-.brand-stripe .brand-mark {
+
+/* ── Brand section ── */
+
+.nav-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex-shrink: 0;
+}
+
+.nav-logo {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-weight: 800;
   font-size: 11px;
   letter-spacing: 0.18em;
-  background: linear-gradient(135deg, #6366f1 0%, #a855f7 50%, #ec4899 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
+  flex-shrink: 0;
 }
-.brand-stripe .brand-sep {
+
+.nav-sep {
   width: 1px;
   height: 12px;
-  background: rgba(99, 102, 241, 0.25);
+  flex-shrink: 0;
+  opacity: 0.3;
 }
-.brand-stripe .brand-meta {
+
+.nav-meta {
   font-size: 11px;
   color: #64748b;
   letter-spacing: 0.04em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
-.brand-stripe .brand-meta b { color: #4338ca; font-weight: 600; }
+.nav-meta b {
+  color: #4338ca;
+  font-weight: 600;
+}
+.nav-meta-sep {
+  margin: 0 4px;
+  color: #cbd5e1;
+}
+
+/* ── Link pills ── */
+
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  flex-shrink: 0;
+  flex-wrap: nowrap;
+}
+
+.nav-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1;
+  color: #64748b;
+  background: transparent;
+  border: 1px solid transparent;
+  white-space: nowrap;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    color 0.15s ease,
+    background 0.15s ease,
+    border-color 0.15s ease,
+    transform 0.15s ease;
+  user-select: none;
+}
+.nav-pill:hover {
+  color: #4338ca;
+  background: rgba(238, 242, 255, 0.7);
+  border-color: rgba(199, 210, 254, 0.5);
+  transform: translateY(-1px);
+}
+.nav-pill:active {
+  transform: translateY(0) scale(0.97);
+}
+
+/* Active pill */
+.nav-pill--active {
+  color: #4338ca;
+  background: rgba(255, 255, 255, 0.85);
+  border-color: rgba(165, 180, 252, 0.6);
+  font-weight: 600;
+}
+.nav-pill--active:hover {
+  background: rgba(255, 255, 255, 0.9);
+}
+
+/* Accent pill (secondary apps) */
+.nav-pill--accent {
+  color: #7c3aed;
+}
+.nav-pill--accent:hover {
+  color: #6d28d9;
+  background: rgba(237, 233, 254, 0.6);
+  border-color: rgba(196, 181, 253, 0.5);
+}
+
+.nav-pill-icon {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+.nav-pill-label {
+  line-height: 1;
+}
+
+/* ── Action buttons ── */
+
+.nav-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 10px;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1;
+  color: #94a3b8;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    color 0.15s ease,
+    background 0.15s ease;
+}
+.nav-action:hover {
+  color: #ef4444;
+  background: rgba(254, 226, 226, 0.6);
+}
+.nav-action:active {
+  transform: scale(0.97);
+}
+.nav-action-icon {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+/* ── Responsive ── */
+
+@media (max-width: 640px) {
+  .nav-float {
+    top: 8px;
+    padding: 6px 10px;
+    gap: 8px;
+    border-radius: 28px;
+    min-width: unset;
+  }
+  .nav-meta {
+    display: none;  /* hide subtitle on mobile */
+  }
+  .nav-pill {
+    padding: 5px 8px;
+    font-size: 11px;
+  }
+  .nav-pill-label {
+    display: none;  /* icon-only on mobile */
+  }
+  .nav-action {
+    padding: 5px 8px;
+    font-size: 11px;
+  }
+}
 
 /* 场景信息条（输入区上方） */
 .scene-strip {

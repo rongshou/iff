@@ -22,15 +22,10 @@ jobs:
         with:
           node-version: 20
 
-      - name: Install root dependencies
+      - name: Install dependencies
         run: npm ci
 
-      - name: Install tianshu dependencies
-        run: |
-          cd tianshu
-          npm ci
-
-      - name: Build tianquan (root)
+      - name: Build tianquan (root React app)
         run: |
           VERSION=$(cat tianshu/VERSION 2>/dev/null || echo "v0.0")
           echo "version: $VERSION"
@@ -44,26 +39,32 @@ jobs:
             [ "$fname" = "tianshu" ] && continue
             mv "$f" "dist/tianquan/"
           done
-          # SPA fallback
+          # SPA fallback (404.html = index.html for client-side routing)
           cp dist/tianquan/index.html dist/tianquan/404.html
           # Landing page
           cp landing/index.html dist/index.html
           cp dist/index.html dist/404.html
         env:
-          # GitHub Pages serves from /iff/tianquan/ (build moves dist/* → dist/tianquan/)
+          # GitHub Pages serves from /iff/tianquan/ (build output moves to dist/tianquan/)
           BASE_URL: /iff/tianquan/
 
-      - name: Build tianshu
+      - name: Copy tianshu (standalone HTML/JS app)
         run: |
-          cd tianshu
-          # Use vite build directly (skip tsc -b; BrandNav.tsx from parent dir
-          # causes TS module resolution to fail in sub-project context.
-          # Vite's esbuild handles cross-directory TS imports correctly.)
-          # Override base to /iff/tianshu/ (GitHub Pages sits under /iff/)
-          npx vite build --base /iff/tianshu/
-          cd ..
           mkdir -p dist/tianshu
-          cp -r tianshu/dist/* dist/tianshu/
+          # Core app files (latest v2 美化 version from tianshu/ root)
+          cp tianshu/index.html dist/tianshu/
+          cp tianshu/app.js dist/tianshu/
+          cp tianshu/bazi.js dist/tianshu/
+          cp tianshu/beidou.js dist/tianshu/
+          cp tianshu/data.js dist/tianshu/
+          cp tianshu/engine.js dist/tianshu/
+          cp tianshu/version.js dist/tianshu/
+          # New test pages (MBTI + Holland self-test)
+          cp tianshu/holland-test.html dist/tianshu/ 2>/dev/null || true
+          cp tianshu/holland-test.js dist/tianshu/ 2>/dev/null || true
+          cp tianshu/mbti-test.html dist/tianshu/ 2>/dev/null || true
+          cp tianshu/mbti-test.js dist/tianshu/ 2>/dev/null || true
+          # Legacy backup (old version)
           mkdir -p dist/tianshu/legacy
           cp tianshu/legacy/* dist/tianshu/legacy/ 2>/dev/null || true
           # .nojekyll for GitHub Pages

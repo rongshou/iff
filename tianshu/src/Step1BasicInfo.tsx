@@ -148,9 +148,6 @@ export default function Step1BasicInfo() {
       </div>
 
       <div className="step-actions">
-        <a href="./legacy/" className="btn-secondary">
-          ← 访问旧版测评
-        </a>
         <button onClick={handleNext} className="btn-primary">
           下一步 →
         </button>

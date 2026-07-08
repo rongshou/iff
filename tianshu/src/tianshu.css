@@ -787,3 +787,41 @@ input[type="range"] {
     display: none;
   }
 }
+
+/* ===== BrandNav shared styles (from root src/index.css) ===== */
+
+.nav-glass {
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: saturate(180%) blur(12px);
+  -webkit-backdrop-filter: saturate(180%) blur(12px);
+  border-bottom: 1px solid rgba(226, 232, 240, 0.7);
+}
+
+.brand-stripe {
+  background: linear-gradient(90deg,
+    rgba(99, 102, 241, 0.10) 0%,
+    rgba(168, 85, 247, 0.10) 50%,
+    rgba(236, 72, 153, 0.10) 100%);
+  border-bottom: 1px solid rgba(99, 102, 241, 0.12);
+}
+.brand-stripe .brand-mark {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-weight: 800;
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  background: linear-gradient(135deg, #6366f1 0%, #a855f7 50%, #ec4899 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.brand-stripe .brand-sep {
+  width: 1px;
+  height: 12px;
+  background: rgba(99, 102, 241, 0.25);
+}
+.brand-stripe .brand-meta {
+  font-size: 11px;
+  color: #64748b;
+  letter-spacing: 0.04em;
+}
+.brand-stripe .brand-meta b { color: #4338ca; font-weight: 600; }

@@ -1,38 +1,16 @@
-name: Deploy Self-hosted (no setup-node)
+name: Trigger self-hosted deploy
 
 on:
   push:
     branches: [master]
 
 jobs:
-  build-and-deploy:
+  trigger:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Install Node.js via NodeSource
+      - name: Ping self-hosted webhook
         run: |
-          curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
-          sudo apt-get install -y nodejs
-          node --version
-          npm --version
-
-      - name: npm ci (root)
-        run: npm ci
-
-      - name: npm ci (tianshu)
-        run: cd tianshu && npm ci
-
-      - name: build
-        env:
-          BASE_URL: /iff/tianquan/
-          VITE_API_BASE: https://iz2ze93ogksv8bwaz3pk8hz.taildec4f9.ts.net/api
-          VITE_APP_VERSION: v0.14.local
-        run: npm run build
-
-      - name: Trigger self-hosted server webhook
-        if: success()
-        run: |
-          curl -s -X POST "http://47.93.149.29/webhook/tianshu?token=${{ secrets.WEBHOOK_SECRET }}" --max-time 120
+          curl -s -X POST \
+            "http://47.93.149.29/webhook/tianshu?token=*** secrets.WEBHOOK_SECRET }}" \
+            --max-time 300
+          echo "[webhook] triggered"

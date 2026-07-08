@@ -31,8 +31,15 @@ cp landing/index.html dist/index.html
 cp dist/index.html dist/404.html
 
 echo "=== tianshu ==="
+# 步骤 2：tianshu 也走 Vite 构建（输出到 tianshu/dist/）
+cd tianshu && pnpm install 2>&1 | tail -3
+pnpm build 2>&1
+cd ..
 mkdir -p dist/tianshu
-cp tianshu/index.html tianshu/*.js tianshu/VERSION dist/tianshu/
+cp -r tianshu/dist/* dist/tianshu/
+# 保留旧测评到 /tianshu/legacy/ 下（步骤 3 才会彻底删除）
+mkdir -p dist/tianshu/legacy
+cp tianshu/legacy/* dist/tianshu/legacy/ 2>/dev/null || true
 
 echo "=== .nojekyll (GitHub Pages) ==="
 touch dist/.nojekyll

@@ -26,3 +26,10 @@ __pycache__/
 *.bak.*
 .omo/
 backup/
+
+# TypeScript build info
+*.tsbuildinfo
+
+# tianshu build artifacts (步骤 2+)
+tianshu/dist/
+tianshu/node_modules/

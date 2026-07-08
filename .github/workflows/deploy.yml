@@ -1,4 +1,4 @@
-name: Deploy to GitHub Pages + Self-hosted
+name: Deploy to GitHub Pages
 
 on:
   push:
@@ -14,27 +14,57 @@ jobs:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
+
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: 20
 
-      - name: Set version from git
-        id: version
+      - name: Install root dependencies
+        run: npm ci
+
+      - name: Build tianquan (root React app)
         run: |
-          COUNT=$(git rev-list --count HEAD)
-          SHA=$(git rev-parse --short HEAD)
-          echo "VITE_APP_VERSION=v0.12.$COUNT+$SHA" >> $GITHUB_OUTPUT
-
-      - run: npm ci
-      - run: cd tianshu && npm ci
-      - run: npm run build
+          VERSION=$(cat tianshu/VERSION 2>/dev/null || echo "v0.0")
+          echo "version: $VERSION"
+          npx tsc -b
+          VITE_APP_VERSION="$VERSION" npx vite build
+          # Move React app to dist/tianquan/
+          mkdir -p dist/tianquan
+          for f in dist/*; do
+            fname=$(basename "$f")
+            [ "$fname" = "tianquan" ] && continue
+            [ "$fname" = "tianshu" ] && continue
+            mv "$f" "dist/tianquan/"
+          done
+          # SPA fallback (404.html = index.html for client-side routing)
+          cp dist/tianquan/index.html dist/tianquan/404.html
+          # Landing page
+          cp landing/index.html dist/index.html
+          cp dist/index.html dist/404.html
         env:
+          # GitHub Pages serves from /iff/tianquan/ (build output moves to dist/tianquan/)
           BASE_URL: /iff/tianquan/
-          VITE_API_BASE: https://iz2ze93ogksv8bwaz3pk8hz.taildec4f9.ts.net/api
-          VITE_APP_VERSION: ${{ steps.version.outputs.VITE_APP_VERSION }}
+
+      - name: Install tianshu dependencies
+        run: |
+          cd tianshu
+          npm ci
+
+      - name: Build tianshu (Vite React app)
+        run: |
+          cd tianshu
+          npx tsc -b
+          npx vite build --base /iff/tianshu/
+          cd ..
+          mkdir -p dist/tianshu
+          cp -r tianshu/dist/* dist/tianshu/
+          # Copy legacy backup (old Streamlit version)
+          mkdir -p dist/tianshu/legacy
+          cp tianshu/legacy/* dist/tianshu/legacy/ 2>/dev/null || true
+          touch dist/.nojekyll
 
       - uses: actions/configure-pages@v4
 
@@ -44,7 +74,3 @@ jobs:
 
       - id: deployment
         uses: actions/deploy-pages@v4
-
-      - name: Trigger self-hosted server webhook
-        run: |
-          curl -s -X POST "http://47.93.149.29/webhook/tianshu?token=*** secrets.WEBHOOK_SECRET }}" --max-time 120

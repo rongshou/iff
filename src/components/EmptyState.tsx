@@ -11,9 +11,9 @@ export default function EmptyState({
   onPick,
 }: EmptyStateProps) {
   return (
-    <div className="min-h-full flex flex-col justify-center py-6">
+    <div className="min-h-full flex flex-col justify-center py-4 sm:py-6">
       {/* ========== 当前场景单卡 ========== */}
-      <div className="mx-auto max-w-xl w-full">
+      <div className="mx-auto max-w-xl w-full px-3 sm:px-0">
         <div className="scene-card">
           <div className="sc-prompts">
             {scene.quickPrompts.map((p) => (

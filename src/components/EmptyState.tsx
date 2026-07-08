@@ -15,20 +15,6 @@ export default function EmptyState({
       {/* ========== 当前场景单卡 ========== */}
       <div className="mx-auto max-w-2xl w-full">
         <div className="scene-card ring-1 ring-indigo-200 border-indigo-200">
-          <div className="sc-icon">{scene.icon}</div>
-          <div className="sc-label">
-            {scene.label}
-            <span
-              className="ml-1.5 inline-block align-middle text-[10px] font-medium px-1.5 py-0.5 rounded-full"
-              style={{
-                background: "rgba(99,102,241,0.10)",
-                color: "#4f46e5",
-                letterSpacing: "0.04em",
-              }}
-            >
-              当前
-            </span>
-          </div>
           <div className="sc-hint">
             {scene.id === "essay" && "PS / CV / 推荐信"}
             {scene.id === "visa" && "F-1 / Tier 4 / 材料清单"}

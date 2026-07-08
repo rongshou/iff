@@ -15,9 +15,10 @@ const testScene: Scene = {
 };
 
 describe("EmptyState", () => {
-  it("renders scene label", () => {
+  it("renders scene hint", () => {
     render(<EmptyState scene={testScene} onPick={vi.fn()} onSceneChange={vi.fn()} />);
-    expect(screen.getByText("选校定位")).toBeDefined();
+    // school 卡片 hint 为空（仅 essay/visa 有 hint）
+    expect(screen.queryByText("选校定位")).toBeNull();
   });
 
   it("renders quick prompts", () => {

@@ -8,20 +8,14 @@
 
 import { useTianshu } from "./TianshuContext";
 import StepPlaceholder from "./PlaceholderStep";
+import Step1BasicInfo from "./Step1BasicInfo";
 
 export default function StepRouter() {
   const { state } = useTianshu();
 
   switch (state.step) {
     case 1:
-      return (
-        <StepPlaceholder
-          step={1}
-          title="学生基础信息"
-          emoji="📝"
-          description="姓名、性别、出生时间、当前学段（sub-3.2 即将上线）"
-        />
-      );
+      return <Step1BasicInfo />;
     case 2:
       return (
         <StepPlaceholder

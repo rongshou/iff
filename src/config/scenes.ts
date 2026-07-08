@@ -16,7 +16,7 @@ export const SCENES: Scene[] = [
     id: "school",
     label: "选校定位",
     shortLabel: "选校",
-    icon: "🎓",
+    icon: "",
     greeting: "选校定位 · 我来帮你参谋",
     intro: "",
     quickPrompts: [

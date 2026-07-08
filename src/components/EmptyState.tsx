@@ -14,7 +14,6 @@ export default function EmptyState({
     <div className="min-h-full flex flex-col justify-center py-6">
       {/* ========== 品牌头部 ========== */}
       <div className="empty-hero">
-        <div className="hero-logo">IFF</div>
         <div className="hero-title">{scene.greeting}</div>
         <div className="hero-sub">{scene.intro}</div>
         <div className="hero-stats">
@@ -44,7 +43,6 @@ export default function EmptyState({
             </span>
           </div>
           <div className="sc-hint">
-            {scene.id === "school" && "选校定位 · GPA 匹配 · 三维评分"}
             {scene.id === "essay" && "PS / CV / 推荐信"}
             {scene.id === "visa" && "F-1 / Tier 4 / 材料清单"}
           </div>

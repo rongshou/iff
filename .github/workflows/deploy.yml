@@ -22,7 +22,7 @@ jobs:
         with:
           node-version: 20
 
-      - name: Install dependencies
+      - name: Install root dependencies
         run: npm ci
 
       - name: Build tianquan (root React app)
@@ -48,26 +48,22 @@ jobs:
           # GitHub Pages serves from /iff/tianquan/ (build output moves to dist/tianquan/)
           BASE_URL: /iff/tianquan/
 
-      - name: Copy tianshu (standalone HTML/JS app)
+      - name: Install tianshu dependencies
         run: |
+          cd tianshu
+          npm ci
+
+      - name: Build tianshu (Vite React app)
+        run: |
+          cd tianshu
+          npx tsc -b
+          npx vite build --base /iff/tianshu/
+          cd ..
           mkdir -p dist/tianshu
-          # Core app files (latest v2 美化 version from tianshu/ root)
-          cp tianshu/index.html dist/tianshu/
-          cp tianshu/app.js dist/tianshu/
-          cp tianshu/bazi.js dist/tianshu/
-          cp tianshu/beidou.js dist/tianshu/
-          cp tianshu/data.js dist/tianshu/
-          cp tianshu/engine.js dist/tianshu/
-          cp tianshu/version.js dist/tianshu/
-          # New test pages (MBTI + Holland self-test)
-          cp tianshu/holland-test.html dist/tianshu/ 2>/dev/null || true
-          cp tianshu/holland-test.js dist/tianshu/ 2>/dev/null || true
-          cp tianshu/mbti-test.html dist/tianshu/ 2>/dev/null || true
-          cp tianshu/mbti-test.js dist/tianshu/ 2>/dev/null || true
-          # Legacy backup (old version)
+          cp -r tianshu/dist/* dist/tianshu/
+          # Copy legacy backup (old Streamlit version)
           mkdir -p dist/tianshu/legacy
           cp tianshu/legacy/* dist/tianshu/legacy/ 2>/dev/null || true
-          # .nojekyll for GitHub Pages
           touch dist/.nojekyll
 
       - uses: actions/configure-pages@v4

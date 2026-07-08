@@ -30,6 +30,7 @@ jobs:
           echo "VITE_APP_VERSION=v0.12.$COUNT+$SHA" >> $GITHUB_OUTPUT
 
       - run: npm ci
+      - run: cd tianshu && npm ci
       - run: npm run build
         env:
           BASE_URL: /iff/tianquan/

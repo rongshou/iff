@@ -13,8 +13,8 @@ export default function EmptyState({
   return (
     <div className="min-h-full flex flex-col justify-center py-6">
       {/* ========== 当前场景单卡 ========== */}
-      <div className="mx-auto max-w-2xl w-full">
-        <div className="scene-card ring-1 ring-indigo-200 border-indigo-200">
+      <div className="mx-auto max-w-xl w-full">
+        <div className="scene-card">
           <div className="sc-prompts">
             {scene.quickPrompts.map((p) => (
               <button

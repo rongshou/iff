@@ -34,6 +34,7 @@ export default function App() {
           ]}
           brandGradient="linear-gradient(135deg, #a855f7 0%, #ec4899 50%, #f59e0b 100%)"
           brandSepColor="linear-gradient(180deg, #a855f7, #ec4899)"
+          className="brand-stripe"
         />
 
         {/* 测评主体 */}

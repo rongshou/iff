@@ -54,6 +54,8 @@ export interface BrandNavProps {
   brandGradient?: string;
   /** 分隔符渐变色 */
   brandSepColor?: string;
+  /** 顶层额外 className（默认含 brand-stripe 渐变背景） */
+  className?: string;
 }
 
 const DEFAULT_GRADIENT =
@@ -68,12 +70,13 @@ export default function BrandNav({
   actions = [],
   brandGradient = DEFAULT_GRADIENT,
   brandSepColor = DEFAULT_SEP,
+  className = "brand-stripe",
 }: BrandNavProps) {
   const logoStyle: CSSProperties = { background: brandGradient };
   const sepStyle: CSSProperties = { background: brandSepColor };
 
   return (
-    <div className="brand-stripe nav-glass -mx-4 sm:-mx-6 px-4 sm:px-6 py-2 flex items-center gap-3">
+    <div className={`${className} nav-glass -mx-4 sm:-mx-6 px-3 sm:px-4 py-1.5 flex items-center gap-2 sm:gap-3`}>
       {/* 左侧品牌区 */}
       <div className="flex items-center gap-2 min-w-0">
         <span className="brand-mark shrink-0" style={logoStyle}>
@@ -112,7 +115,7 @@ export default function BrandNav({
               className={`${baseClass} ${variantClass}`}
               title={link.title || link.label}
             >
-              {link.icon && <span>{link.icon}</span>}
+              {link.icon && <span className="inline-block w-3.5 h-3.5 leading-none text-[13px] text-center align-middle">{link.icon}</span>}
               <span>{link.label}</span>
             </Comp>
           );
@@ -126,7 +129,7 @@ export default function BrandNav({
             className="text-[11.5px] text-slate-500 hover:text-red-600 px-2.5 py-1 rounded-lg hover:bg-red-50 transition-colors flex items-center gap-1"
             title={action.title || action.label}
           >
-            {action.icon && <span className="leading-none">{action.icon}</span>}
+            {action.icon && <span className="inline-block w-3.5 h-3.5 leading-none text-[13px] text-center align-middle">{action.icon}</span>}
             {action.hideTextOnMobile ? (
               <>
                 <span className="hidden sm:inline">{action.label}</span>

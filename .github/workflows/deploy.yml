@@ -47,6 +47,8 @@ jobs:
         env:
           # GitHub Pages serves from /iff/tianquan/ (build output moves to dist/tianquan/)
           BASE_URL: /iff/tianquan/
+          # Backend API base (Tailscale Funnel) — used by school.ts, api.ts, chat.ts
+          VITE_API_BASE: https://iz2ze93ogksv8bwaz3pk8hz.taildec4f9.ts.net/api
 
       - name: Install tianshu dependencies
         run: |

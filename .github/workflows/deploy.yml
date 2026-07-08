@@ -10,11 +10,37 @@ jobs:
     permissions:
       contents: read
     steps:
+      - name: Debug step 1 - basic env
+        run: |
+          echo "=== Step 1: Basic env ==="
+          date
+          pwd
+          ls -la
+          echo "=== Node check ==="
+          which node || echo "no node yet"
+          echo "=== npm check ==="
+          which npm || echo "no npm yet"
+
       - uses: actions/checkout@v4
+
+      - name: Debug step 2 - after checkout
+        run: |
+          echo "=== Step 2: After checkout ==="
+          date
+          ls -la
+          cat package.json | head -10
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Debug step 3 - after setup-node
+        run: |
+          echo "=== Step 3: After setup-node ==="
+          date
+          node --version
+          npm --version
 
       - name: Set version from git
         id: version
@@ -23,14 +49,42 @@ jobs:
           SHA=$(git rev-parse --short HEAD)
           echo "VITE_APP_VERSION=v0.12.$COUNT+$SHA" >> $GITHUB_OUTPUT
 
+      - name: Debug step 4 - before npm ci
+        run: |
+          echo "=== Step 4: Before npm ci ==="
+          date
+
       - run: npm ci
+
+      - name: Debug step 5 - after root npm ci
+        run: |
+          echo "=== Step 5: After root npm ci ==="
+          date
+          ls -la node_modules/.bin/vite 2>&1 | head -2 || echo "vite missing"
+
       - run: cd tianshu && npm ci
+
+      - name: Debug step 6 - after tianshu npm ci
+        run: |
+          echo "=== Step 6: After tianshu npm ci ==="
+          date
+
       - run: npm run build
         env:
           BASE_URL: /iff/tianquan/
           VITE_API_BASE: https://iz2ze93ogksv8bwaz3pk8hz.taildec4f9.ts.net/api
           VITE_APP_VERSION: ${{ steps.version.outputs.VITE_APP_VERSION }}
 
+      - name: Debug step 7 - after build
+        run: |
+          echo "=== Step 7: After build ==="
+          date
+          ls -la dist/ 2>&1 | head -5
+
       - name: Trigger self-hosted server webhook
         run: |
+          echo "=== Step 8: Triggering webhook ==="
+          date
           curl -s -X POST "http://47.93.149.29/webhook/tianshu?token=${{ secrets.WEBHOOK_SECRET }}" --max-time 120
+          echo "=== Step 8 done ==="
+          date

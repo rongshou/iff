@@ -19,6 +19,8 @@ export default function App() {
         links={[
           { label: "首页", icon: "🏠", href: "/tianquan/", variant: "primary" },
           { label: "天权", icon: "🌐", href: "/tianquan/", variant: "primary" },
+          { label: "档案", icon: "📁", href: "/tianquan/profile" },
+          { label: "旧测评", icon: "📜", href: "/tianshu/legacy/", variant: "accent" },
         ]}
         brandGradient="linear-gradient(135deg, #a855f7 0%, #ec4899 50%, #f59e0b 100%)"
         brandSepColor="linear-gradient(180deg, #a855f7, #ec4899)"

@@ -106,9 +106,9 @@ export default function ChatPage() {
           brandSubtitle="智能留学平台"
           sceneLabel={scene.label}
           links={[
-            { label: "首页", icon: "🏠", to: "/", active: true },
-            { label: "档案", icon: "📁", to: "/profile" },
-            { label: "天枢", icon: "🧭", href: "../tianshu/", variant: "accent" },
+            { label: "首页", icon: "🏠", href: "/tianquan/", active: true },
+            { label: "档案", icon: "📁", href: "/tianquan/profile" },
+            { label: "天枢", icon: "🧭", href: "/tianshu/", variant: "accent" },
           ]}
           actions={
             totalMessages > 0

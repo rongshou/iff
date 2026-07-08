@@ -15,9 +15,9 @@ const testScene: Scene = {
 };
 
 describe("EmptyState", () => {
-  it("renders scene greeting", () => {
+  it("renders scene label", () => {
     render(<EmptyState scene={testScene} onPick={vi.fn()} onSceneChange={vi.fn()} />);
-    expect(screen.getByText("选校定位 · 我来帮你参谋")).toBeDefined();
+    expect(screen.getByText("选校定位")).toBeDefined();
   });
 
   it("renders quick prompts", () => {

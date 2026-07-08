@@ -12,19 +12,6 @@ export default function EmptyState({
 }: EmptyStateProps) {
   return (
     <div className="min-h-full flex flex-col justify-center py-6">
-      {/* ========== 品牌头部 ========== */}
-      <div className="empty-hero">
-        <div className="hero-title">{scene.greeting}</div>
-        <div className="hero-sub">{scene.intro}</div>
-        <div className="hero-stats">
-          <span><span className="num">17.6万</span> 真实案例</span>
-          <span style={{ color: "#cbd5e1" }}>·</span>
-          <span><span className="num">24h</span> 持续更新</span>
-          <span style={{ color: "#cbd5e1" }}>·</span>
-          <span><span className="num">3维</span> 评分模型</span>
-        </div>
-      </div>
-
       {/* ========== 当前场景单卡 ========== */}
       <div className="mx-auto max-w-2xl w-full">
         <div className="scene-card ring-1 ring-indigo-200 border-indigo-200">

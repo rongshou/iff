@@ -1,4 +1,4 @@
-name: Deploy to GitHub Pages + Self-hosted
+name: Deploy Self-hosted (minimal)
 
 on:
   push:
@@ -10,81 +10,78 @@ jobs:
     permissions:
       contents: read
     steps:
-      - name: Debug step 1 - basic env
+      - name: Debug - log to file
         run: |
-          echo "=== Step 1: Basic env ==="
-          date
-          pwd
-          ls -la
-          echo "=== Node check ==="
-          which node || echo "no node yet"
-          echo "=== npm check ==="
-          which npm || echo "no npm yet"
+          mkdir -p debug
+          echo "=== runner info ===" > debug/run.log
+          uname -a >> debug/run.log
+          echo "=== date ===" >> debug/run.log
+          date >> debug/run.log
+          echo "=== pwd ===" >> debug/run.log
+          pwd >> debug/run.log
+          echo "=== ls ===" >> debug/run.log
+          ls -la >> debug/run.log 2>&1
+          echo "=== which node ===" >> debug/run.log
+          which node >> debug/run.log 2>&1
+          echo "=== node version ===" >> debug/run.log
+          node --version >> debug/run.log 2>&1
+          echo "=== npm version ===" >> debug/run.log
+          npm --version >> debug/run.log 2>&1
 
       - uses: actions/checkout@v4
 
-      - name: Debug step 2 - after checkout
+      - name: Debug - after checkout
         run: |
-          echo "=== Step 2: After checkout ==="
-          date
-          ls -la
-          cat package.json | head -10
+          echo "=== after checkout ===" >> debug/run.log
+          date >> debug/run.log
+          ls -la >> debug/run.log 2>&1
 
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
 
-      - name: Debug step 3 - after setup-node
+      - name: Debug - after setup-node
         run: |
-          echo "=== Step 3: After setup-node ==="
-          date
-          node --version
-          npm --version
+          echo "=== after setup-node ===" >> debug/run.log
+          date >> debug/run.log
+          node --version >> debug/run.log 2>&1
+          npm --version >> debug/run.log 2>&1
+          echo "=== ls after setup ===" >> debug/run.log
+          ls -la >> debug/run.log 2>&1
 
-      - name: Set version from git
-        id: version
+      - name: npm ci (root)
         run: |
-          COUNT=$(git rev-list --count HEAD)
-          SHA=$(git rev-parse --short HEAD)
-          echo "VITE_APP_VERSION=v0.12.$COUNT+$SHA" >> $GITHUB_OUTPUT
+          echo "=== before npm ci ===" >> debug/run.log
+          date >> debug/run.log
+          npm ci 2>> debug/run.log
+          echo "=== after npm ci ===" >> debug/run.log
+          date >> debug/run.log
 
-      - name: Debug step 4 - before npm ci
+      - name: npm ci (tianshu)
         run: |
-          echo "=== Step 4: Before npm ci ==="
-          date
+          echo "=== before tianshu npm ci ===" >> debug/run.log
+          date >> debug/run.log
+          cd tianshu && npm ci 2>> debug/run.log
+          echo "=== after tianshu npm ci ===" >> debug/run.log
+          date >> debug/run.log
 
-      - run: npm ci
-
-      - name: Debug step 5 - after root npm ci
+      - name: build
         run: |
-          echo "=== Step 5: After root npm ci ==="
-          date
-          ls -la node_modules/.bin/vite 2>&1 | head -2 || echo "vite missing"
+          echo "=== before build ===" >> debug/run.log
+          date >> debug/run.log
+          npm run build 2>> debug/run.log
+          echo "=== after build ===" >> debug/run.log
+          date >> debug/run.log
+          ls -la dist/ >> debug/run.log 2>&1
 
-      - run: cd tianshu && npm ci
-
-      - name: Debug step 6 - after tianshu npm ci
-        run: |
-          echo "=== Step 6: After tianshu npm ci ==="
-          date
-
-      - run: npm run build
-        env:
-          BASE_URL: /iff/tianquan/
-          VITE_API_BASE: https://iz2ze93ogksv8bwaz3pk8hz.taildec4f9.ts.net/api
-          VITE_APP_VERSION: ${{ steps.version.outputs.VITE_APP_VERSION }}
-
-      - name: Debug step 7 - after build
-        run: |
-          echo "=== Step 7: After build ==="
-          date
-          ls -la dist/ 2>&1 | head -5
+      - name: Upload debug log as artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: debug-run
+          path: debug/run.log
 
       - name: Trigger self-hosted server webhook
+        if: success()
         run: |
-          echo "=== Step 8: Triggering webhook ==="
-          date
           curl -s -X POST "http://47.93.149.29/webhook/tianshu?token=${{ secrets.WEBHOOK_SECRET }}" --max-time 120
-          echo "=== Step 8 done ==="
-          date

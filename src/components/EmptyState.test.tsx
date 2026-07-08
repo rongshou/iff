@@ -15,10 +15,11 @@ const testScene: Scene = {
 };
 
 describe("EmptyState", () => {
-  it("renders scene hint", () => {
+  it("does not render scene hint", () => {
     render(<EmptyState scene={testScene} onPick={vi.fn()} onSceneChange={vi.fn()} />);
-    // school 卡片 hint 为空（仅 essay/visa 有 hint）
-    expect(screen.queryByText("选校定位")).toBeNull();
+    // hint 行已删除，不应出现任何 hint 文字
+    expect(screen.queryByText("PS / CV / 推荐信")).toBeNull();
+    expect(screen.queryByText("F-1 / Tier 4 / 材料清单")).toBeNull();
   });
 
   it("renders quick prompts", () => {

@@ -15,10 +15,6 @@ export default function EmptyState({
       {/* ========== 当前场景单卡 ========== */}
       <div className="mx-auto max-w-2xl w-full">
         <div className="scene-card ring-1 ring-indigo-200 border-indigo-200">
-          <div className="sc-hint">
-            {scene.id === "essay" && "PS / CV / 推荐信"}
-            {scene.id === "visa" && "F-1 / Tier 4 / 材料清单"}
-          </div>
           <div className="sc-prompts">
             {scene.quickPrompts.map((p) => (
               <button

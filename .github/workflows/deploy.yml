@@ -30,15 +30,42 @@ jobs:
           cd tianshu
           npm ci
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: latest
-
-      - name: Build
-        run: bash scripts/build-prod.sh
+      - name: Build tianquan (root)
+        run: |
+          VERSION=$(cat tianshu/VERSION 2>/dev/null || echo "v0.0")
+          echo "version: $VERSION"
+          npx tsc -b
+          VITE_APP_VERSION="$VERSION" npx vite build
+          # Move React app to dist/tianquan/
+          mkdir -p dist/tianquan
+          for f in dist/*; do
+            fname=$(basename "$f")
+            [ "$fname" = "tianquan" ] && continue
+            [ "$fname" = "tianshu" ] && continue
+            mv "$f" "dist/tianquan/"
+          done
+          # SPA fallback
+          cp dist/tianquan/index.html dist/tianquan/404.html
+          # Landing page
+          cp landing/index.html dist/index.html
+          cp dist/index.html dist/404.html
         env:
           BASE_URL: /iff/
+
+      - name: Build tianshu
+        run: |
+          cd tianshu
+          # Use vite build directly (skip tsc -b; BrandNav.tsx from parent dir
+          # causes TS module resolution to fail in sub-project context.
+          # Vite's esbuild handles cross-directory TS imports correctly.)
+          npx vite build
+          cd ..
+          mkdir -p dist/tianshu
+          cp -r tianshu/dist/* dist/tianshu/
+          mkdir -p dist/tianshu/legacy
+          cp tianshu/legacy/* dist/tianshu/legacy/ 2>/dev/null || true
+          # .nojekyll for GitHub Pages
+          touch dist/.nojekyll
 
       - uses: actions/configure-pages@v4
 

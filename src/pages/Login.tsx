@@ -23,7 +23,7 @@ export default function LoginPage() {
 
     setLoading(true);
 
-    // 先调后端验证授权码是否合法
+    // 先尝试后端验证（可选，失败不阻塞）
     try {
       const { valid } = await verifyAuthCode(authCode.trim());
       if (!valid) {
@@ -32,9 +32,8 @@ export default function LoginPage() {
         return;
       }
     } catch {
-      setLoading(false);
-      setError("无法验证授权码，请检查网络或联系管理员");
-      return;
+      // 后端不可达时回退到纯本地验证
+      console.warn("Backend unreachable, falling back to local auth");
     }
 
     const result = login(username, authCode);

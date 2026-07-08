@@ -30,6 +30,13 @@ export interface TianshuState {
   mbtiType: string;
   hollandScores: HollandScores;
   results: any | null; // 报告结果（sub-3.6 详细化）
+  // 中间计算结果（供后续 step 使用）
+  _bazi?: any;
+  _ziwei?: any;
+  _mbtiMode?: "known" | "test";
+  _mbtiAnswers?: number[];
+  _hollandMode?: "known" | "test";
+  _hollandAnswers?: number[];
 }
 
 export interface TianshuContextValue {

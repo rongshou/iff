@@ -305,3 +305,485 @@ body {
     justify-content: center;
   }
 }
+/* ========== 加载/错误状态 ========== */
+.loading-state,
+.error-state {
+  text-align: center;
+  padding: 60px 20px;
+  font-size: 16px;
+  color: #64748b;
+}
+
+.error-state {
+  color: #c53030;
+}
+
+/* ========== Mode Tabs ========== */
+.mode-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+  padding: 4px;
+  background: #f1f5f9;
+  border-radius: 10px;
+}
+
+.mode-tab {
+  flex: 1;
+  padding: 10px 16px;
+  background: transparent;
+  color: #64748b;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.mode-tab:hover {
+  color: #475569;
+}
+
+.mode-tab.active {
+  background: #fff;
+  color: #a855f7;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+/* ========== Hint ========== */
+.hint {
+  padding: 12px 16px;
+  background: rgba(168, 85, 247, 0.06);
+  border-left: 3px solid #a855f7;
+  border-radius: 6px;
+  color: #6b21a8;
+  font-size: 13px;
+  margin-bottom: 16px;
+}
+
+/* ========== Data Table ========== */
+.section-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1e293b;
+  margin: 20px 0 12px;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 16px;
+  font-size: 13px;
+}
+
+.data-table th,
+.data-table td {
+  padding: 10px 12px;
+  text-align: left;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.data-table th {
+  background: #f8fafc;
+  font-weight: 600;
+  color: #475569;
+}
+
+.data-table td:first-child {
+  color: #64748b;
+  width: 30%;
+}
+
+.tag {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.tag-primary {
+  background: rgba(168, 85, 247, 0.12);
+  color: #a855f7;
+}
+
+.tag-warning {
+  background: rgba(245, 158, 11, 0.12);
+  color: #d97706;
+}
+
+.info-block {
+  padding: 14px 18px;
+  background: #f8fafc;
+  border-radius: 8px;
+  font-size: 13px;
+  line-height: 1.7;
+  color: #475569;
+  margin-bottom: 16px;
+}
+
+/* ========== 紫微宫位 ========== */
+.gong-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.gong-card {
+  padding: 14px;
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.06) 0%, rgba(236, 72, 153, 0.04) 100%);
+  border-radius: 10px;
+  border: 1px solid rgba(168, 85, 247, 0.12);
+  font-size: 12.5px;
+  line-height: 1.6;
+}
+
+.gong-title {
+  font-weight: 600;
+  color: #1e293b;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.hour-effect {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px dashed rgba(168, 85, 247, 0.2);
+  color: #6b21a8;
+  font-size: 12px;
+}
+
+.note {
+  padding: 10px 14px;
+  background: rgba(245, 158, 11, 0.06);
+  border-left: 3px solid #f59e0b;
+  border-radius: 6px;
+  color: #92400e;
+  font-size: 12px;
+  margin-top: 12px;
+}
+
+/* ========== MBTI / Holland 卡片 ========== */
+.mbti-card,
+.holland-card {
+  margin-top: 16px;
+  padding: 16px 20px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.mbti-title,
+.holland-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #1e293b;
+  margin-bottom: 10px;
+}
+
+.holland-fits ul {
+  margin: 8px 0 0 18px;
+}
+
+.risk-warning {
+  margin-top: 10px;
+  padding: 8px 12px;
+  background: rgba(245, 158, 11, 0.08);
+  border-radius: 6px;
+  color: #92400e;
+  font-size: 12.5px;
+}
+
+/* ========== 测试题 ========== */
+.test-questions {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-bottom: 12px;
+}
+
+.test-q {
+  padding: 14px 16px;
+  background: #f8fafc;
+  border-radius: 10px;
+}
+
+.test-q-num {
+  font-size: 11px;
+  font-weight: 700;
+  color: #a855f7;
+  letter-spacing: 0.05em;
+  margin-bottom: 6px;
+}
+
+.test-q-stem,
+.test-q-text {
+  font-size: 13px;
+  color: #1e293b;
+  margin-bottom: 10px;
+  font-weight: 500;
+}
+
+.test-q-opt {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 12px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 12.5px;
+  color: #475569;
+  margin-bottom: 4px;
+  transition: all 0.15s ease;
+}
+
+.test-q-opt:hover {
+  border-color: #c7d2fe;
+}
+
+.test-q-opt.selected {
+  background: rgba(168, 85, 247, 0.08);
+  border-color: #a855f7;
+  color: #6b21a8;
+}
+
+.test-q-opt input {
+  margin-top: 2px;
+}
+
+.test-q-rating {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 8px;
+}
+
+.rating-opt {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.rating-opt:hover {
+  border-color: #c7d2fe;
+}
+
+.rating-opt.selected {
+  background: rgba(168, 85, 247, 0.08);
+  border-color: #a855f7;
+}
+
+.rating-num {
+  font-weight: 700;
+  color: #a855f7;
+  width: 18px;
+  text-align: center;
+}
+
+.rating-label {
+  color: #64748b;
+}
+
+/* ========== 维度条 ========== */
+.test-dim-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.dim-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: #475569;
+}
+
+.dim-bar > span:first-child,
+.dim-bar > span:last-child {
+  width: 32px;
+  font-weight: 600;
+}
+
+.bar-track {
+  flex: 1;
+  height: 6px;
+  background: #f1f5f9;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #a855f7 0%, #ec4899 100%);
+  transition: width 0.3s ease;
+}
+
+/* ========== 滑块 ========== */
+.sliders {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.slider-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.slider-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #475569;
+}
+
+.slider-value {
+  margin-left: auto;
+  font-weight: 700;
+  color: #a855f7;
+  min-width: 32px;
+  text-align: right;
+}
+
+input[type="range"] {
+  width: 100%;
+  accent-color: #a855f7;
+}
+
+.btn-text {
+  background: none;
+  border: none;
+  color: #64748b;
+  font-size: 12px;
+  cursor: pointer;
+  text-decoration: underline;
+  padding: 4px 0;
+  margin-bottom: 8px;
+}
+
+.btn-text:hover {
+  color: #a855f7;
+}
+
+/* ========== 报告 ========== */
+.report-section {
+  margin-top: 28px;
+}
+
+.report-section > h2 {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1e293b;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #f1f5f9;
+  margin-bottom: 12px;
+}
+
+.report-section > h3 {
+  font-size: 14px;
+  font-weight: 600;
+  color: #475569;
+  margin: 16px 0 8px;
+}
+
+.report-header {
+  padding: 20px 24px;
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.08) 0%, rgba(236, 72, 153, 0.06) 100%);
+  border-radius: 12px;
+  border: 1px solid rgba(168, 85, 247, 0.12);
+  margin-bottom: 20px;
+}
+
+.report-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1e293b;
+  margin-bottom: 10px;
+}
+
+.report-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.report-quote {
+  font-size: 14px;
+  line-height: 1.7;
+  color: #475569;
+  font-style: italic;
+}
+
+.report-desc {
+  font-size: 13px;
+  color: #64748b;
+  margin-bottom: 14px;
+  padding: 10px 14px;
+  background: #f8fafc;
+  border-radius: 6px;
+}
+
+.cross-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.cross-card {
+  padding: 14px 16px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  font-size: 12.5px;
+  line-height: 1.7;
+}
+
+.cross-card-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #1e293b;
+  margin-bottom: 4px;
+}
+
+.cross-card-sub {
+  font-size: 12px;
+  color: #a855f7;
+  margin-bottom: 10px;
+}
+
+@media (max-width: 640px) {
+  .gong-grid {
+    grid-template-columns: 1fr;
+  }
+  .cross-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media print {
+  .tianshu-footer,
+  .step-actions,
+  .step-progress {
+    display: none;
+  }
+}

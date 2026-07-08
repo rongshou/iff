@@ -9,6 +9,10 @@
 import { useTianshu } from "./TianshuContext";
 import StepPlaceholder from "./PlaceholderStep";
 import Step1BasicInfo from "./Step1BasicInfo";
+import Step2BaziZiwei from "./Step2BaziZiwei";
+import Step3MBTI from "./Step3MBTI";
+import Step4Holland from "./Step4Holland";
+import Step5Report from "./Step5Report";
 
 export default function StepRouter() {
   const { state } = useTianshu();
@@ -17,41 +21,13 @@ export default function StepRouter() {
     case 1:
       return <Step1BasicInfo />;
     case 2:
-      return (
-        <StepPlaceholder
-          step={2}
-          title="八字排盘"
-          emoji="🌙"
-          description="基于出生时间生成四柱八字 + 五行 + 喜用神（sub-3.3 即将上线）"
-        />
-      );
+      return <Step2BaziZiwei />;
     case 3:
-      return (
-        <StepPlaceholder
-          step={3}
-          title="MBTI 测评"
-          emoji="🧠"
-          description="16 型人格测试，可选已知或现场测评（sub-3.4 即将上线）"
-        />
-      );
+      return <Step3MBTI />;
     case 4:
-      return (
-        <StepPlaceholder
-          step={4}
-          title="霍兰德测评"
-          emoji="🎯"
-          description="RIASEC 六维职业兴趣测评（sub-3.5 即将上线）"
-        />
-      );
+      return <Step4Holland />;
     case 5:
-      return (
-        <StepPlaceholder
-          step={5}
-          title="综合测评报告"
-          emoji="📊"
-          description="八字 + 紫微 + MBTI + 霍兰德四维交叉验证 + 生涯路径（sub-3.6 即将上线）"
-        />
-      );
+      return <Step5Report />;
     default:
       return null;
   }

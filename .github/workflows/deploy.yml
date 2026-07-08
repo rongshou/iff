@@ -1,4 +1,4 @@
-name: Deploy Self-hosted (minimal)
+name: Deploy Self-hosted (no setup-node)
 
 on:
   push:
@@ -10,76 +10,27 @@ jobs:
     permissions:
       contents: read
     steps:
-      - name: Debug - log to file
-        run: |
-          mkdir -p debug
-          echo "=== runner info ===" > debug/run.log
-          uname -a >> debug/run.log
-          echo "=== date ===" >> debug/run.log
-          date >> debug/run.log
-          echo "=== pwd ===" >> debug/run.log
-          pwd >> debug/run.log
-          echo "=== ls ===" >> debug/run.log
-          ls -la >> debug/run.log 2>&1
-          echo "=== which node ===" >> debug/run.log
-          which node >> debug/run.log 2>&1
-          echo "=== node version ===" >> debug/run.log
-          node --version >> debug/run.log 2>&1
-          echo "=== npm version ===" >> debug/run.log
-          npm --version >> debug/run.log 2>&1
-
       - uses: actions/checkout@v4
 
-      - name: Debug - after checkout
+      - name: Install Node.js via NodeSource
         run: |
-          echo "=== after checkout ===" >> debug/run.log
-          date >> debug/run.log
-          ls -la >> debug/run.log 2>&1
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Debug - after setup-node
-        run: |
-          echo "=== after setup-node ===" >> debug/run.log
-          date >> debug/run.log
-          node --version >> debug/run.log 2>&1
-          npm --version >> debug/run.log 2>&1
-          echo "=== ls after setup ===" >> debug/run.log
-          ls -la >> debug/run.log 2>&1
+          curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+          sudo apt-get install -y nodejs
+          node --version
+          npm --version
 
       - name: npm ci (root)
-        run: |
-          echo "=== before npm ci ===" >> debug/run.log
-          date >> debug/run.log
-          npm ci 2>> debug/run.log
-          echo "=== after npm ci ===" >> debug/run.log
-          date >> debug/run.log
+        run: npm ci
 
       - name: npm ci (tianshu)
-        run: |
-          echo "=== before tianshu npm ci ===" >> debug/run.log
-          date >> debug/run.log
-          cd tianshu && npm ci 2>> debug/run.log
-          echo "=== after tianshu npm ci ===" >> debug/run.log
-          date >> debug/run.log
+        run: cd tianshu && npm ci
 
       - name: build
-        run: |
-          echo "=== before build ===" >> debug/run.log
-          date >> debug/run.log
-          npm run build 2>> debug/run.log
-          echo "=== after build ===" >> debug/run.log
-          date >> debug/run.log
-          ls -la dist/ >> debug/run.log 2>&1
-
-      - name: Upload debug log as artifact
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: debug-run
-          path: debug/run.log
+        env:
+          BASE_URL: /iff/tianquan/
+          VITE_API_BASE: https://iz2ze93ogksv8bwaz3pk8hz.taildec4f9.ts.net/api
+          VITE_APP_VERSION: v0.14.local
+        run: npm run build
 
       - name: Trigger self-hosted server webhook
         if: success()

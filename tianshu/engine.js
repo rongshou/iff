@@ -457,33 +457,59 @@ function generateCareerPath(studentInfo, cross, majors, gradRecs) {
   const primaryTheme = cross.positionLabel.theme;
   const gradProg = gradRecs.firstPriority[0] ? gradRecs.firstPriority[0].program : "";
 
-  // 第一阶段:学业深耕
-  const stage1 = {
-    name: "学业深耕与技能筑基(本科/硕士阶段)",
-    goal: `夯实${primaryMajor}及相关领域基础能力,完成学业目标,确定研究生方向并冲刺顶尖项目`,
-    actions: [
-      `课程学习:重点学习与${primaryMajor}相关的核心课程,成绩目标年级前 20%`,
-      `项目实践:参与至少 2 个与专业相关的深度项目(开源贡献/科研项目/学科竞赛)`,
-      gradProg ? `研究生方向:聚焦「${gradProg}」方向,选择对应实验室或导师` : "研究生方向:根据专业推荐选择适配方向",
-      "背景提升:参加 CTF/算法竞赛/学术会议,积累行业视野",
-      "语言与文书:提前准备留学申请所需的语言考试和个人陈述"
-    ],
-    abilities: [
-      `建立 ${primaryMajor} 方向的系统知识体系`,
-      `强化${primaryTheme}主题相关的基础能力`,
-      "培养技术写作与文档能力"
-    ],
-    resources: [
-      "寻找 1-2 位领域导师或前辈定期请教",
-      "建立个人知识库(GitHub/博客/笔记系统)"
-    ]
-  };
+  // 计算实际年龄 & 学段判断
+  const currentYear = new Date().getFullYear();
+  const birthYear = (studentInfo && studentInfo.birthYear) || 2000;
+  const actualAge = currentYear - birthYear;
+  const grade = (studentInfo && studentInfo.grade) || "";
+  const isPreUniv = ["初中","高一","高二","高三"].includes(grade);
+  const isUnderGrad = grade === "本科";
+  const isGradOrWorking = ["研究生","已毕业"].includes(grade);
 
-  // 第二阶段:职场起步
-  const stage2 = {
-    name: "技术深耕期(22-28岁)",
-    goal: `进入适配行业,建立核心技术护城河`,
-    jobs: [
+  // 构建学段 label
+  const ageLabel = actualAge ? `(当前 ${actualAge} 岁)` : "";
+
+  // ===== 动态构建阶段 =====
+  const stages = [];
+
+  // 第一阶段:学业阶段(仅初高中/本科展示)
+  if (!isGradOrWorking) {
+    stages.push({
+      name: "学业深耕与技能筑基",
+      goal: `夯实${primaryMajor}及相关领域基础能力,完成学业目标,确定研究生方向并冲刺顶尖项目`,
+      actions: [
+        `课程学习:重点学习与${primaryMajor}相关的核心课程,成绩目标年级前 20%`,
+        `项目实践:参与至少 2 个与专业相关的深度项目(开源贡献/科研项目/学科竞赛)`,
+        gradProg ? `研究生方向:聚焦「${gradProg}」方向,选择对应实验室或导师` : "研究生方向:根据专业推荐选择适配方向",
+        "背景提升:参加 CTF/算法竞赛/学术会议,积累行业视野",
+        "语言与文书:提前准备留学申请所需的语言考试和个人陈述"
+      ],
+      abilities: [
+        `建立 ${primaryMajor} 方向的系统知识体系`,
+        `强化${primaryTheme}主题相关的基础能力`,
+        "培养技术写作与文档能力"
+      ],
+      resources: [
+        "寻找 1-2 位领域导师或前辈定期请教",
+        "建立个人知识库(GitHub/博客/笔记系统)"
+      ]
+    });
+  }
+
+  // 第二阶段:职场深耕
+  const stage2Name = isGradOrWorking
+    ? `职场深耕期 ${ageLabel}`
+    : isUnderGrad ? "职场起步期" : "技术深耕期";
+  stages.push({
+    name: stage2Name,
+    goal: isGradOrWorking
+      ? `在${primaryMajor}领域深化技术护城河,建立不可替代的专业壁垒`
+      : `进入适配行业,建立核心技术护城河`,
+    jobs: isGradOrWorking ? [
+      gradProg ? `${gradProg}方向的中高级研发/专家岗位` : `${primaryMajor}方向的中高级研发/专家岗位`,
+      "优先考虑核心架构或基础设施团队,关注技术深度 > 短期回报",
+      "目标公司:金融科技(对冲基金/交易所)、云计算大厂、安全公司"
+    ] : [
       gradProg ? `${gradProg}方向的初级/中级研发岗位` : `${primaryMajor}方向的初级研发岗位`,
       "优先选择核心业务部门,关注成长性 > 短期薪资",
       "目标公司:金融科技(对冲基金/交易所)、云计算大厂、安全公司"
@@ -493,20 +519,24 @@ function generateCareerPath(studentInfo, cross, majors, gradRecs) {
       "云计算大厂(AWS/Azure/GCP/阿里云国际)",
       "网络安全公司(NCSC/Darktrace/Rapid7)"
     ],
-    growth: [
+    growth: isGradOrWorking ? [
+      "专业能力:成为团队核心骨干或技术专家,可主导重大项目",
+      "技术深度:在细分领域建立不可替代的技术壁垒",
+      "技术影响:通过技术写作、演讲、开源贡献建立行业影响力"
+    ] : [
       "专业能力:成为团队核心骨干,可独立负责中型项目",
       "技术深度:在细分领域建立至少一个专长方向",
       "行业认知:对所处赛道建立系统认知"
     ],
     transitions: [
-      "2-3年:第一次岗位调整(纵向深耕或横向扩展)",
-      "5-6年:进入高级工程师或专家序列"
+      "强化技术领导力,逐步从个人贡献者转型为技术决策者",
+      "在核心技术上建立至少 1-2 项行业认可的标志性成果"
     ]
-  };
+  });
 
-  // 第三阶段:架构决策
-  const stage3 = {
-    name: "架构决策或技术合伙人阶段(29-35岁)",
+  // 第三阶段:架构/专家
+  stages.push({
+    name: `架构决策或技术专家阶段 ${isGradOrWorking ? ageLabel : ""}`,
     goal: "从执行者转型为技术决策者或领域专家",
     paths: [
       {name:"技术架构师", desc:"从资深工程师 → 系统架构师 → 首席工程师", fit:"深度钻研型、追求技术壁垒"},
@@ -521,11 +551,11 @@ function generateCareerPath(studentInfo, cross, majors, gradRecs) {
       "建立行业人脉网络,定期参与顶级技术会议",
       "通过技术写作、演讲建立个人技术品牌"
     ]
-  };
+  });
 
-  // 第四阶段:稳定与突破
-  const stage4 = {
-    name: "技术标准制定或技术管理(36岁后)",
+  // 第四阶段:影响力
+  stages.push({
+    name: "技术影响力阶段",
     goal: "实现职业价值的长期沉淀,从技术执行转向技术影响力",
     directions: [
       {name:"行业技术领袖", desc:"成为细分领域公认的专家,参与行业标准制定"},
@@ -536,7 +566,7 @@ function generateCareerPath(studentInfo, cross, majors, gradRecs) {
       "建立可持续的工作节奏,避免长期高负荷",
       "通过专利、架构规范、技术标准获取持续性收益"
     ]
-  };
+  });
 
   const careerDetails = majors.firstPriority.map(m => ({
     major: m.major,
@@ -546,10 +576,6 @@ function generateCareerPath(studentInfo, cross, majors, gradRecs) {
   }));
 
   // ===== 根据学段生成适配的关键节点 =====
-  const grade = (studentInfo && studentInfo.grade) || "";
-  const isPreUniv = ["初中","高一","高二","高三"].includes(grade);
-  const isUnderGrad = grade === "本科";
-  const isGradOrWorking = ["研究生","已毕业"].includes(grade);
 
   let keyNodes;
   if (isPreUniv) {
@@ -637,7 +663,7 @@ function generateCareerPath(studentInfo, cross, majors, gradRecs) {
   }
 
   return {
-    stages: [stage1, stage2, stage3, stage4],
+    stages,
     careerDetails,
     keyNodes,
     health: [

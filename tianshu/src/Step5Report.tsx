@@ -120,7 +120,41 @@ export default function Step5Report() {
     return (
       <div className="step-card-placeholder">
         <div className="error-state">报告生成失败,请重试</div>
-        <div className="step-actions">
+      {/* 五、年度能量提醒 */}
+      {results.yearlyForecast && results.yearlyForecast.length > 0 && (
+        <section className="report-section">
+          <h2>五、{results.yearlyForecast[0].year} 年能量提醒</h2>
+          <div className="info-block">
+            {results.yearlyForecast.map((f: any, i: number) => (
+              <div key={i} style={{ marginBottom: 12 }}>
+                <strong>{f.year} 年 · {f.ganzhi}</strong>
+                {f.impact && <p style={{ margin: "4px 0", fontSize: 14 }}>{f.impact}</p>}
+                {f.advice && <p style={{ margin: "4px 0", fontSize: 13, color: "#2c5282" }}>📋 {f.advice}</p>}
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* 六、总结建议 */}
+      {results.summary && (
+        <section className="report-section">
+          <h2>六、核心建议与避坑提醒</h2>
+          {results.summary.summary && (
+            <p style={{ fontSize: 14, lineHeight: 1.8, color: "#2d3748", marginBottom: 12 }}>
+              {results.summary.summary}
+            </p>
+          )}
+          <div style={{ marginTop: 12, padding: "12px 16px", background: "#f7fafc", borderLeft: "3px solid #a0aec0", borderRadius: 6, fontSize: 13, color: "#4a5568", lineHeight: 1.8 }}>
+            <strong>⚠️ 重要声明</strong><br />
+            1. 本报告基于东方命理(八字、紫微)+ 西方心理测评(MBTI、霍兰德)交叉生成，命理部分无科学证据支持，仅作为文化参考。<br />
+            2. 测评结果会随时间、经历变化，建议每 2-3 年做一次复盘调整。<br />
+            3. 重大人生决策(高考志愿、长期职业规划)请结合实际能力测试、行业调研、家庭情况综合判断。
+          </div>
+        </section>
+      )}
+
+      <div className="step-actions">
           <button onClick={goPrev} className="btn-secondary">← 上一步</button>
         </div>
       </div>

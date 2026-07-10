@@ -69,7 +69,7 @@ export default function LoginPage() {
               boxShadow: "0 12px 28px -8px rgba(99,102,241,0.45)",
             }}
           >
-            IFF
+            Iff
           </div>
           <h1 className="text-2xl font-bold text-slate-900">AI 留学规划与生涯规划工具</h1>
           <p

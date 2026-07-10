@@ -102,9 +102,8 @@ export default function ChatPage() {
       <div className="max-w-3xl w-full mx-auto flex-1 flex flex-col min-h-0 px-4 sm:px-6 py-0 sm:py-2">
         {/* ── 浮岛导航 ── */}
         <BrandNav
-          brandName="IFF"
-          brandSubtitle="智能留学平台"
-          sceneLabel={scene.label}
+          brandName="Iff"
+          brandSubtitle="天权智能留学平台"
           links={[
             { label: "首页", icon: "home", to: "/", active: true },
             { label: "档案", icon: "user", to: "/profile" },

@@ -103,7 +103,7 @@ export default function ChatPage() {
         {/* ── 浮岛导航 ── */}
         <BrandNav
           brandName="Iff"
-          brandSubtitle="天权智能留学平台"
+          brandSubtitle="天枢综合特质测评与生涯规划"
           links={[
             { label: "首页", icon: "home", to: "/", active: true },
             { label: "档案", icon: "user", to: "/profile" },

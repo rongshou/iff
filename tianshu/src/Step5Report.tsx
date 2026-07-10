@@ -247,27 +247,25 @@ export default function Step5Report() {
           <div className="info-block">
             {typeof results.career === "string" ? (
               <p>{results.career}</p>
+            ) : results.career.stages ? (
+              results.career.stages.map((stage: any, i: number) => (
+                <div key={i} style={{ marginBottom: 16, padding: "12px 0", borderBottom: i < results.career.stages.length - 1 ? "1px solid #e2e8f0" : "none" }}>
+                  <strong style={{ color: "#2c5282" }}>{stage.name}</strong>
+                  <p style={{ margin: "4px 0", fontSize: 14 }}>{stage.goal}</p>
+                  {stage.actions && (
+                    <ul style={{ margin: "4px 0 4px 18px", fontSize: 13 }}>
+                      {stage.actions.map((a: string, j: number) => <li key={j}>{a}</li>)}
+                    </ul>
+                  )}
+                  {stage.jobs && (
+                    <div style={{ fontSize: 13, color: "#4a5568" }}>
+                      <strong>适配岗位:</strong> {stage.jobs.filter((j: any) => typeof j === "string").join("; ")}
+                    </div>
+                  )}
+                </div>
+              ))
             ) : (
-              <>
-                {results.career.shortTerm && (
-                  <div style={{ marginBottom: 12 }}>
-                    <strong>短期(0-3 年):</strong>
-                    <p>{results.career.shortTerm}</p>
-                  </div>
-                )}
-                {results.career.midTerm && (
-                  <div style={{ marginBottom: 12 }}>
-                    <strong>中期(3-7 年):</strong>
-                    <p>{results.career.midTerm}</p>
-                  </div>
-                )}
-                {results.career.longTerm && (
-                  <div style={{ marginBottom: 12 }}>
-                    <strong>长期(7+ 年):</strong>
-                    <p>{results.career.longTerm}</p>
-                  </div>
-                )}
-              </>
+              <p>{JSON.stringify(results.career)}</p>
             )}
           </div>
         </section>
@@ -279,11 +277,13 @@ export default function Step5Report() {
           <h2>四、潜在挑战与建议</h2>
           <div className="info-block">
             {Array.isArray(results.challenges) ? (
-              <ul>
-                {results.challenges.map((c: any, i: number) => (
-                  <li key={i}>{typeof c === "string" ? c : c.description || c.text || JSON.stringify(c)}</li>
-                ))}
-              </ul>
+              results.challenges.map((c: any, i: number) => (
+                <div key={i} style={{ marginBottom: 14, padding: "10px 14px", background: "#fff5f5", borderLeft: "3px solid #c53030", borderRadius: 6 }}>
+                  <strong style={{ color: "#c53030" }}>{c.title || c.description || c.text || c}</strong>
+                  {c.desc && <p style={{ margin: "4px 0", fontSize: 14 }}>{c.desc}</p>}
+                  {c.solution && <p style={{ margin: "4px 0", fontSize: 13, color: "#2c5282" }}><strong>建议:</strong> {c.solution}</p>}
+                </div>
+              ))
             ) : (
               <p>{JSON.stringify(results.challenges)}</p>
             )}

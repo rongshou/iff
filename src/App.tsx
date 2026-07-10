@@ -51,7 +51,7 @@ export default function App() {
           ⚠ 我们只提供工具，生成的内容仅供参考，请自主做出判断、选择和决策。
         </div>
         <div style={{ marginTop: 4, opacity: 0.7 }}>
-          Iff · 天枢综合特质测评与生涯规划 · {VERSION}
+          Iff · 天权智能留学问答平台 · {VERSION}
         </div>
       </footer>
     </>

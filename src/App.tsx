@@ -33,6 +33,9 @@ export default function App() {
             <Route path="/chat" element={<ChatPage />} />
             <Route path="/profile" element={<ProfilePage />} />
           </Route>
+
+          {/* 兜底：未匹配的 hash 路由 → 跳首页（由 AuthGuard 处理登录态） */}
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </HashRouter>
       <footer

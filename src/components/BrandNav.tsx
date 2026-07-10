@@ -9,6 +9,7 @@
  */
 
 import type { CSSProperties } from "react";
+import { Link } from "react-router-dom";
 
 // ── 轻量 SVG 图标（替代 emoji）──
 
@@ -170,22 +171,43 @@ export default function BrandNav({
             isAccent && "nav-pill--accent",
           ].filter(Boolean).join(" ");
 
-          const href = link.to || link.href;
-          const Tag = href ? "a" : "button";
-
-          return (
-            <Tag
-              key={i}
-              {...(href ? { href } : { type: "button" as const })}
-              className={pillClass}
-              title={link.title || link.label}
-              {...(isActive ? { "aria-current": "page" as const } : {})}
-            >
+          const pillTitle = link.title || link.label;
+          const pillContent = (
+            <>
               {IconComp && (
                 <span className="nav-pill-icon"><IconComp /></span>
               )}
               <span className="nav-pill-label">{link.label}</span>
-            </Tag>
+            </>
+          );
+          const extraProps = {
+            key: i,
+            className: pillClass,
+            title: pillTitle,
+            ...(isActive ? { "aria-current": "page" as const } : {}),
+          };
+
+          // react-router Link
+          if (link.to) {
+            return (
+              <Link {...extraProps} to={link.to}>
+                {pillContent}
+              </Link>
+            );
+          }
+          // external link
+          if (link.href) {
+            return (
+              <a {...extraProps} href={link.href}>
+                {pillContent}
+              </a>
+            );
+          }
+          // fallback button
+          return (
+            <button {...extraProps} type="button">
+              {pillContent}
+            </button>
           );
         })}
 

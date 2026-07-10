@@ -388,13 +388,20 @@ export default function ProfilePage() {
 
                 {/* 星座 */}
                 {tianshu.sunSign && (
-                  <div className="border border-purple-100 rounded-xl p-4 bg-purple-50/30">
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="text-lg">📅</span>
-                      <span className="font-semibold text-slate-800">星座</span>
-                      <span className="text-sm font-bold text-purple-600 ml-auto">{tianshu.sunSign}</span>
-                    </div>
-                  </div>
+                  (() => {
+                    const ss = typeof tianshu.sunSign === "string"
+                      ? tianshu.sunSign
+                      : tianshu.sunSign.nameCN || tianshu.sunSign.name || "";
+                    return (
+                      <div className="border border-purple-100 rounded-xl p-4 bg-purple-50/30">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="text-lg">📅</span>
+                          <span className="font-semibold text-slate-800">星座</span>
+                          <span className="text-sm font-bold text-purple-600 ml-auto">{ss}</span>
+                        </div>
+                      </div>
+                    );
+                  })()
                 )}
               </div>
 

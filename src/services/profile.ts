@@ -71,7 +71,7 @@ export interface TianshuData {
     dimensions: Record<string, { name: string; fit: string }>;
     sorted: [string, number][];
   };
-  sunSign?: string;
+  sunSign?: string | { name?: string; nameCN?: string };
   summary?: {
     tags: string[];
     summary: string;

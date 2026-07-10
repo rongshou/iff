@@ -106,8 +106,8 @@ export default function ChatPage() {
           brandSubtitle="智能留学平台"
           sceneLabel={scene.label}
           links={[
-            { label: "首页", icon: "home", href: "./", active: true },
-            { label: "档案", icon: "user", href: "./#/profile" },
+            { label: "首页", icon: "home", to: "/", active: true },
+            { label: "档案", icon: "user", to: "/profile" },
             { label: "天枢", icon: "compass", href: "../tianshu/", variant: "accent" },
           ]}
           actions={

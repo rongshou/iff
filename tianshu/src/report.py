@@ -403,8 +403,6 @@ def generate_html_report(student_info: dict, all_results: dict, output_path: str
             html += f'<p><strong>匹配逻辑:</strong>{m["匹配逻辑"]}</p>'
         if "核心课程" in m:
             html += f'<p><strong>核心课程:</strong>{" · ".join(m["核心课程"])}</p>'
-        if "院校梯队" in m:
-            html += f'<p><strong>院校梯队:</strong>{" / ".join(m["院校梯队"][:6])}</p>'
         html += '</div>'
         return html
 

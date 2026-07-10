@@ -425,7 +425,6 @@ function renderFullReport(s, r) {
           <div class="major-meta">细分方向:${m.subs.join(" · ")}</div>
           <div><strong>匹配逻辑:</strong>${m.logic}</div>
           <div><strong>核心课程:</strong>${m.courses.join(" · ")}</div>
-          <div><strong>院校梯队:</strong>${m.schools.slice(0, 6).join(" / ")}</div>
         </div>
       `).join("")}
 
@@ -436,7 +435,6 @@ function renderFullReport(s, r) {
             <div class="major-title">${m.major} <span class="tag">匹配分 ${m.score}</span></div>
             <div class="major-meta">细分方向:${m.subs.join(" · ")}</div>
             <div><strong>匹配逻辑:</strong>${m.logic}</div>
-            <div><strong>院校梯队:</strong>${m.schools.slice(0, 6).join(" / ")}</div>
           </div>
         `).join("")}
       ` : ""}

@@ -222,8 +222,8 @@ export default function Step5Report() {
           <div className="info-block">
             <strong>推荐专业方向:</strong>
             <ul>
-              {results.majors.slice(0, 6).map((m: any, i: number) => (
-                <li key={i}>{typeof m === "string" ? m : m.name || JSON.stringify(m)}</li>
+              {results.majors.firstPriority.slice(0, 6).map((m: any, i: number) => (
+                <li key={i}>{m.major || m.name || m}</li>
               ))}
             </ul>
           </div>
@@ -232,8 +232,8 @@ export default function Step5Report() {
           <div className="info-block">
             <strong>研究生细分赛道:</strong>
             <ul>
-              {results.gradRecs.slice(0, 5).map((g: any, i: number) => (
-                <li key={i}>{typeof g === "string" ? g : g.name || JSON.stringify(g)}</li>
+              {results.gradRecs.firstPriority.slice(0, 5).map((g: any, i: number) => (
+                <li key={i}>{g.program || g.name || g}</li>
               ))}
             </ul>
           </div>

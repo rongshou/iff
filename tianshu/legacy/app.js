@@ -766,7 +766,6 @@ function renderFullReport(s, r) {
           <div class="major-meta">细分方向:${m.subs.join(" · ")}</div>
           <div><strong>匹配逻辑:</strong>${m.logic}</div>
           <div><strong>核心课程:</strong>${m.courses.join(" · ")}</div>
-          <div><strong>院校梯队:</strong>${m.schools.slice(0, 6).join(" / ")}</div>
         </div>
       `).join("")}
 
@@ -777,7 +776,6 @@ function renderFullReport(s, r) {
             <div class="major-title">${m.major} <span class="tag">匹配分 ${m.score}</span></div>
             <div class="major-meta">细分方向:${m.subs.join(" · ")}</div>
             <div><strong>匹配逻辑:</strong>${m.logic}</div>
-            <div><strong>院校梯队:</strong>${m.schools.slice(0, 6).join(" / ")}</div>
           </div>
         `).join("")}
       ` : ""}
@@ -805,7 +803,6 @@ function renderFullReport(s, r) {
           <div><strong>匹配逻辑:</strong>${g.reasons.join("; ")}</div>
           <div><strong>核心技能:</strong>${g.skills.join(" · ")}</div>
           <div><strong>职业出口:</strong>${g.careers.join("、")}</div>
-          <div><strong>推荐院校:</strong>${(g.schools || []).slice(0, 5).join(" / ")}</div>
         </div>
       `).join("")}
 

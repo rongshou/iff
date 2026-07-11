@@ -171,7 +171,7 @@ def _classify_chance_major_aware(
 
 # ── 三维评分模型 ──
 # 总分 = GPA匹配分(40) + 学校排名分(30) + 案例证据分(20)
-# ≥80 = 安全 | 60-79 = 匹配 | <60 = 冲刺
+# ≥75 = 安全 | 55-74 = 匹配 | <55 = 冲刺
 
 QS_RANK_BANDS = [
     (20, 18),   # QS 1-20: 顶级校, 低基础分 → 偏冲刺
@@ -241,10 +241,10 @@ def _score_school_3d(
 
     total = gpa_score + rank_score + evidence_score
 
-    # 档位阈值（上调，避免冲刺档消失）
-    if total >= 80:
+    # 档位阈值（证件分降低后保持原阈值，冲刺档自然出现）
+    if total >= 75:
         tier = "安全"
-    elif total >= 60:
+    elif total >= 55:
         tier = "匹配"
     else:
         tier = "冲刺"
@@ -259,7 +259,7 @@ def _calculate_gpa_gap(
     rank_score: float,
     evidence_score: float,
 ) -> Optional[float]:
-    """冲刺校: 计算 GPA 需提升多少百分点才能进入匹配档(总分≥60)."""
+    """冲刺校: 计算 GPA 需提升多少百分点才能进入匹配档(总分≥55)."""
     if not school_percentiles:
         return None
     p25 = school_percentiles.get("p25")
@@ -268,7 +268,7 @@ def _calculate_gpa_gap(
     if not all([p25, p50, p75]) or p75 <= p25:
         return None
 
-    matching_target = 60.0
+    matching_target = 55.0
     gpa_needed = max(0.0, matching_target - rank_score - evidence_score)
 
     if gpa_needed <= 8.0:

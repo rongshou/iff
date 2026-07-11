@@ -171,7 +171,7 @@ def _classify_chance_major_aware(
 
 # ── 三维评分模型 ──
 # 总分 = GPA匹配分(40) + 学校排名分(30) + 案例证据分(20)
-# ≥75 = 安全 | 55-74 = 匹配 | <55 = 冲刺
+# ≥75 = 安全 | ≥55 = 匹配 | <55 = 冲刺
 
 QS_RANK_BANDS = [
     (20, 18),   # QS 1-20: 顶级校, 低基础分 → 偏冲刺
@@ -181,11 +181,31 @@ QS_RANK_BANDS = [
 ]
 
 
+def _estimate_gpa_score(gpa_percent: float, school_median_gpa: Optional[float]) -> float:
+    """无百分位数据时用学校中位数估算 GPA 匹配分。
+    用户 GPA 超过中位数越多 → 分越高；无中位数时保守给 20。"""
+    if school_median_gpa is None or school_median_gpa <= 0:
+        return 20.0
+    ratio = gpa_percent / school_median_gpa
+    if ratio >= 1.04:
+        return 38.0  # 明显超过中位数
+    if ratio >= 1.02:
+        return 34.0
+    if ratio >= 1.00:
+        return 26.0  # 等于或略高于中位数
+    if ratio >= 0.92:
+        return 16.0
+    if ratio >= 0.85:
+        return 8.0
+    return 4.0
+
+
 def _score_school_3d(
     school_percentiles: Optional[dict],
     qs_rank: Optional[int],
     case_count: int,
     gpa_percent: float,
+    school_median_gpa: Optional[float] = None,
 ) -> tuple[float, float, float, float, str]:
     """三维评分: 返回 (gpa_score, rank_score, evidence_score, total, tier)."""
     # ── 维度一: GPA 匹配分 (0-40) ──
@@ -213,9 +233,10 @@ def _score_school_3d(
             else:
                 gpa_score = 4.0
         else:
-            gpa_score = 20.0
+            gpa_score = _estimate_gpa_score(gpa_percent, school_median_gpa)
     else:
-        gpa_score = 20.0  # 无百分位数据, 中性分
+        # 无百分位数据，用学校中位数做退路估算
+        gpa_score = _estimate_gpa_score(gpa_percent, school_median_gpa)
 
     # ── 维度二: 学校排名分 (0-30) ──
     # 排名越靠前(数字越小) → 基础分越低 → 天然偏冲刺
@@ -229,19 +250,18 @@ def _score_school_3d(
         rank_score = 30.0  # 无 QS → 最高基础分(低门槛)
 
     # ── 维度三: 案例证据分 (0-20) ──
-    # 案例多 → 置信度高 → 更高分（方向不变，上限收紧）
     if case_count >= 16:
         evidence_score = 20.0
     elif case_count >= 6:
-        evidence_score = 13.0
+        evidence_score = 15.0
     elif case_count >= 1:
-        evidence_score = 7.0
+        evidence_score = 12.0
     else:
         evidence_score = 0.0
 
     total = gpa_score + rank_score + evidence_score
 
-    # 档位阈值（证件分降低后保持原阈值，冲刺档自然出现）
+    # 档位: ≥75=安全, ≥55=匹配, <55=冲刺
     if total >= 75:
         tier = "安全"
     elif total >= 55:

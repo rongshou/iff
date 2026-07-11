@@ -283,9 +283,19 @@ def _build_response(by_country: dict, target_countries: list[str], gpa_percent: 
             p50_ref = school_percentiles.get("p50") if school_percentiles else None
             case_count = len(slot["cases"])
 
+            # 学校 GPA 中位数（从匹配案例估算，用于无百分位数据时的回退）
+            school_median_gpa = None
+            if slot.get("gpas"):
+                sorted_gpas = sorted(slot["gpas"])
+                n = len(sorted_gpas)
+                if n % 2 == 0:
+                    school_median_gpa = (sorted_gpas[n // 2 - 1] + sorted_gpas[n // 2]) / 2
+                else:
+                    school_median_gpa = sorted_gpas[n // 2]
+
             # ── 三维评分 + 分档 ──
             gpa_score, rank_score, evidence_score, total, tier = _score_school_3d(
-                school_percentiles, qs_rank, case_count, gpa_percent,
+                school_percentiles, qs_rank, case_count, gpa_percent, school_median_gpa,
             )
 
             # ── 冲刺校 GPA 提升建议 ──

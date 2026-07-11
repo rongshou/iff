@@ -171,43 +171,28 @@ export default function BrandNav({
             isAccent && "nav-pill--accent",
           ].filter(Boolean).join(" ");
 
-          const pillTitle = link.title || link.label;
-          const pillContent = (
-            <>
+          const href = link.to || link.href;
+          const useRouterLink = !!link.to;
+          const Tag = useRouterLink ? Link : href ? "a" : "button";
+          const linkProps = useRouterLink
+            ? { to: href }
+            : href
+              ? { href }
+              : { type: "button" as const };
+
+          return (
+            <Tag
+              key={i}
+              {...linkProps}
+              className={pillClass}
+              title={link.title || link.label}
+              {...(isActive ? { "aria-current": "page" as const } : {})}
+            >
               {IconComp && (
                 <span className="nav-pill-icon"><IconComp /></span>
               )}
               <span className="nav-pill-label">{link.label}</span>
-            </>
-          );
-          const extraProps = {
-            key: i,
-            className: pillClass,
-            title: pillTitle,
-            ...(isActive ? { "aria-current": "page" as const } : {}),
-          };
-
-          // react-router Link
-          if (link.to) {
-            return (
-              <Link {...extraProps} to={link.to}>
-                {pillContent}
-              </Link>
-            );
-          }
-          // external link
-          if (link.href) {
-            return (
-              <a {...extraProps} href={link.href}>
-                {pillContent}
-              </a>
-            );
-          }
-          // fallback button
-          return (
-            <button {...extraProps} type="button">
-              {pillContent}
-            </button>
+            </Tag>
           );
         })}
 

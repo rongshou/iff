@@ -6,12 +6,23 @@
 def generate_career_path(student_info: dict, cross_result: dict, major_recommend: dict) -> dict:
     """
     输入:学生基础信息 + 交叉验证结果 + 专业推荐
-    输出:4 阶段生涯路径 + 关键节点行动指引
+    输出:4 阶段生涯路径 + 关键节点行动指引(按当前学段过滤)
     """
-    current_grade = student_info.get("学段", "高一")
+    current_grade = student_info.get("当前学段", student_info.get("学段", "高一"))
     primary_major = major_recommend["第一优先级(核心适配)"][0]["专业"] if major_recommend["第一优先级(核心适配)"] else "未确定"
     primary_theme = cross_result["核心定位标签"]["主题"]
     mbti_short = cross_result["核心竞争力组合"][1]  # 性格层
+
+    # ── 判断当前教育阶段 ──
+    _grade_lower = current_grade.lower()
+    if any(k in _grade_lower for k in ("初中", "高一", "高二", "高三", "高中", "中学")):
+        edu_level = "high_school"
+    elif any(k in _grade_lower for k in ("大一", "大二", "大三", "大四", "大五", "大学", "本科", "硕士", "博士", "研", "研究生")):
+        edu_level = "university"
+    elif any(k in _grade_lower for k in ("毕业", "工作", "职场", "已就业")):
+        edu_level = "working"
+    else:
+        edu_level = "university"  # 默认大学，不过滤太多
 
     # 阶段 1:学业深耕期(在校阶段)
     stage1 = {
@@ -121,36 +132,56 @@ def generate_career_path(student_info: dict, cross_result: dict, major_recommend
             "行业头部雇主": _get_top_employers(major_info["专业"]),
         })
 
-    # 关键节点行动指引(简化表)
-    key_nodes = [
+    # 关键节点行动指引 — 按当前学段过滤，只显示尚未经历的节点
+    _all_nodes = [
         {
             "节点": "高考志愿填报",
             "时间": "高三下学期(截止前 1-3 月)",
             "核心行动": "1. 完成测评最终验证 2. 确定专业分级推荐 3. 完成院校梯队筛选 4. 制定志愿填报方案",
             "注意": "优先保障专业适配度,非盲目追求院校排名;预留保底选项",
+            "visible_if": ["high_school"],  # 仅高中阶段显示
         },
         {
             "节点": "考研 / 留学申请",
             "时间": "申请截止前 6-12 个月",
             "核心行动": "1. 确定目标院校与项目 2. 备考/申请分阶段计划 3. 完成科研/实习背景提升 4. 文书与面试准备",
             "注意": "针对目标项目核心录取偏好,重点突出核心特质与适配度",
+            "visible_if": ["high_school", "university"],  # 高中+大学
         },
         {
             "节点": "实习 / 科研项目",
             "时间": "开始前 3-6 个月",
             "核心行动": "1. 确定匹配方向的实习/项目目标 2. 申请与参与的分阶段计划 3. 高质量完成并沉淀成果",
             "注意": "优先选择匹配核心发展方向的项目,非盲目追求大厂/title",
+            "visible_if": ["high_school", "university"],  # 高中+大学
         },
         {
             "节点": "毕业 / 职业选择",
             "时间": "毕业前 6-12 个月",
             "核心行动": "1. 确定职业目标赛道 2. 求职分阶段计划 3. 简历优化 + 面试准备 4. offer 筛选与谈判",
             "注意": "选择与核心特质匹配的岗位,非盲目追求高薪",
+            "visible_if": ["high_school", "university"],
+        },
+        {
+            "节点": "职业转型与提升",
+            "时间": "每 2-3 年做一次复盘",
+            "核心行动": "1. 评估当前岗位与核心特质的匹配度 2. 了解行业新趋势与机会 3. 规划下一阶段技能提升与角色升级路径",
+            "注意": "避免被短期利益驱动频繁跳槽;深耕核心方向,建立不可替代性",
+            "visible_if": ["working"],
         },
     ]
+    key_nodes = [{k: v for k, v in n.items() if k != "visible_if"} for n in _all_nodes if edu_level in n["visible_if"]]
+
+    # ── 构建阶段列表：已工作者跳过"在校阶段" ──
+    all_stages = [stage1, stage2, stage3, stage4]
+    if edu_level == "working":
+        # 已毕业 → 学业深耕期已过，从职场起步期开始
+        stages = all_stages[1:]  # stage2, stage3, stage4
+    else:
+        stages = all_stages
 
     return {
-        "4阶段路径": [stage1, stage2, stage3, stage4],
+        "4阶段路径": stages,
         "核心职业方向细分": career_details,
         "关键节点行动指引": key_nodes,
         "健康与状态管理": [
@@ -202,7 +233,7 @@ def _get_top_employers(major: str) -> list:
 
 
 if __name__ == "__main__":
-    # 集成测试
+    # 集成测试 — 验证不同学段的节点过滤
     from datetime import datetime
     from bazi import get_four_pillars
     from ziwei import get_ziwei_summary
@@ -212,7 +243,6 @@ if __name__ == "__main__":
     from majors import recommend_majors
 
     dt = datetime(2010, 5, 15, 14, 30)
-    student_info = {"姓名": "林小满", "学段": "高一", "出生": dt}
     bazi = get_four_pillars(dt)
     ziwei = get_ziwei_summary(dt)
     mbti = get_mbti_info("INTJ-A")
@@ -220,16 +250,16 @@ if __name__ == "__main__":
     cross = cross_validate(bazi, ziwei, mbti, holland)
     majors = recommend_majors(cross, bazi, mbti, holland)
 
-    result = generate_career_path(student_info, cross, majors)
-    print("=== 4阶段路径 ===")
-    for stage in result["4阶段路径"]:
-        print(f"\n【{stage['阶段']}】")
-        print(f"  核心目标: {stage['核心目标']}")
-        print(f"  关键行动项:")
-        for item in stage["关键行动项"]:
-            print(f"    - {item}")
-
-    print("\n=== 关键节点 ===")
-    for node in result["关键节点行动指引"]:
-        print(f"\n[{node['节点']}]{node['时间']}")
-        print(f"  行动: {node['核心行动']}")
+    for grade, label in [
+        ("高一", "高中"),
+        ("大二", "本科"),
+        ("已毕业·3年工作经验", "职场"),
+    ]:
+        student_info = {"姓名": "林小满", "当前学段": grade, "出生": dt}
+        result = generate_career_path(student_info, cross, majors)
+        nodes = [n["节点"] for n in result["关键节点行动指引"]]
+        stages = [s["阶段"] for s in result["4阶段路径"]]
+        print(f"\n{'='*50}")
+        print(f"  学段: {label}({grade})")
+        print(f"  阶段数: {len(stages)} → {[s[:10]+'...' for s in stages]}")
+        print(f"  关键节点({len(nodes)}): {nodes}")

@@ -1,17 +1,15 @@
 """知识库管理 API —— 排除文章、统计、重建索引、批量操作。"""
 import time
-import sqlite3
 import logging
 from datetime import datetime
 
 logger = logging.getLogger(__name__)
-from fastapi import APIRouter, Query, Body
+from fastapi import APIRouter, HTTPException, Query
 from typing import Optional
 from pydantic import BaseModel
 
 from ..core.config import settings
-from ..core.database import get_db
-from ..repositories import ArticleRepository
+from ..repositories import ArticleRepository, WerssRepository
 
 router = APIRouter(prefix="/api/knowledge", tags=["知识库管理"])
 
@@ -101,7 +99,7 @@ def add_excluded(req: ExcludeRequest):
         )
         return {"ok": True, "article_id": req.article_id, "reason": req.reason}
     except Exception as e:
-        return {"ok": False, "error": str(e)}
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.delete("/excluded/{article_id}")
@@ -115,7 +113,7 @@ def remove_excluded(article_id: str):
         )
         return {"ok": True, "article_id": article_id}
     except Exception as e:
-        return {"ok": False, "error": str(e)}
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # ---------------------------------------------------------------------------
@@ -133,8 +131,7 @@ def bulk_exclude(req: BulkExcludeRequest):
     excluded_count = 0
 
     # 从 werss.db 查找匹配的文章
-    werss_conn = sqlite3.connect(settings.WERS_DB_PATH)
-    werss_conn.row_factory = sqlite3.Row
+    werss_repo = WerssRepository(settings.WERS_DB_PATH)
 
     try:
         conditions = []
@@ -152,12 +149,12 @@ def bulk_exclude(req: BulkExcludeRequest):
             params.append(cutoff)
 
         if not conditions:
-            return {"ok": False, "error": "至少提供一个过滤条件"}
+            raise HTTPException(status_code=400, detail="至少提供一个过滤条件")
 
         where = " AND ".join(conditions)
-        rows = werss_conn.execute(
-            f"SELECT id, title FROM articles WHERE {where}", params
-        ).fetchall()
+        rows = werss_repo.fetch_all(
+            f"SELECT id, title FROM articles WHERE {where}", tuple(params)
+        )
 
         for row in rows:
             article_id = str(row["id"])
@@ -181,8 +178,9 @@ def bulk_exclude(req: BulkExcludeRequest):
             except Exception as e:
                 logger.warning("Insert into excluded_articles failed: %s", e, exc_info=True)
 
-    finally:
-        werss_conn.close()
+    except Exception as e:
+        logger.warning("Bulk exclude query failed: %s", e, exc_info=True)
+        return {"ok": False, "error": str(e)}
 
     return {
         "ok": True,

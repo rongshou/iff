@@ -5,7 +5,6 @@ import logging
 import httpx
 from typing import Any, TYPE_CHECKING
 from ..core.config import settings
-from ..core.database import get_db
 from .news_knowledge import search_articles
 from .essay_knowledge import is_essay_query, build_essay_context
 from .recommend import run as run_recommend

@@ -4,13 +4,8 @@
 在 case_matcher 的 3D 评分基础上，应用国家特定的学校和分类规则。
 """
 
-from typing import Any
-
 from .country_rules import get_rule, get_merged_rule
 from .plugin_runner import run_plugins
-from .rule_engine import get_rule_for_background
-from ..utils.gpa import normalize_gpa
-from ..utils.tier import classify_school_tier
 
 
 def enhance_with_rules(

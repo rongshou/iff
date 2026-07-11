@@ -12,8 +12,6 @@
 import importlib
 import logging
 
-from .country_rules import get_rule
-
 
 logger = logging.getLogger(__name__)
 

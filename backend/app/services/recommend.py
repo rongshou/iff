@@ -1,6 +1,7 @@
 import hashlib
 import json
 import time
+from concurrent.futures import ThreadPoolExecutor
 
 from ..core.database import get_db
 from ..utils.gpa import normalize_gpa
@@ -80,18 +81,24 @@ def run(profile: dict) -> dict:
             undergrad_school=undergrad_school,
         )
 
-        # 应用国家插件增强推荐结果
-        match_result = enhance_with_rules(conn, match_result, profile, background)
+        # 启动 pathway 搜索（使用独立连接，可与规则增强并行）
+        with ThreadPoolExecutor(max_workers=1) as executor:
+            pathway_future = executor.submit(
+                find_pathway_suggestions,
+                conn=conn,
+                study_level=study_level,
+                target_countries=countries,
+                gpa_percent=gpa_percent,
+                school_tier=tier,
+                original_major=original_major,
+                target_major=target_major,
+            )
 
-        pathway = find_pathway_suggestions(
-            conn=conn,
-            study_level=study_level,
-            target_countries=countries,
-            gpa_percent=gpa_percent,
-            school_tier=tier,
-            original_major=profile.get("original_major"),
-            target_major=profile.get("target_major"),
-        )
+            # 应用国家插件增强推荐结果
+            match_result = enhance_with_rules(conn, match_result, profile, background)
+
+        # 收集 pathway 结果
+        pathway = pathway_future.result()
 
     total_cases = sum(c["matched_cases"] for c in match_result["by_country"])
     total_schools = sum(c["matched_schools"] for c in match_result["by_country"])

@@ -48,11 +48,12 @@ export default function ChatPage() {
   );
 
   // 自动滚到底部（仅当用户已经在底部时）
+  // streaming 期间用 "auto" 避免排队数百个 smooth 动画互相冲突
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
     if (atBottomRef.current) {
-      el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+      el.scrollTo({ top: el.scrollHeight, behavior: loading ? "auto" : "smooth" });
     }
   }, [messages, loading]);
 
@@ -206,7 +207,7 @@ export default function ChatPage() {
             className="flex-1 overflow-y-auto thin-scrollbar space-y-4 sm:space-y-5 pr-1 -mr-1 pb-2"
           >
             {messages.map((msg) => (
-              <MessageBubble key={msg.id} msg={msg} />
+              <MessageBubble key={msg.id} msg={msg} loading={loading} />
             ))}
             {error && (
               <div className="flex justify-center">

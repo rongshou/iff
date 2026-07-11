@@ -6,19 +6,25 @@ from typing import Optional
 from ..core.database import get_connection
 
 
-def get_school_percentiles(school_name: str, tier_label: str) -> Optional[dict]:
+def get_school_percentiles(
+    school_name: str, tier_label: str, conn: sqlite3.Connection | None = None
+) -> Optional[dict]:
     """
     获取某学校在某层次下的真实 GPA 百分位
     优先级: school::tier > school > 404
     表不存在时优雅降级，返回 None
+
+    可选传入 conn 复用连接，避免在循环中重复打开/关闭连接。
     """
-    conn = get_connection()
+    own_conn = conn is None
+    if own_conn:
+        conn = get_connection()
     try:
         cur = conn.cursor()
 
-        # 精确匹配 school::tier
+        # 精确匹配 university + tier
         row = cur.execute(
-            "SELECT * FROM school_percentiles WHERE school_name=? AND tier_label=?",
+            "SELECT * FROM school_gpa_percentiles_by_tier WHERE university=? AND tier=?",
             (school_name, tier_label),
         ).fetchone()
         if row:
@@ -26,7 +32,7 @@ def get_school_percentiles(school_name: str, tier_label: str) -> Optional[dict]:
 
         # 回退到 school 不限 tier
         row = cur.execute(
-            "SELECT * FROM school_percentiles WHERE school_name=? AND tier_label=''",
+            "SELECT * FROM school_gpa_percentiles_by_tier WHERE university=? AND tier=''",
             (school_name,),
         ).fetchone()
         if row:
@@ -34,10 +40,10 @@ def get_school_percentiles(school_name: str, tier_label: str) -> Optional[dict]:
 
         return None
     except sqlite3.OperationalError:
-        # 表可能尚未创建（school_percentiles / country_gpa_benchmark）
         return None
     finally:
-        conn.close()
+        if own_conn:
+            conn.close()
 
 
 def classify_admission_chance(

@@ -1,4 +1,5 @@
 import re
+from functools import lru_cache
 
 SCHOOL_TIERS = {
     1: "985/海本",
@@ -50,6 +51,7 @@ SINO_FOREIGN_UNIVERSITIES = {
 }
 
 
+@lru_cache(maxsize=4096)
 def classify_school_tier(undergrad_school: str | None) -> tuple[int, str]:
     if not undergrad_school:
         return 4, "双非"

@@ -62,7 +62,7 @@ def apply(conn, scored, profile, bg, rule, context):
 
             safe_major = major.replace("%", r"\%").replace("_", r"\_") if major else "%"
             lac_total_cases = conn.execute(
-                "SELECT COUNT(*) FROM cases WHERE admitted_university = ? AND major LIKE ? ESCAPE '\\' AND study_level = ?",
+                "SELECT COUNT(*) FROM cases WHERE university = ? AND admitted_major LIKE ? ESCAPE '\\' AND study_level = ?",
                 (lac_name, f"%{safe_major}%" if major else "%", study_level)
             ).fetchone()[0]
 

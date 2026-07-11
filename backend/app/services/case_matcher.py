@@ -5,67 +5,18 @@ from typing import Optional
 from ..utils.gpa import normalize_gpa, GPA_FORMAT_ALIASES
 from ..utils.tier import classify_school_tier, get_tier_label
 from .gpa_requirement import meets_requirement
-from .probability import classify_admission_chance, get_school_percentiles
-
-COUNTRY_RANK_FIELD = {
-    "英国": "qs_rank", "美国": "usnews_rank", "澳大利亚": "qs_rank",
-    "加拿大": "qs_rank", "中国香港": "qs_rank", "新加坡": "qs_rank",
-    "日本": "qs_rank", "韩国": "qs_rank", "中国澳门": "qs_rank",
-    "新西兰": "qs_rank", "爱尔兰": "qs_rank", "德国": "qs_rank",
-    "法国": "qs_rank", "荷兰": "qs_rank", "瑞士": "qs_rank",
-    "瑞典": "qs_rank", "丹麦": "qs_rank", "意大利": "qs_rank",
-    "西班牙": "qs_rank", "马来西亚": "qs_rank",
-}
-
-MAX_SCHOOLS_PER_COUNTRY = 15
-
-# 非大学机构关键词 - 排除语言学校/教育局/中学
-NON_UNIVERSITY_KEYWORDS = [
-    "语言学院", "语言学校", "语言中心", "语言课程",
-    "教育局", "中学", "高中", "国际学校",
-    "培训", "补习", "私塾", "专门学校",
-    "国际学院", "预科", "校区",
-]
-
-MAJOR_KEYWORD_EXPANSION = {
-    "计算机": ["computer", "computing", "software", "软件", "data science", "数据科学",
-               "artificial intelligence", "ai", "machine learning", "机器学习", "cyber",
-               "information technology", "informatics", "信息", "编程",
-               "ds", "ba", "hci", "cse", "ece", "cs", "se", "it"],
-    "金融": ["金融", "finance", "accounting", "会计", "account", "banking", "银行",
-             "investment", "投资", "insurance", "保险", "actuarial", "精算", "经济", "economics", "econ",
-             "fe", "mfe", "quant"],
-    "商科": ["business", "management", "商", "mba", "管理", "行政", "marketing", "市场",
-             "人力资源", "hr", "logistics", "物流", "供应链", "supply chain", "enterprise", "创业",
-             "mis", "information system", "信息系统"],
-    "工程": ["engineer", "工程", "mechanical", "机械", "civil", "土木", "electronic", "电气",
-             "electrical", "aerospace", "航空", "chemical", "化工", "材料", "materials",
-             "建筑", "architecture", "环境", "environmental", "制造",
-             "ee", "me", "ce", "ieor", "or", "运筹"],
-    "教育": ["education", "教育", "teaching", "教学", "tesol", "pedagogy", "师范", "双语"],
-    "传媒": ["media", "传媒", "communication", "传播", "新闻", "journalism", "广告", "advertising",
-             "public relation", "公关", "电影", "film", "design", "设计", "创意",
-             "imc", "digital media", "新传"],
-    "法律": ["law", "法律", "法学", "llm", "jd", "political", "政治", "国际关系",
-             "public policy", "公共政策", "社会学", "sociology", "social work",
-             "mpp", "mpa"],
-    "医学": ["medicine", "医学", "临床", "clinical", "护理", "nursing", "pharmacy", "药学",
-             "public health", "公共卫生", "nutrition", "营养", "生物", "biology",
-             "mph", "biostat", "生物统计"],
-    "数学": ["mathematics", "数学", "math", "统计", "statistics", "actuarial", "精算", "运筹",
-             "applied math", "应数"],
-    "艺术": ["art", "艺术", "music", "音乐", "fine art", "visual", "表演", "fashion", "时尚",
-             "交互设计", "interaction design", "ux", "平面设计", "graphic design"],
-}
-
+from .probability import get_school_percentiles
 
 from ..repositories import CaseRepository
 from ..core.config import settings
 from .case_utils import (
+    COUNTRY_RANK_FIELD,
+    NON_UNIVERSITY_KEYWORDS,
     _expand_major_keywords,
     _target_major_to_category,
     _normalize_tier_key,
     _get_major_percentiles,
+    _get_major_percentiles_batch,
     _classify_chance_major_aware,
     _score_school_3d,
     _calculate_gpa_gap,
@@ -309,19 +260,25 @@ def _build_response(by_country: dict, target_countries: list[str], gpa_percent: 
         # 预查专业级 GPA 百分位（同 target_major 只查一次 taxonomy）
         major_category = _target_major_to_category(target_major)
 
+        # 批量查询所有学校的专业级百分位（消除 N+1）
+        major_percentiles_batch: dict[str, dict] = {}
+        if major_category:
+            tier_key = _normalize_tier_key(tier_label)
+            all_uni_names = list(schools.keys())
+            major_percentiles_batch = _get_major_percentiles_batch(
+                conn, all_uni_names, major_category, tier_key
+            )
+
         school_list = []
         for uni_name, slot in schools.items():
             qs_rank = slot.get(rank_field)
             if qs_rank is None or qs_rank == 0:
                 qs_rank = 9999
 
-            # GPA 百分位: 优先专业级 → 学校级回退
-            school_percentiles = None
-            if major_category:
-                tier_key = _normalize_tier_key(tier_label)
-                school_percentiles = _get_major_percentiles(conn, uni_name, major_category, tier_key)
+            # GPA 百分位: 优先专业级（批量查得）→ 学校级回退
+            school_percentiles = major_percentiles_batch.get(uni_name)
             if not school_percentiles:
-                school_percentiles = get_school_percentiles(uni_name, tier_label)
+                school_percentiles = get_school_percentiles(uni_name, tier_label, conn=conn)
 
             p50_ref = school_percentiles.get("p50") if school_percentiles else None
             case_count = len(slot["cases"])

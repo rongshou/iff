@@ -3,7 +3,6 @@ import sqlite3
 from collections import defaultdict
 from typing import Optional
 
-from ..core.database import get_connection
 from ..repositories import PathwayRepository
 from ..core.config import settings
 
@@ -117,11 +116,17 @@ def find_pathway_suggestions(
     reason_text = "；".join(reasons)
     suggestions = []
 
+    # 批量查询所有 pathway 大学（消除 N+1）
+    uni_names = list(pathway_map.keys())
+    repo = _get_pathway_repo()
+    uni_batch = repo.find_universities_batch(uni_names) if uni_names else {}
+    valid_countries = {"UK", "IE", "AU", "US", "SG", "MY"}
+
     for uni_name, programs in pathway_map.items():
-        uni = _get_pathway_repo().find_university(uni_name)
+        uni = uni_batch.get(uni_name)
         if not uni:
             continue
-        if uni["country"] not in ["UK", "IE", "AU", "US", "SG", "MY"]:
+        if uni.get("country") not in valid_countries:
             continue
 
         rank = uni.get("qs_rank") or 9999

@@ -251,6 +251,7 @@ def _load_excluded_ids() -> set[str]:
 # ============================================================
 
 _SEARCH_CACHE: dict[str, tuple[float, list[dict[str, Any]]]] = {}
+_SEARCH_CACHE_MAX = 128  # prevent unbounded memory growth
 
 
 def search_articles(query: str, limit: int = 8) -> list[dict[str, Any]]:
@@ -306,6 +307,10 @@ def search_articles(query: str, limit: int = 8) -> list[dict[str, Any]]:
                     break
                 results.append(h)
 
+        # LRU eviction before inserting new cache entry
+        if len(_SEARCH_CACHE) >= _SEARCH_CACHE_MAX:
+            oldest_key = min(_SEARCH_CACHE.keys(), key=lambda k: _SEARCH_CACHE[k][0])
+            del _SEARCH_CACHE[oldest_key]
         _SEARCH_CACHE[cache_key] = (now, results)
         return results
 

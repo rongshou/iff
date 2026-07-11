@@ -5,7 +5,7 @@ from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
     APP_NAME: str = "天权留学选校推荐引擎"
-    APP_VERSION: str = "2.0.0"
+    APP_VERSION: str = "0.15"
 
     DB_PATH: str = str(Path(__file__).parent.parent.parent / "data" / "advisor.db")
     DATA_DIR: str = str(Path(__file__).parent.parent.parent / "data")

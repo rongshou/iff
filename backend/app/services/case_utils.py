@@ -1,11 +1,6 @@
 import sqlite3
-from collections import defaultdict
 from typing import Optional
 
-from ..utils.gpa import normalize_gpa, GPA_FORMAT_ALIASES
-from ..utils.tier import classify_school_tier, get_tier_label
-from .gpa_requirement import meets_requirement
-from .probability import classify_admission_chance, get_school_percentiles
 from ..utils.tier import classify_school_tier, get_tier_label
 from .gpa_requirement import meets_requirement
 from .probability import classify_admission_chance, get_school_percentiles
@@ -116,6 +111,13 @@ def _get_major_percentiles(
     if not row:
         return None
     return {"n": row["n"], "p10": row["p10"], "p25": row["p25"], "p50": row["p50"], "p75": row["p75"]}
+
+
+def _get_major_percentiles_batch(
+    conn: sqlite3.Connection, universities: list[str], major_category: str, tier_key: str,
+) -> dict[str, dict]:
+    """批量获取多所院校的专业级 GPA 百分位（消除 N+1）。"""
+    return _get_repo().get_major_percentiles_batch(universities, major_category, tier_key)
 
 
 # 专业 GPA 敏感度: 理工科 GPA 决定性强=1.0, 文商科 GPA 非决定性<1.0

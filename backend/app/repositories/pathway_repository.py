@@ -1,5 +1,4 @@
 """通路学校数据库操作。"""
-import sqlite3
 from typing import Optional
 from ..core.repository import Repository
 
@@ -27,3 +26,15 @@ class PathwayRepository(Repository):
             (name,),
         )
         return dict(row) if row else None
+
+    def find_universities_batch(self, names: list[str]) -> dict[str, dict]:
+        """批量按名称查找院校（消除 N+1）。"""
+        if not names:
+            return {}
+        ph = ",".join("?" for _ in names)
+        rows = self.fetch_all(
+            f"SELECT id, name, country, qs_rank, usnews_rank FROM universities WHERE name IN ({ph})",
+            tuple(names),
+        )
+        return {r["name"]: dict(r) for r in rows}
+

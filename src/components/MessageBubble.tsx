@@ -58,9 +58,17 @@ function TypingDots() {
 
 /* ---------- 消息气泡（React.memo 避免无关消息重渲染） ---------- */
 
-const MessageBubble = memo(function MessageBubble({ msg }: { msg: ChatMessage }) {
+const MessageBubble = memo(function MessageBubble({ msg, loading }: { msg: ChatMessage; loading?: boolean }) {
   const isUser = msg.role === "user";
-  const renderedContent = useMemo(() => msg.content ? renderMarkdown(msg.content) : null, [msg.content]);
+  const isStreaming = !!loading && !isUser && !!msg.content;
+  // Skip expensive markdown rendering while streaming — render raw text via CSS instead.
+  // renderMarkdown is O(n) and was being called on EVERY token (500-2000x per response),
+  // saturating the main thread and freezing the page.
+  const renderedContent = useMemo(() => {
+    if (!msg.content) return null;
+    if (isStreaming) return null; // will render raw text below
+    return renderMarkdown(msg.content);
+  }, [msg.content, isStreaming]);
 
   return (
     <div className={`flex gap-2 sm:gap-3 ${isUser ? "flex-row-reverse" : "flex-row"}`}>
@@ -82,7 +90,11 @@ const MessageBubble = memo(function MessageBubble({ msg }: { msg: ChatMessage })
           {isUser ? (
             <div className="whitespace-pre-wrap break-words">{msg.content}</div>
           ) : msg.content ? (
-            <div className="break-words">{renderedContent}</div>
+            isStreaming ? (
+              <div className="whitespace-pre-wrap break-words">{msg.content}</div>
+            ) : (
+              <div className="break-words">{renderedContent}</div>
+            )
           ) : msg.reasoning ? (
             <div className="flex items-center gap-2 text-slate-400 text-[13px]">
               <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none">
@@ -108,6 +120,6 @@ const MessageBubble = memo(function MessageBubble({ msg }: { msg: ChatMessage })
       </div>
     </div>
   );
-}, (prev, next) => prev.msg.id === next.msg.id && prev.msg.content === next.msg.content && prev.msg.reasoning === next.msg.reasoning);
+}, (prev, next) => prev.msg.id === next.msg.id && prev.msg.content === next.msg.content && prev.msg.reasoning === next.msg.reasoning && prev.loading === next.loading);
 
 export default MessageBubble;

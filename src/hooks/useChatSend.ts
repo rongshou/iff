@@ -85,28 +85,70 @@ export function useChatSend(
 
       let accumulated = "";
       let reasoningText = "";
+      // rAF batching: cap React state updates at ~60fps during streaming
+      // instead of firing setScenes on EVERY token (which freezes the page)
+      let rAFContent = 0;
+      let rAFReasoning = 0;
+
+      const flushContent = () => {
+        if (rAFContent) { cancelAnimationFrame(rAFContent); rAFContent = 0; }
+        const current = accumulated;
+        setScenes((prev: SceneState) => ({
+          ...prev,
+          [activeScene]: prev[activeScene].map((m: ChatMessage) =>
+            m.id === assistantId ? { ...m, content: current } : m
+          ),
+        }));
+      };
+
+      const flushReasoning = () => {
+        if (rAFReasoning) { cancelAnimationFrame(rAFReasoning); rAFReasoning = 0; }
+        const current = reasoningText;
+        setScenes((prev: SceneState) => ({
+          ...prev,
+          [activeScene]: prev[activeScene].map((m: ChatMessage) =>
+            m.id === assistantId ? { ...m, reasoning: current } : m
+          ),
+        }));
+      };
+
       await streamChat(
         apiMessages,
         (chunk: string) => {
           accumulated += chunk;
-          const current = accumulated;
-          setScenes((prev: SceneState) => ({
-            ...prev,
-            [activeScene]: prev[activeScene].map((m: ChatMessage) =>
-              m.id === assistantId ? { ...m, content: current } : m
-            ),
-          }));
+          if (!rAFContent) {
+            rAFContent = requestAnimationFrame(() => {
+              rAFContent = 0;
+              const current = accumulated;
+              setScenes((prev: SceneState) => ({
+                ...prev,
+                [activeScene]: prev[activeScene].map((m: ChatMessage) =>
+                  m.id === assistantId ? { ...m, content: current } : m
+                ),
+              }));
+            });
+          }
         },
-        () => {},
+        () => {
+          // flush any pending batched state on stream completion
+          flushContent();
+          flushReasoning();
+        },
         controller.signal,
         (reasoning: string) => {
           reasoningText += reasoning;
-          setScenes((prev: SceneState) => ({
-            ...prev,
-            [activeScene]: prev[activeScene].map((m: ChatMessage) =>
-              m.id === assistantId ? { ...m, reasoning: reasoningText } : m
-            ),
-          }));
+          if (!rAFReasoning) {
+            rAFReasoning = requestAnimationFrame(() => {
+              rAFReasoning = 0;
+              const current = reasoningText;
+              setScenes((prev: SceneState) => ({
+                ...prev,
+                [activeScene]: prev[activeScene].map((m: ChatMessage) =>
+                  m.id === assistantId ? { ...m, reasoning: current } : m
+                ),
+              }));
+            });
+          }
         }
       );
     } catch (e: any) {

@@ -47,7 +47,7 @@ JSON："""
             )
 
             # 429 限流 / 5xx 服务端错误 → 等待后重试
-            if resp.status_code == 429 or resp.status_code >= 500:
+            if resp.status_code == 429 or resp.status_code >= 400:
                 delay = RETRY_BASE_DELAY * (2 ** attempt)
                 print(f"  API error {resp.status_code}, retrying in {delay:.0f}s...")
                 time.sleep(delay)

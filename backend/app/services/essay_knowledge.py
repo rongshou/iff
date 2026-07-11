@@ -2,7 +2,6 @@
 文书知识库：从 advisor.db 读取文书知识，供 Chat 上下文注入。
 """
 
-import re
 from typing import Any
 from ..core.database import get_db
 

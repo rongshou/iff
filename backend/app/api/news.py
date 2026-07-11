@@ -2,7 +2,6 @@
 
 通过 WerssRepository 访问 werss 数据库，分类逻辑保留在 API 层。
 """
-from pathlib import Path
 from datetime import datetime
 from fastapi import APIRouter, Query
 from typing import Optional

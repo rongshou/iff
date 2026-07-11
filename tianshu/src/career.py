@@ -17,12 +17,14 @@ def generate_career_path(student_info: dict, cross_result: dict, major_recommend
     _grade_lower = current_grade.lower()
     if any(k in _grade_lower for k in ("初中", "高一", "高二", "高三", "高中", "中学")):
         edu_level = "high_school"
-    elif any(k in _grade_lower for k in ("大一", "大二", "大三", "大四", "大五", "大学", "本科", "硕士", "博士", "研", "研究生")):
+    elif any(k in _grade_lower for k in ("研", "硕士", "博士", "研究生")):
+        edu_level = "graduate"
+    elif any(k in _grade_lower for k in ("大一", "大二", "大三", "大四", "大五", "大学", "本科")):
         edu_level = "university"
     elif any(k in _grade_lower for k in ("毕业", "工作", "职场", "已就业")):
         edu_level = "working"
     else:
-        edu_level = "university"  # 默认大学，不过滤太多
+        edu_level = "university"  # 默认大学
 
     # 阶段 1:学业深耕期(在校阶段)
     stage1 = {
@@ -139,28 +141,35 @@ def generate_career_path(student_info: dict, cross_result: dict, major_recommend
             "时间": "高三下学期(截止前 1-3 月)",
             "核心行动": "1. 完成测评最终验证 2. 确定专业分级推荐 3. 完成院校梯队筛选 4. 制定志愿填报方案",
             "注意": "优先保障专业适配度,非盲目追求院校排名;预留保底选项",
-            "visible_if": ["high_school"],  # 仅高中阶段显示
+            "visible_if": ["high_school"],
         },
         {
             "节点": "考研 / 留学申请",
             "时间": "申请截止前 6-12 个月",
             "核心行动": "1. 确定目标院校与项目 2. 备考/申请分阶段计划 3. 完成科研/实习背景提升 4. 文书与面试准备",
             "注意": "针对目标项目核心录取偏好,重点突出核心特质与适配度",
-            "visible_if": ["high_school", "university"],  # 高中+大学
+            "visible_if": ["high_school", "university"],
+        },
+        {
+            "节点": "留学 / 学术深造",
+            "时间": "申请截止前 6-12 个月",
+            "核心行动": "1. 确定目标院校与导师 2. 准备研究计划/论文发表 3. 强化科研与学术背景 4. 联系推荐人与套磁",
+            "注意": "博士申请核心看研究匹配度与学术成果,提前 1-2 年准备",
+            "visible_if": ["graduate"],
         },
         {
             "节点": "实习 / 科研项目",
             "时间": "开始前 3-6 个月",
             "核心行动": "1. 确定匹配方向的实习/项目目标 2. 申请与参与的分阶段计划 3. 高质量完成并沉淀成果",
             "注意": "优先选择匹配核心发展方向的项目,非盲目追求大厂/title",
-            "visible_if": ["high_school", "university"],  # 高中+大学
+            "visible_if": ["high_school", "university", "graduate"],
         },
         {
             "节点": "毕业 / 职业选择",
             "时间": "毕业前 6-12 个月",
             "核心行动": "1. 确定职业目标赛道 2. 求职分阶段计划 3. 简历优化 + 面试准备 4. offer 筛选与谈判",
             "注意": "选择与核心特质匹配的岗位,非盲目追求高薪",
-            "visible_if": ["high_school", "university"],
+            "visible_if": ["high_school", "university", "graduate"],
         },
         {
             "节点": "职业转型与提升",

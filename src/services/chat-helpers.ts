@@ -147,7 +147,8 @@ export async function extractInfo(text: string): Promise<Record<string, string>>
 
   // --- 目前专业 — 先移除"目标专业xxx"避免误匹配，再匹配多种自然表达 ---
   const textForMajor = text.replace(/目标专业[：:是为]?\s*[^，。,.!！?？\n]{1,30}/g, "");
-  let mMajor = textForMajor.match(/(?:本科|在读|目前)[\s]*(?:读|学|专业)[：:是为]?\s*([^，。,.!！?？\n]{2,30})/);
+  // "学" 排除复合名词："大学"(大在前)、"学校/学院/学生/学期/学费…"(在后)
+  let mMajor = textForMajor.match(/(?:本科|在读|目前)[\s]*(?:读|(?<!大)学(?!校|院|生|期|习|业|费|位|分|历|年|科|者)|专业)[：:是为]?\s*([^，。,.!！?？\n]{2,30})/);
   if (!mMajor) {
     const mTemp = textForMajor.match(/专业[：:是为]?\s*([^，。,.!！?？\n]{2,30})/);
     if (mTemp) {
@@ -157,7 +158,8 @@ export async function extractInfo(text: string): Promise<Record<string, string>>
       }
     }
   }
-  if (!mMajor) mMajor = textForMajor.match(/(?:读|学)\s*([^，。,.!！?？\n]{2,30})/);
+  // "读" 正常匹配动词用法；"学" 排除复合名词（大在前/校院生等在后）
+  if (!mMajor) mMajor = textForMajor.match(/(?:读|(?<!大)学(?!校|院|生|期|习|业|费|位|分|历|年|科|者|长|姐|妹|弟|员|派|说|士|[a-zA-Z]))\s*([^，。,.!！?？\n]{2,30})/);
   if (!mMajor) mMajor = textForMajor.match(/([^，。,.!！?？\s\n]{2,8})专业(?!课|课目|课表|课成绩|课老师)/);
   if (mMajor && !info.major) info.major = mMajor[1].trim();
 

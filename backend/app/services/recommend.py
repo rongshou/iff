@@ -8,7 +8,7 @@ from ..utils.gpa import normalize_gpa
 from ..utils.tier import classify_school_tier
 from .case_matcher import match_schools_by_background
 from .pathway_service import find_pathway_suggestions
-from .school_engine import enhance_with_rules, generate_application_strategy, generate_background_improvement
+from .school_engine import enhance_with_rules, generate_application_strategy, generate_background_improvement, generate_major_recommendations
 
 # ===== 推荐结果缓存（内存，5 分钟 TTL） =====
 _cache: dict[str, tuple[float, dict]] = {}
@@ -97,6 +97,9 @@ def run(profile: dict) -> dict:
             # 应用国家插件增强推荐结果
             match_result = enhance_with_rules(conn, match_result, profile, background)
 
+            # 生成专业推荐（需要 conn 查 school_major_strength）
+            major_recs = generate_major_recommendations(conn, match_result, profile)
+
         # 收集 pathway 结果
         pathway = pathway_future.result()
 
@@ -111,8 +114,9 @@ def run(profile: dict) -> dict:
         },
         "by_country": match_result["by_country"],
         "pathway_suggestions": pathway,
+        "major_recommendations": major_recs,
         "application_strategy": generate_application_strategy(background, match_result),
-        "background_improvement": generate_background_improvement(background, match_result),
+        "background_improvement": "\n".join(generate_background_improvement(background, match_result)),
         "generated_at": "",
     }
     _cache_set(key, result)

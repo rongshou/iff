@@ -226,40 +226,40 @@ def test_p0_evidence_dimension_zero_returns_0():
     assert evidence_score == pytest.approx(0.0)
 
 
-def test_p0_evidence_dimension_one_returns_10():
-    """1 案例 → 10 分（边界）。"""
+def test_p0_evidence_dimension_one_returns_12():
+    """1 案例 → 12 分（边界）。"""
     _, _, evidence_score, _, _ = cm._score_school_3d(None, qs_rank=None, case_count=1, gpa_percent=50)
-    assert evidence_score == pytest.approx(10.0)
+    assert evidence_score == pytest.approx(12.0)
 
 
-def test_p0_evidence_dimension_five_returns_10():
-    """5 案例 → 10 分（边界上界）。"""
+def test_p0_evidence_dimension_five_returns_12():
+    """5 案例 → 12 分（边界上界）。"""
     _, _, evidence_score, _, _ = cm._score_school_3d(None, qs_rank=None, case_count=5, gpa_percent=50)
-    assert evidence_score == pytest.approx(10.0)
+    assert evidence_score == pytest.approx(12.0)
 
 
-def test_p0_evidence_dimension_six_returns_18():
-    """6 案例 → 18 分（边界跳档）。"""
+def test_p0_evidence_dimension_six_returns_15():
+    """6 案例 → 15 分（边界跳档）。"""
     _, _, evidence_score, _, _ = cm._score_school_3d(None, qs_rank=None, case_count=6, gpa_percent=50)
-    assert evidence_score == pytest.approx(18.0)
+    assert evidence_score == pytest.approx(15.0)
 
 
-def test_p0_evidence_dimension_fifteen_returns_18():
-    """15 案例 → 18 分（边界上界）。"""
+def test_p0_evidence_dimension_fifteen_returns_15():
+    """15 案例 → 15 分（边界上界）。"""
     _, _, evidence_score, _, _ = cm._score_school_3d(None, qs_rank=None, case_count=15, gpa_percent=50)
-    assert evidence_score == pytest.approx(18.0)
+    assert evidence_score == pytest.approx(15.0)
 
 
-def test_p0_evidence_dimension_sixteen_returns_30():
-    """16 案例 → 30 分（封顶）。"""
+def test_p0_evidence_dimension_sixteen_returns_20():
+    """16 案例 → 20 分（封顶）。"""
     _, _, evidence_score, _, _ = cm._score_school_3d(None, qs_rank=None, case_count=16, gpa_percent=50)
-    assert evidence_score == pytest.approx(30.0)
+    assert evidence_score == pytest.approx(20.0)
 
 
-def test_p0_evidence_dimension_large_count_caps_at_30():
-    """大量案例仍封顶 30 分。"""
+def test_p0_evidence_dimension_large_count_caps_at_20():
+    """大量案例仍封顶 20 分。"""
     _, _, evidence_score, _, _ = cm._score_school_3d(None, qs_rank=None, case_count=999, gpa_percent=50)
-    assert evidence_score == pytest.approx(30.0)
+    assert evidence_score == pytest.approx(20.0)
 
 
 # ── 三维综合与分档逻辑 ────────────────────────────────────────────────────
@@ -267,16 +267,16 @@ def test_p0_total_score_is_sum_of_three_dimensions():
     """总分 = GPA + 排名 + 证据。"""
     perc = _perc(p25=60, p50=80, p75=90)
     _, _, _, total, _ = cm._score_school_3d(perc, qs_rank=50, case_count=10, gpa_percent=85)
-    # GPA 32 + rank 22 + evidence 18 = 72
-    assert total == pytest.approx(72.0)
+    # GPA 32 + rank 22 + evidence 15 = 69
+    assert total == pytest.approx(69.0)
 
 
 def test_p0_full_stack_returns_total_near_100():
-    """所有维度接近满分时总分接近 100。"""
+    """所有维度接近满分时总分接近 90。"""
     perc = _perc(p25=60, p50=80, p75=90)
     _, _, _, total, _ = cm._score_school_3d(perc, qs_rank=201, case_count=50, gpa_percent=95)
-    # GPA 40 + rank 30 + evidence 30 = 100
-    assert total == pytest.approx(100.0)
+    # GPA 40 + rank 30 + evidence 20 = 90
+    assert total == pytest.approx(90.0)
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -285,19 +285,19 @@ def test_p0_full_stack_returns_total_near_100():
 # ══════════════════════════════════════════════════════════════════════════════
 def test_p3_tier_safe_boundary_75_is_safe():
     """分数恰好 75.0 → 安全（边界含）。"""
-    # 构造：GPA 15 + 排名 30 + 证据 30 = 75
-    # 详见 P0：p25=60, p50=80, p75=90 时取 gpa=68.75 → GPA 分 15
+    # 构造：GPA 25 + 排名 30 + 证据 20 = 75
+    # 见 P0：p25=60, p50=80, p75=90 时 gpa=80.625 → GPA 分 25
     perc = _perc(p25=60, p50=80, p75=90)
-    _, _, _, total, tier = cm._score_school_3d(perc, qs_rank=201, case_count=16, gpa_percent=68.75)
+    _, _, _, total, tier = cm._score_school_3d(perc, qs_rank=201, case_count=16, gpa_percent=80.625)
     assert total == pytest.approx(75.0)
     assert tier == "安全"
 
 
 def test_p3_tier_just_below_safe_boundary_is_match():
     """分数 74.9 → 匹配（边界外）。"""
-    # GPA 分 14.9 → 8 + 16*x = 14.9 ⇒ x = 0.43125 ⇒ gpa = 60 + 0.43125*20 = 68.625
+    # GPA 分 24.9 → 24+1.6*(gpa-80)=24.9 ⇒ gpa=80.5625
     perc = _perc(p25=60, p50=80, p75=90)
-    _, _, _, total, tier = cm._score_school_3d(perc, qs_rank=201, case_count=16, gpa_percent=68.625)
+    _, _, _, total, tier = cm._score_school_3d(perc, qs_rank=201, case_count=16, gpa_percent=80.5625)
     assert total == pytest.approx(74.9, abs=0.05)
     assert tier == "匹配"
 
@@ -333,7 +333,7 @@ def test_p3_tier_maximum_total_is_safe():
     """最高组合 → 安全。"""
     perc = _perc(p25=60, p50=80, p75=90)
     _, _, _, total, tier = cm._score_school_3d(perc, qs_rank=300, case_count=100, gpa_percent=100)
-    assert total == pytest.approx(100.0)
+    assert total == pytest.approx(90.0)
     assert tier == "安全"
 
 

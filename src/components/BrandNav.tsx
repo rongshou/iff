@@ -175,7 +175,7 @@ export default function BrandNav({
           const useRouterLink = !!link.to;
           const Tag = useRouterLink ? Link : href ? "a" : "button";
           const linkProps = useRouterLink
-            ? { to: href }
+            ? { to: href! }
             : href
               ? { href }
               : { type: "button" as const };
@@ -183,7 +183,8 @@ export default function BrandNav({
           return (
             <Tag
               key={i}
-              {...linkProps}
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              {...(linkProps as any)}
               className={pillClass}
               title={link.title || link.label}
               {...(isActive ? { "aria-current": "page" as const } : {})}

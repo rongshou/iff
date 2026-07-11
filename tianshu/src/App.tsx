@@ -27,7 +27,7 @@ export default function App() {
           brandName="TIA"
           brandSubtitle="综合特质测评与生涯规划"
           links={[
-            { label: "首页", icon: "home", href: "./", variant: "primary" },
+            { label: "首页", icon: "home", href: "../", variant: "primary" },
             { label: "天权", icon: "globe", href: "../tianquan/", variant: "primary" },
             { label: "档案", icon: "user", href: "../tianquan/#/profile" },
           ]}

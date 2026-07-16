@@ -25,7 +25,7 @@ export default function App() {
         {/* ── 浮岛导航（统一 IFF 品牌）── */}
         <BrandNav
           brandName="Iff"
-          brandSubtitle="天权智能留学问答平台"
+          brandSubtitle="天枢综合评测和生涯规划"
           links={[
             { label: "首页", icon: "home", href: "../", variant: "primary" },
             { label: "天权", icon: "globe", href: "../tianquan/", variant: "primary" },

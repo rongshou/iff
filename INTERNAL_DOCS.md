@@ -498,11 +498,12 @@ API 代理配置在 `vite.config.ts`：`/api` → `http://localhost:3470`。
 | 项 | 配置值 | 说明 |
 |---|--------|------|
 | Provider | `opencode` | 仅支持 OpenCode API |
-| Base URL | `https://opencode.ai/zen/v1` | ⚠️ `/zen/go/v1` 不支持 free 模型 |
-| 主模型 | `mimo-v2.5-free` | 推理模型，~4s 响应，负载较低 |
-| 后备模型 | `mimo-v2.5-free` | 主模型 401/429/5xx 自动切换 |
+| Base URL | `https://opencode.ai/zen/go/v1` | OpenCode CLI 路由 |
+| 主模型 | `deepseek-v4-flash` | 付费模型，选校场景输出质量好 |
+| 后备模型 | `minimax-m2.7` | 主模型 401/429/5xx 自动切换 |
+| max_tokens | `8192` | 通过 `TIANQUAN_LLM_MAX_TOKENS` 环境变量配置 |
 
-**配置位置**：`docker-compose.yml`（环境变量） + `backend/app/core/config.py`（默认值）
+**配置位置**：`docker-compose.yml`（环境变量） + `backend/app/core/config.py`（默认值） + `.env`（实际运行时值）
 
 ### 10.2 推荐结果缓存
 
@@ -562,10 +563,11 @@ NON_RECOMMEND_KEYWORDS = [
 
 ### 10.4 max_tokens 调整
 
-| 场景 | 旧值 | 新值 | 理由 |
+| 日期 | 旧值 | 新值 | 理由 |
 |------|------|------|------|
-| LLM response | 8192 | 2048 | free 模型 8192 返回极慢；16s→6s |
-| 推荐回复 | 8192 | 2048 | 同理由 |
+| 2026-07-16 | 4096 | **8192** | 选校回复因 4096 token 上限频繁截断（`finish_reason="length"`），末尾显示「回复"继续"让 AI 接着写」但无实际续写逻辑；翻倍后基本覆盖完整选校输出 |
+
+**截断检测**：`chat.py:349-354` 检测 `finish_reason == "length"` 时追加截断提示，但无自动续写。当前方案是提高上限从根本上避免截断。
 
 ### 10.5 Fallback 重试逻辑
 
@@ -586,14 +588,14 @@ for attempt in range(2):
 
 ### 10.6 常见问题
 
-**Q: 为什么 /zen/go/v1 不行？**
-A: `/zen/go/v1` 是 OpenCode 的 CLI 路由，只支持带余额的付费模型。free 模型（`*-free`）只在 `/zen/v1` 可用。
+**Q: 为什么用 `/zen/go/v1` 而不是 `/zen/v1`？**
+A: `/zen/go/v1` 是 OpenCode CLI 路由，支持付费模型（如 `deepseek-v4-flash`、`minimax-m2.7`）。`/zen/v1` 仅支持免费模型（`*-free` 后缀）。当前使用付费模型以获得更好的选校输出质量。
 
-**Q: 免费模型慢怎么办？**
-A: 当前 `deepseek-v4-flash-free` 非流式单次约 6-15s。可选的优化方向：
+**Q: 模型响应慢怎么办？**
+A: 当前 `deepseek-v4-flash` 非流式单次约 6-15s。可选的优化方向：
 - 使用流式响应（前端 `stream=true`）
-- 进一步降低 `max_tokens`
-- 增大推荐缓存 TTL
+- 增大推荐缓存 TTL（当前 300s）
+- 考虑切回 lighter 模型处理非选校类简单问答
 
 ---
 

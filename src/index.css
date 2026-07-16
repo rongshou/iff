@@ -162,12 +162,14 @@ body {
 .nav-logo {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-weight: 800;
-  font-size: 11px;
-  letter-spacing: 0.18em;
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  color: #6366f1;
   flex-shrink: 0;
+  background: rgba(99, 102, 241, 0.08);
+  padding: 2px 6px;
+  border-radius: 6px;
+  border: 1px solid rgba(99, 102, 241, 0.18);
 }
 
 .nav-sep {

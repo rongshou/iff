@@ -22,17 +22,15 @@ export default function App() {
   return (
     <TianshuProvider>
       <div className="tianshu-app">
-        {/* ── 浮岛导航（天枢品牌色）── */}
+        {/* ── 浮岛导航（统一 IFF 品牌）── */}
         <BrandNav
-          brandName="TIA"
-          brandSubtitle="综合特质测评与生涯规划"
+          brandName="Iff"
+          brandSubtitle="天权智能留学问答平台"
           links={[
             { label: "首页", icon: "home", href: "../", variant: "primary" },
             { label: "天权", icon: "globe", href: "../tianquan/", variant: "primary" },
             { label: "档案", icon: "user", href: "../tianquan/#/profile" },
           ]}
-          brandGradient="linear-gradient(135deg, #a855f7 0%, #ec4899 50%, #f59e0b 100%)"
-          brandSepColor="linear-gradient(180deg, #a855f7, #ec4899)"
         />
 
         {/* 测评主体 */}

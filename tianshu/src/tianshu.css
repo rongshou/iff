@@ -815,10 +815,10 @@ input[type="range"] {
   font-weight: 800; font-size: 10px; letter-spacing: 0.1em;
   color: #ffffff;
   flex-shrink: 0;
-  background: linear-gradient(135deg, #a855f7 0%, #ec4899 50%, #f59e0b 100%);
+  background: linear-gradient(135deg, #6366f1 0%, #a855f7 50%, #ec4899 100%);
   padding: 2px 6px;
   border-radius: 6px;
-  border: 1px solid rgba(168, 85, 247, 0.3);
+  border: 1px solid rgba(99, 102, 241, 0.25);
 }
 .nav-sep { width: 1px; height: 12px; flex-shrink: 0; opacity: 0.3; }
 .nav-meta { font-size: 11px; color: #64748b; letter-spacing: 0.04em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

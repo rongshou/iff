@@ -15,11 +15,34 @@ export default function ChatPage() {
   const { scrollRef, showScrollBottom, setShowScrollBottom, onScroll, scrollToBottom } = useChatScroll();
   const [activeScene, setActiveScene] = useState<SceneId>("school");
   // 每个场景的对话历史独立存储，切换 Tab 不串
-  const [scenes, setScenes] = useState<SceneState>(() => ({
-    school: [],
-    essay: [],
-    visa: [],
-  }));
+  const [scenes, setScenes] = useState<SceneState>(() => {
+    // 从 localStorage 读取上次会话（避免刷新丢上下文）
+    try {
+      const raw = localStorage.getItem("iff_chat_scenes_v1");
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === "object") {
+          return {
+            school: Array.isArray(parsed.school) ? parsed.school : [],
+            essay: Array.isArray(parsed.essay) ? parsed.essay : [],
+            visa: Array.isArray(parsed.visa) ? parsed.visa : [],
+          };
+        }
+      }
+    } catch (e) {
+      console.warn("[chat] failed to load scenes from localStorage", e);
+    }
+    return { school: [], essay: [], visa: [] };
+  });
+
+  // scenes 变化时同步到 localStorage（持久化跨刷新）
+  useEffect(() => {
+    try {
+      localStorage.setItem("iff_chat_scenes_v1", JSON.stringify(scenes));
+    } catch (e) {
+      console.warn("[chat] failed to save scenes to localStorage", e);
+    }
+  }, [scenes]);
   const loading = useChatStore((s) => s.loading);
   const error = useChatStore((s) => s.error);
   const collectedInfo = useChatStore((s) => s.collectedInfo);

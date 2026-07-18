@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import type { HistoryItem, ProfileData } from "../services/profile";
 import {
   loadHistory,
@@ -9,6 +9,7 @@ import {
 import { logout } from "../services/auth";
 import { viewDetail } from "../utils/profile-utils";
 import HistoryRow from "../components/HistoryRow";
+import BrandNav from "../components/BrandNav";
 import { useProfileStore } from "../store/profileStore";
 
 /* =====================================================================
@@ -104,24 +105,25 @@ export default function ProfilePage() {
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-3xl mx-auto px-4 py-6 sm:py-8">
 
-        {/* ======== 头部 ======== */}
-        <header className="flex items-center gap-3 mb-6">
-          <div className="flex items-center gap-1">
-            <Link
-              to="/"
-              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium text-indigo-600 bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 transition-all"
-              title="首页"
-            ><span>🏠</span>首页</Link>
-          </div>
-          <span className="w-px h-4 bg-slate-200" />
-          <h1 className="text-xl font-bold text-slate-900 flex-1">📁 我的档案</h1>
-          <button
-            onClick={() => { logout(); navigate("/login", { replace: true }); }}
-            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium text-slate-400 border border-slate-200 hover:text-red-600 hover:border-red-300 hover:bg-red-50 transition-all"
-          >
-            <span>🚪</span>退出
-          </button>
-        </header>
+        {/* ======== 浮岛导航（统一 IFF 品牌）======= */}
+        <BrandNav
+          brandName="Iff"
+          brandSubtitle="我的档案"
+          links={[
+            { label: "首页", icon: "home", href: "/" },
+            { label: "档案", icon: "user", to: "/profile", active: true },
+            { label: "天枢", icon: "compass", href: "../tianshu/", variant: "accent" },
+          ]}
+          actions={[
+            {
+              label: "退出",
+              icon: "logout",
+              onClick: () => { logout(); navigate("/login", { replace: true }); },
+              title: "退出登录",
+            },
+          ]}
+        />
+        <div className="h-3" />
 
         {/* ======== ① 基本信息 ======== */}
         <section className="bg-white rounded-xl shadow-sm border border-slate-200 p-5 sm:p-6 mb-5">

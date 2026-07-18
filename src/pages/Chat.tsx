@@ -129,7 +129,7 @@ export default function ChatPage() {
           brandName="Iff"
           brandSubtitle="天权智能留学问答平台"
           links={[
-            { label: "首页", icon: "home", to: "/", active: true },
+            { label: "首页", icon: "home", href: "/" },
             { label: "档案", icon: "user", to: "/profile" },
             { label: "天枢", icon: "compass", href: "../tianshu/", variant: "accent" },
           ]}

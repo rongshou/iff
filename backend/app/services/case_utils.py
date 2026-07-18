@@ -155,7 +155,7 @@ def _classify_chance_major_aware(
             match_thr = p50 - (1 - s) * (p50 - p25)
             reach_thr = p25 - (1 - s) * (p25 - p10) if (p10 and p25 > p10) else p25
             if gpa_percent >= safe_thr:
-                return "安全", 0.92, p50, n
+                return "保底", 0.92, p50, n
             if gpa_percent >= match_thr:
                 ratio = (gpa_percent - match_thr) / (safe_thr - match_thr) if safe_thr > match_thr else 0.5
                 return "匹配", 0.55 + ratio * 0.35, p50, n
@@ -171,7 +171,7 @@ def _classify_chance_major_aware(
 
 # ── 三维评分模型 ──
 # 总分 = GPA匹配分(40) + 学校排名分(30) + 案例证据分(20)
-# ≥75 = 安全 | ≥55 = 匹配 | <55 = 冲刺
+# ≥75 = 保底 | ≥55 = 匹配 | <55 = 冲刺
 
 QS_RANK_BANDS = [
     (20, 18),   # QS 1-20: 顶级校, 低基础分 → 偏冲刺
@@ -261,9 +261,9 @@ def _score_school_3d(
 
     total = gpa_score + rank_score + evidence_score
 
-    # 档位: ≥75=安全, ≥55=匹配, <55=冲刺
+    # 档位: ≥75=保底, ≥55=匹配, <55=冲刺
     if total >= 75:
-        tier = "安全"
+        tier = "保底"
     elif total >= 55:
         tier = "匹配"
     else:

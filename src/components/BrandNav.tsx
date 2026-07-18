@@ -10,6 +10,7 @@
 
 import type { CSSProperties } from "react";
 import { Link } from "react-router-dom";
+import "./BrandNav.css";
 
 // ── 轻量 SVG 图标（替代 emoji）──
 

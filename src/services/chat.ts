@@ -16,11 +16,16 @@ export async function sendChat(
   messages: ChatMessageInput[],
   stream: boolean = false
 ): Promise<ChatResponse> {
-  const res = await fetch(`${API_BASE}/chat`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", ...getAuthHeaders() },
-    body: JSON.stringify({ messages, stream }),
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE}/chat`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+      body: JSON.stringify({ messages, stream }),
+    });
+  } catch {
+    throw new Error("网络连接失败，请检查网络后重试");
+  }
   if (!res.ok) {
     const err = await res.json().catch(() => ({ detail: res.statusText }));
     throw new Error(err.detail || "请求失败");
@@ -35,12 +40,20 @@ export async function streamChat(
   signal?: AbortSignal,
   onReasoning?: (text: string) => void
 ): Promise<void> {
-  const res = await fetch(`${API_BASE}/chat`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", ...getAuthHeaders() },
-    body: JSON.stringify({ messages, stream: true }),
-    signal,
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE}/chat`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+      body: JSON.stringify({ messages, stream: true }),
+      signal,
+    });
+  } catch (e: any) {
+    if (signal?.aborted) {
+      throw Object.assign(new Error("aborted"), { name: "AbortError" });
+    }
+    throw new Error("网络连接失败，请检查网络后重试");
+  }
   if (!res.ok) {
     const err = await res.json().catch(() => ({ detail: res.statusText }));
     throw new Error(err.detail || "请求失败");

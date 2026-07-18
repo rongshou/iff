@@ -176,7 +176,7 @@ export function useChatSend(
           }));
         } catch (retryErr: unknown) {
           const msg = retryErr instanceof Error ? retryErr.message : "";
-          let errorMsg = "网络异常，请稍后重试";
+          let errorMsg = "网络连接失败，请检查网络后重试";
           let contentMsg = "抱歉，请求失败，请稍后重试。";
           if (msg.includes("授权码") || msg.includes("X-Auth-Code") || msg.includes("401")) {
             errorMsg = "授权已过期，请重新登录";
@@ -336,7 +336,15 @@ export function useChatSend(
       await doSendToAI(updatedMessages);
     } catch (err) {
       console.error("handleSend failed:", err);
-      setError(err instanceof Error ? err.message : "请求处理失败");
+      const msg = err instanceof Error ? err.message : "";
+      // "Failed to fetch" is a browser TypeError — network unreachable, not auth/data issue
+      if (msg.includes("Failed to fetch") || msg.includes("NetworkError") || msg.includes("fetch")) {
+        setError("网络连接异常，请检查网络后重试");
+      } else if (msg) {
+        setError(msg);
+      } else {
+        setError("请求处理失败");
+      }
       setLoading(false);
       sendingRef.current = false;
     }

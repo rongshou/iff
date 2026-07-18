@@ -84,7 +84,7 @@ def enhance_with_rules(
 def _map_tianquan_to_advisor_chance(chance: str) -> str:
     """将 tianquan 的录取分档映射到 advisor 的分档"""
     mapping = {
-        "安全": "保底",
+        "保底": "保底",
         "匹配": "稳妥",
         "冲刺": "冲刺",
     }
@@ -94,7 +94,7 @@ def _map_tianquan_to_advisor_chance(chance: str) -> str:
 def _map_advisor_to_tianquan_chance(chance: str) -> str:
     """将 advisor 的分档映射回 tianquan 的分档"""
     mapping = {
-        "保底": "安全",
+        "保底": "保底",
         "稳妥": "匹配",
         "冲刺": "冲刺",
         "排除": "排除",
@@ -110,7 +110,7 @@ def generate_application_strategy(background: dict, match_result: dict) -> str:
     for country_result in match_result.get("by_country", []):
         country = country_result.get("country", "")
         schools = country_result.get("schools", [])
-        safe_count = sum(1 for s in schools if s.get("admission_chance") == "安全")
+        safe_count = sum(1 for s in schools if s.get("admission_chance") == "保底")
         match_count = sum(1 for s in schools if s.get("admission_chance") == "匹配")
         reach_count = sum(1 for s in schools if s.get("admission_chance") == "冲刺")
 

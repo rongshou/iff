@@ -140,7 +140,6 @@ export default function ChatPage() {
                     label: "清空",
                     icon: "trash",
                     onClick: handleClear,
-                    hideTextOnMobile: true,
                     title: "只清空当前场景的对话",
                   },
                   {

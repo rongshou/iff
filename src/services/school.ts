@@ -27,6 +27,7 @@ let loadingPromise: Promise<Record<string, string[]>> | null = null;
 export async function loadSchoolAbbreviations(): Promise<Record<string, string[]>> {
   if (cache) return cache;
   if (loadingPromise) return loadingPromise;
+
   loadingPromise = (async () => {
     const res = await fetch(`${API_BASE}/school/abbreviations`, {
       headers: { ...getAuthHeaders() },
@@ -36,25 +37,37 @@ export async function loadSchoolAbbreviations(): Promise<Record<string, string[]
     cache = data.abbreviations;
     return cache;
   })();
+
   try {
-    await loadingPromise;
+    const result = await loadingPromise;
+    return result;
+  } catch {
+    // loadingPromise was cleared by finally; no-op — caller gets empty map from getSchoolAbbrevMap
+    throw new Error("获取学校简称映射失败");
   } finally {
     loadingPromise = null;
   }
-  return cache!;
 }
 
 /**
  * 返回 `简称 → 全称` 的映射（与原 Chat.tsx 中硬编码的 SCHOOL_ABBREV 形状一致）。
  * 缓存未就绪时会触发一次 fetch 并 await，因此调用方需在 async 上下文中使用。
+ *
+ * 如果加载失败（网络错误 / 认证失败），返回空映射而不是抛出异常，
+ * 避免整个消息发送流程因简称映射加载失败而中断。
  */
 export async function getSchoolAbbrevMap(): Promise<Record<string, string>> {
-  const data = await loadSchoolAbbreviations();
-  const map: Record<string, string> = {};
-  for (const [full, abbrevs] of Object.entries(data)) {
-    for (const abbr of abbrevs) {
-      map[abbr] = full;
+  try {
+    const data = await loadSchoolAbbreviations();
+    const map: Record<string, string> = {};
+    for (const [full, abbrevs] of Object.entries(data)) {
+      for (const abbr of abbrevs) {
+        map[abbr] = full;
+      }
     }
+    return map;
+  } catch (e) {
+    console.warn("加载学校简称映射失败，将跳过简称解析:", e);
+    return {};
   }
-  return map;
 }

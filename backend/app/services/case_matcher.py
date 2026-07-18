@@ -240,9 +240,9 @@ def _enrich_with_ranking(
 
 
 def _build_response(by_country: dict, target_countries: list[str], gpa_percent: float, tier_label: str, conn: sqlite3.Connection, target_major: Optional[str] = None) -> dict:
-    """三维评分模型构建输出: 冲刺/匹配/安全 各最多 6 所, 档内按 QS 排名排序."""
+    """三维评分模型构建输出: 冲刺/匹配/保底 各最多 6 所, 档内按 QS 排名排序."""
     MAX_PER_TIER = 6
-    TIER_ORDER = {"冲刺": 0, "匹配": 1, "安全": 2}
+    TIER_ORDER = {"冲刺": 0, "匹配": 1, "保底": 2}
 
     result_countries = []
 
@@ -335,11 +335,11 @@ def _build_response(by_country: dict, target_countries: list[str], gpa_percent: 
             group.sort(key=lambda x: x["_sort_rank"] if x["_sort_rank"] else 9999)
 
         selected = []
-        for tier_name in ("冲刺", "匹配", "安全"):
+        for tier_name in ("冲刺", "匹配", "保底"):
             group = by_tier.get(tier_name, [])
             selected.extend(group[:MAX_PER_TIER])
 
-        # 最终排序: 冲刺 → 匹配 → 安全, 每档内 QS 排名升序
+        # 最终排序: 冲刺 → 匹配 → 保底, 每档内 QS 排名升序
         selected.sort(key=lambda x: (
             TIER_ORDER.get(x["admission_chance"], 9),
             x["_sort_rank"] if x["_sort_rank"] else 9999,

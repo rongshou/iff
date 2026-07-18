@@ -38,7 +38,7 @@ def _perc(p10=None, p25=None, p50=None, p75=None, n=None):
 # ══════════════════════════════════════════════════════════════════════════════
 # P0 — 三维评分函数 _score_school_3d
 #   总分 = GPA 匹配分(0-40) + 学校排名分(0-30) + 案例证据分(0-30)
-#   ≥75 = 安全 | 55-74 = 匹配 | <55 = 冲刺
+#   ≥75 = 保底 | 55-74 = 匹配 | <55 = 冲刺
 # ══════════════════════════════════════════════════════════════════════════════
 
 # ── GPA 维度：百分位细分档 ──────────────────────────────────────────────────
@@ -281,16 +281,16 @@ def test_p0_full_stack_returns_total_near_100():
 
 # ══════════════════════════════════════════════════════════════════════════════
 # P3 — 档位划分（嵌入在 _score_school_3d 末尾返回的 tier）
-#   ≥75 = 安全 | 55-74 = 匹配 | <55 = 冲刺
+#   ≥75 = 保底 | 55-74 = 匹配 | <55 = 冲刺
 # ══════════════════════════════════════════════════════════════════════════════
 def test_p3_tier_safe_boundary_75_is_safe():
-    """分数恰好 75.0 → 安全（边界含）。"""
+    """分数恰好 75.0 → 保底（边界含）。"""
     # 构造：GPA 25 + 排名 30 + 证据 20 = 75
     # 见 P0：p25=60, p50=80, p75=90 时 gpa=80.625 → GPA 分 25
     perc = _perc(p25=60, p50=80, p75=90)
     _, _, _, total, tier = cm._score_school_3d(perc, qs_rank=201, case_count=16, gpa_percent=80.625)
     assert total == pytest.approx(75.0)
-    assert tier == "安全"
+    assert tier == "保底"
 
 
 def test_p3_tier_just_below_safe_boundary_is_match():
@@ -330,11 +330,11 @@ def test_p3_tier_minimum_total_is_reach():
 
 
 def test_p3_tier_maximum_total_is_safe():
-    """最高组合 → 安全。"""
+    """最高组合 → 保底。"""
     perc = _perc(p25=60, p50=80, p75=90)
     _, _, _, total, tier = cm._score_school_3d(perc, qs_rank=300, case_count=100, gpa_percent=100)
     assert total == pytest.approx(90.0)
-    assert tier == "安全"
+    assert tier == "保底"
 
 
 # ══════════════════════════════════════════════════════════════════════════════

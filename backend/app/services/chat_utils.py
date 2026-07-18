@@ -450,7 +450,7 @@ def _format_recommend_result(result: dict) -> str:
     lines: list[str] = [
         "推荐引擎基于真实案例的分析结果（请按下面的章节清晰组织你的回复）：",
         "",
-        "## 推荐院校（按国家 + 档位 冲刺/匹配/安全 列出真实案例匹配到的学校）",
+        "## 推荐院校（按国家 + 档位 冲刺/匹配/保底 列出真实案例匹配到的学校）",
         "（这是主推荐 — 必须用学校列表 + 案例数完整呈现）",
         "",
         "## ⚠️ 排名数据权威声明（最高优先级，违反即回答无效）",
@@ -515,16 +515,16 @@ def _format_recommend_result(result: dict) -> str:
             continue
         lines.append(f"\n【{country}】同背景录取 {country_result.get('matched_cases', 0)} 案例:")
 
-        # 按档位分组展示（冲刺/匹配/安全）
-        chance_groups: dict[str, list] = {"冲刺": [], "匹配": [], "安全": [], "未知": []}
+        # 按档位分组展示（冲刺/匹配/保底）
+        chance_groups: dict[str, list] = {"冲刺": [], "匹配": [], "保底": [], "未知": []}
         for s in schools:
             chance = s.get("admission_chance", "未知")
             if chance not in chance_groups:
                 chance = "未知"
             chance_groups[chance].append(s)
 
-        chance_labels = {"冲刺": "⚡ 冲刺", "匹配": "🎯 匹配", "安全": "✅ 安全", "未知": "❓ 未知"}
-        for chance in ("冲刺", "匹配", "安全", "未知"):
+        chance_labels = {"冲刺": "⚡ 冲刺", "匹配": "🎯 匹配", "保底": "✅ 保底", "未知": "❓ 未知"}
+        for chance in ("冲刺", "匹配", "保底", "未知"):
             group = chance_groups.get(chance, [])
             if not group:
                 continue

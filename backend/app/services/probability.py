@@ -55,7 +55,7 @@ def classify_admission_chance(
     返回: (分档, 概率分数 0-1, p50参考值, 案例数)
 
     分档:
-      - "安全" (>p75, chance 0.9+)
+      - "保底" (>p75, chance 0.9+)
       - "匹配" (p50-p75, chance 0.6-0.9)
       - "冲刺" (p25-p50, chance 0.3-0.6)
       - "彩票" (<p25, chance 0.1-0.3)
@@ -70,7 +70,7 @@ def classify_admission_chance(
     n = perc.get("n", 0)
 
     if p75 is not None and user_gpa_percent >= p75:
-        return "安全", 0.92, p50, n
+        return "保底", 0.92, p50, n
     if p50 is not None and user_gpa_percent >= p50:
         ratio = (user_gpa_percent - p50) / (p75 - p50) if p75 is not None and p75 > p50 else 0.5
         return "匹配", 0.55 + ratio * 0.35, p50, n

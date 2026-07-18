@@ -145,14 +145,14 @@ def test_background_shuangfei_detected():
 # Tier 分档常识检查
 # ══════════════════════════════════════════════════════════════════════════════
 def test_three_tiers_all_present():
-    """冲刺/匹配/安全 三档都应该存在学校。"""
+    """冲刺/匹配/保底 三档都应该存在学校。"""
     result = _recommend(BASE_PROFILE)
     schools = _get_australia_schools(result)
     tiers = {s.get("admission_chance") for s in schools}
-    assert "安全" in tiers, f"缺少安全档: {tiers}"
+    assert "保底" in tiers, f"缺少保底档: {tiers}"
     assert "匹配" in tiers, f"缺少匹配档: {tiers}"
     assert "冲刺" in tiers, f"缺少冲刺档: {tiers}"
-    print(f"  三档分布: { {t: sum(1 for s in schools if s['admission_chance']==t) for t in ['安全','匹配','冲刺']} }")
+    print(f"  三档分布: { {t: sum(1 for s in schools if s['admission_chance']==t) for t in ['保底','匹配','冲刺']} }")
 
 
 def test_lower_qs_schools_more_reachable():
@@ -160,7 +160,7 @@ def test_lower_qs_schools_more_reachable():
     即：QS 排名更低的学校 admission_chance 不应劣于 QS 排名更高的学校。"""
     result = _recommend(BASE_PROFILE)
     schools = _get_australia_schools(result)
-    tier_order = {"冲刺": 0, "匹配": 1, "安全": 2}
+    tier_order = {"冲刺": 0, "匹配": 1, "保底": 2}
     ranked = [(s.get("qs_rank", 9999), tier_order.get(s.get("admission_chance", ""), 0), s["name"])
               for s in schools if s.get("qs_rank") and s["name"] in (
         "墨尔本大学", "悉尼大学", "新南威尔士大学", "莫纳什大学",
@@ -170,14 +170,14 @@ def test_lower_qs_schools_more_reachable():
     ranked.sort()
     print("\n  QS→档位排序:")
     for qs, tier_val, name in ranked:
-        tier_label = ["冲刺", "匹配", "安全"][tier_val]
+        tier_label = ["冲刺", "匹配", "保底"][tier_val]
         print(f"    QS#{qs} {name} → {tier_label}")
 
     for i in range(len(ranked) - 1):
         # QS 排名升序排列，越往后 QS 排名越低 → 档位不应更差
         assert ranked[i][1] <= ranked[i+1][1], \
-            f"反常：{ranked[i][2]}(QS#{ranked[i][0]}:{['冲刺','匹配','安全'][ranked[i][1]]}) " \
-            f"比 {ranked[i+1][2]}(QS#{ranked[i+1][0]}:{['冲刺','匹配','安全'][ranked[i+1][1]]}) 更容易"
+            f"反常：{ranked[i][2]}(QS#{ranked[i][0]}:{['冲刺','匹配','保底'][ranked[i][1]]}) " \
+            f"比 {ranked[i+1][2]}(QS#{ranked[i+1][0]}:{['冲刺','匹配','保底'][ranked[i+1][1]]}) 更容易"
 
 
 def test_tier_consistency_for_known_outliers():
@@ -192,43 +192,43 @@ def test_tier_consistency_for_known_outliers():
         assert mel.get("admission_chance") == "冲刺", \
             f"墨尔本应为冲刺, 实际={mel.get('admission_chance')}"
 
-    # 伍伦贡（QS#195, low tier）→ 安全（用户 GPA 明显超过）
+    # 伍伦贡（QS#195, low tier）→ 保底（用户 GPA 明显超过）
     wol = school_map.get("伍伦贡大学")
     if wol:
-        assert wol.get("admission_chance") == "安全", \
-            f"伍伦贡应为安全, 实际={wol.get('admission_chance')}"
+        assert wol.get("admission_chance") == "保底", \
+            f"伍伦贡应为保底, 实际={wol.get('admission_chance')}"
 
-    # 悉尼科技大学（QS#96, median ≤ user GPA）→ 安全
+    # 悉尼科技大学（QS#96, median ≤ user GPA）→ 保底
     uts = school_map.get("悉尼科技大学")
     if uts:
-        assert uts.get("admission_chance") == "安全", \
-            f"悉尼科技大学应为安全, 实际={uts.get('admission_chance')}"
+        assert uts.get("admission_chance") == "保底", \
+            f"悉尼科技大学应为保底, 实际={uts.get('admission_chance')}"
 
 
 # ══════════════════════════════════════════════════════════════════════════════
 # 满分位分档检查
 # ══════════════════════════════════════════════════════════════════════════════
 def test_high_gpa_all_safe():
-    """GPA 95/100（优异）→ 几乎所有学校都是安全档。"""
+    """GPA 95/100（优异）→ 几乎所有学校都是保底档。"""
     profile = {**BASE_PROFILE, "gpa_score": 95.0}
     result = _recommend(profile)
     schools = _get_australia_schools(result)
     tiers = {s.get("admission_chance") for s in schools}
-    assert "安全" in tiers
+    assert "保底" in tiers
     reach_count = sum(1 for s in schools if s.get("admission_chance") == "冲刺")
     assert reach_count <= 1, f"GPA 95 不应有多个冲刺校, 实际有 {reach_count} 个"
 
 
 def test_low_gpa_more_reach():
-    """GPA 70/100（偏低）→ 大部分学校应为冲刺或匹配，安全档很少。"""
+    """GPA 70/100（偏低）→ 大部分学校应为冲刺或匹配，保底档很少。"""
     profile = {**BASE_PROFILE, "gpa_score": 70.0}
     result = _recommend(profile)
     schools = _get_australia_schools(result)
-    safe_count = sum(1 for s in schools if s.get("admission_chance") == "安全")
+    safe_count = sum(1 for s in schools if s.get("admission_chance") == "保底")
     reach_count = sum(1 for s in schools if s.get("admission_chance") == "冲刺")
-    print(f"  GPA 70: 安全={safe_count}, 匹配={sum(1 for s in schools if s.get('admission_chance')=='匹配')}, 冲刺={reach_count}")
+    print(f"  GPA 70: 保底={safe_count}, 匹配={sum(1 for s in schools if s.get('admission_chance')=='匹配')}, 冲刺={reach_count}")
     assert safe_count <= int(len(schools) * 0.3), \
-        f"GPA 70 安全档不应超过30%, 实际 {safe_count}/{len(schools)}"
+        f"GPA 70 保底档不应超过30%, 实际 {safe_count}/{len(schools)}"
 
 
 def test_985_vs_shuangfei_tier_shift():
@@ -239,14 +239,14 @@ def test_985_vs_shuangfei_tier_shift():
     schools_985 = {s["name"]: s for s in _get_australia_schools(result_985)}
     schools_sf = {s["name"]: s for s in _get_australia_schools(result_sf)}
 
-    tier_val = {"冲刺": 0, "匹配": 1, "安全": 2}
+    tier_val = {"冲刺": 0, "匹配": 1, "保底": 2}
     divergences = []
     for name in schools_985:
         if name in schools_sf:
             t985 = tier_val.get(schools_985[name].get("admission_chance", ""), 1)
             tsf = tier_val.get(schools_sf[name].get("admission_chance", ""), 1)
             if t985 < tsf:
-                divergences.append(f"  {name}: 985→{['冲刺','匹配','安全'][t985]}, 双非→{['冲刺','匹配','安全'][tsf]}")
+                divergences.append(f"  {name}: 985→{['冲刺','匹配','保底'][t985]}, 双非→{['冲刺','匹配','保底'][tsf]}")
 
     if divergences:
         print("\n  985 背景比双非更有利的差异:")
@@ -272,21 +272,21 @@ def test_uk_has_results():
 
 
 def test_uk_three_tiers_present():
-    """英国也应存在冲刺/匹配/安全三档。"""
+    """英国也应存在冲刺/匹配/保底三档。"""
     result = _recommend(UK_PROFILE)
     schools = _get_uk_schools(result)
     tiers = {s.get("admission_chance") for s in schools}
-    assert "安全" in tiers, f"UK 缺少安全档: {tiers}"
+    assert "保底" in tiers, f"UK 缺少保底档: {tiers}"
     assert "匹配" in tiers, f"UK 缺少匹配档: {tiers}"
     assert "冲刺" in tiers, f"UK 缺少冲刺档: {tiers}"
-    print(f"  UK 三档分布: { {t: sum(1 for s in schools if s['admission_chance']==t) for t in ['安全','匹配','冲刺']} }")
+    print(f"  UK 三档分布: { {t: sum(1 for s in schools if s['admission_chance']==t) for t in ['保底','匹配','冲刺']} }")
 
 
 def test_uk_lower_qs_more_reachable():
     """英国同校对比：QS 更低不应比 QS 更高档位更差。"""
     result = _recommend(UK_PROFILE)
     schools = _get_uk_schools(result)
-    tier_order = {"冲刺": 0, "匹配": 1, "安全": 2}
+    tier_order = {"冲刺": 0, "匹配": 1, "保底": 2}
     ranked = [(s.get("qs_rank", 9999), tier_order.get(s.get("admission_chance", ""), 0), s["name"])
               for s in schools if s.get("qs_rank") and s["name"] in (
         "帝国理工学院", "伦敦大学学院", "爱丁堡大学", "曼彻斯特大学",
@@ -296,14 +296,14 @@ def test_uk_lower_qs_more_reachable():
     ranked.sort()
     print("\n  UK QS→档位排序:")
     for qs, tier_val, name in ranked:
-        print(f"    QS#{qs} {name} → {['冲刺','匹配','安全'][tier_val]}")
+        print(f"    QS#{qs} {name} → {['冲刺','匹配','保底'][tier_val]}")
     for i in range(len(ranked) - 1):
         assert ranked[i][1] <= ranked[i + 1][1], \
             f"UK 反常：{ranked[i][2]}(QS#{ranked[i][0]}) 比 {ranked[i+1][2]}(QS#{ranked[i+1][0]}) 更容易"
 
 
 def test_uk_high_gpa_all_safe():
-    """UK GPA 95 也应几乎全安全。"""
+    """UK GPA 95 也应几乎全保底。"""
     profile = {**UK_PROFILE, "gpa_score": 95.0}
     result = _recommend(profile)
     schools = _get_uk_schools(result)
@@ -312,13 +312,13 @@ def test_uk_high_gpa_all_safe():
 
 
 def test_uk_low_gpa_more_reach():
-    """UK GPA 70 安全档 ≤30%。"""
+    """UK GPA 70 保底档 ≤30%。"""
     profile = {**UK_PROFILE, "gpa_score": 70.0}
     result = _recommend(profile)
     schools = _get_uk_schools(result)
-    safe_count = sum(1 for s in schools if s.get("admission_chance") == "安全")
+    safe_count = sum(1 for s in schools if s.get("admission_chance") == "保底")
     assert safe_count <= int(len(schools) * 0.3), \
-        f"UK GPA 70 安全档过多: {safe_count}/{len(schools)}"
+        f"UK GPA 70 保底档过多: {safe_count}/{len(schools)}"
 
 
 def test_uk_985_vs_shuangfei():
@@ -327,7 +327,7 @@ def test_uk_985_vs_shuangfei():
     rsf = _recommend(UK_PROFILE_SHUANGFEI)
     s985 = {s["name"]: s for s in _get_uk_schools(r985)}
     ssf = {s["name"]: s for s in _get_uk_schools(rsf)}
-    tier_val = {"冲刺": 0, "匹配": 1, "安全": 2}
+    tier_val = {"冲刺": 0, "匹配": 1, "保底": 2}
     bad = []
     for name in s985:
         if name in ssf and tier_val.get(s985[name].get("admission_chance", ""), 1) < tier_val.get(ssf[name].get("admission_chance", ""), 1):
@@ -350,13 +350,13 @@ def test_us_has_results():
 
 
 def test_us_three_tiers_present():
-    """美国至少应有冲刺和匹配两档（安全档较少是合理的）。"""
+    """美国至少应有冲刺和匹配两档（保底档较少是合理的）。"""
     result = _recommend(US_PROFILE)
     schools = _get_us_schools(result)
     tiers = {s.get("admission_chance") for s in schools}
     assert "冲刺" in tiers, f"US 缺少冲刺档: {tiers}"
     assert "匹配" in tiers, f"US 缺少匹配档: {tiers}"
-    print(f"  US 三档分布: { {t: sum(1 for s in schools if s['admission_chance']==t) for t in ['安全','匹配','冲刺']} }")
+    print(f"  US 三档分布: { {t: sum(1 for s in schools if s['admission_chance']==t) for t in ['保底','匹配','冲刺']} }")
 
 
 def test_us_high_gpa_all_safe():
@@ -369,13 +369,13 @@ def test_us_high_gpa_all_safe():
 
 
 def test_us_low_gpa_more_reach():
-    """US GPA 70 安全档 ≤30%。"""
+    """US GPA 70 保底档 ≤30%。"""
     profile = {**US_PROFILE, "gpa_score": 70.0}
     result = _recommend(profile)
     schools = _get_us_schools(result)
-    safe_count = sum(1 for s in schools if s.get("admission_chance") == "安全")
+    safe_count = sum(1 for s in schools if s.get("admission_chance") == "保底")
     assert safe_count <= int(len(schools) * 0.3), \
-        f"US GPA 70 安全档过多: {safe_count}/{len(schools)}"
+        f"US GPA 70 保底档过多: {safe_count}/{len(schools)}"
 
 
 def test_us_985_vs_shuangfei():
@@ -384,7 +384,7 @@ def test_us_985_vs_shuangfei():
     rsf = _recommend(US_PROFILE_SHUANGFEI)
     s985 = {s["name"]: s for s in _get_us_schools(r985)}
     ssf = {s["name"]: s for s in _get_us_schools(rsf)}
-    tier_val = {"冲刺": 0, "匹配": 1, "安全": 2}
+    tier_val = {"冲刺": 0, "匹配": 1, "保底": 2}
     bad = []
     for name in s985:
         if name in ssf and tier_val.get(s985[name].get("admission_chance", ""), 1) < tier_val.get(ssf[name].get("admission_chance", ""), 1):
@@ -441,12 +441,12 @@ def test_major_has_tiers(target_major, original_major):
         tiers = {s.get("admission_chance") for s in schools}
         assert "冲刺" in tiers, f"{target_major}/{country} 缺少冲刺: {tiers}"
         assert "匹配" in tiers, f"{target_major}/{country} 缺少匹配: {tiers}"
-        # 不强制要求安全档存在（各国各专业难度不同）
+        # 不强制要求保底档存在（各国各专业难度不同）
 
 
 @pytest.mark.parametrize("target_major,original_major", _OTHER_MAJORS)
 def test_major_low_gpa_more_reach(target_major, original_major):
-    """其他专业：GPA 70 安全档不宜超过30%。"""
+    """其他专业：GPA 70 保底档不宜超过30%。"""
     for country, _ in _COUNTRIES_FOR_MAJOR:
         profile = {
             "target_countries": [country],
@@ -459,9 +459,9 @@ def test_major_low_gpa_more_reach(target_major, original_major):
         }
         result = _recommend(profile)
         schools = _GETTER[country](result)
-        safe_count = sum(1 for s in schools if s.get("admission_chance") == "安全")
+        safe_count = sum(1 for s in schools if s.get("admission_chance") == "保底")
         assert safe_count <= int(len(schools) * 0.4), \
-            f"{target_major}/{country} GPA70 安全档过多: {safe_count}/{len(schools)}"
+            f"{target_major}/{country} GPA70 保底档过多: {safe_count}/{len(schools)}"
 
 
 # ══════════════════════════════════════════════════════════════════════════════

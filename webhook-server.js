@@ -56,7 +56,7 @@ createServer((req, res) => {
     // 失败时容器不会留下空目录（旧 html 仍在）
     res.write('> tar | docker exec (rm + extract dist)\n');
     res.write(execSync(
-      'tar -C dist -cf - . | docker exec -i tianquan-nginx sh -c "rm -rf /usr/share/nginx/html/* && tar -C /usr/share/nginx/html -xf -" 2>&1',
+      `bash -c 'cd "${CWD}" && tar -C dist -cf - . | docker exec -i tianquan-nginx sh -c "rm -rf /usr/share/nginx/html/* && tar -C /usr/share/nginx/html -xf -"' 2>&1`,
       { timeout: 60_000, encoding: 'utf-8' },
     ));
 

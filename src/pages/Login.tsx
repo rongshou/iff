@@ -74,7 +74,7 @@ export default function LoginPage() {
             Iff
           </div>
           <h1 className="text-xl sm:text-2xl font-bold text-slate-900 leading-tight px-2">
-            AI 留学规划与生涯规划工具
+            Iff · 国际学业智能规划
           </h1>
           <p
             className="hidden sm:block"
@@ -86,7 +86,7 @@ export default function LoginPage() {
               fontWeight: 600,
             }}
           >
-            INTELLIGENT FOREIGN EDUCATION FRONTIER
+            INTELLIGENT FOREIGN EDUCATION FORGE
           </p>
           <p className="text-[12px] sm:text-[13px] text-slate-500 mt-2 sm:mt-3 px-2">
             首次登录即绑定，后续使用相同凭据登录

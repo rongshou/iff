@@ -296,6 +296,26 @@ h1 .accent::after {
   color: var(--ink);
 }
 
+.card-pain {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  margin-bottom: 12px;
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.7);
+  backdrop-filter: blur(6px);
+  border: 1px solid rgba(99,102,241,0.15);
+  color: var(--ink);
+  line-height: 1.4;
+}
+.card-tianquan .card-pain { border-color: rgba(99,102,241,0.25); color: var(--tq); }
+.card-tianshu  .card-pain { border-color: rgba(168,85,247,0.25); color: var(--ts); }
+.card-pain .pain-icon { font-size: 14px; line-height: 1; }
+
 .card-tagline {
   font-size: 13px;
   font-weight: 600;
@@ -519,6 +539,7 @@ footer .disclaimer {
   <div class="grid">
 
     <a class="card card-tianquan" href="tianquan/">
+      <div class="card-pain"><span class="pain-icon">🎯</span>不知道能不能录？</div>
       <div class="card-icon-wrap">🎓</div>
       <div class="card-title">天权·留学智能问答</div>
       <div class="card-tagline">选校选专业/文书辅助/签证咨询</div>
@@ -534,6 +555,7 @@ footer .disclaimer {
     </a>
 
     <a class="card card-tianshu" href="tianshu/">
+      <div class="card-pain"><span class="pain-icon">🧭</span>不知道选什么专业？</div>
       <div class="card-icon-wrap">🧭</div>
       <div class="card-title">天枢·综合测评生涯规划</div>
       <div class="card-tagline">MBTI/霍兰德测评/生涯规划</div>

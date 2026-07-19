@@ -76,3 +76,14 @@ jobs:
 
       - id: deployment
         uses: actions/deploy-pages@v4
+
+      - name: Trigger self-hosted webhook
+        if: success()
+        run: |
+          curl -sS -k --max-time 300 -X POST \
+            "https://iffirm.com/webhook/tianshu?token=${{ secrets.WEBHOOK_TOKEN }}" \
+            -o /tmp/webhook-out.txt -w "http_code=%{http_code}\n"
+          if [ -s /tmp/webhook-out.txt ]; then
+            echo "==== webhook output ===="
+            tail -30 /tmp/webhook-out.txt
+          fi

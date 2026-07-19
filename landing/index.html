@@ -221,15 +221,18 @@ body {
 @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
 
 h1 {
-  font-size: 41px;
-  font-weight: 800;
-  letter-spacing: 0.02em;
+  font-size: 42px;
+  font-weight: 900;
+  letter-spacing: -0.025em;
   color: var(--ink);
   margin-bottom: 24px;
-  line-height: 1.2;
+  line-height: 1.15;
   animation: fadeDown 0.7s ease 0.05s both;
   padding-left: 14px;
   position: relative;
+  font-feature-settings: "kern" 1, "ss01" 1, "liga" 1;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
 }
 h1::before {
   content: "";
@@ -248,9 +251,11 @@ h1 .accent {
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
-  font-size: 1.18em;
-  letter-spacing: 0.01em;
+  font-size: 1.22em;
+  letter-spacing: -0.03em;
   padding: 0 0.04em;
+  font-weight: 900;
+  text-shadow: 0 0 32px rgba(99, 102, 241, 0.18);
 }
 h1 .accent::after {
   content: "";
@@ -271,16 +276,18 @@ h1 .accent::after {
 }
 
 .subtitle {
-  font-size: 18.5px;
+  font-size: 19px;
+  font-weight: 500;
   color: var(--ink-soft);
   margin-bottom: 28px;
-  letter-spacing: 0.02em;
-  line-height: 1.65;
+  letter-spacing: 0.04em;
+  line-height: 1.7;
   animation: fadeDown 0.7s ease 0.1s both;
+  font-feature-settings: "kern" 1, "ss01" 1;
 }
 .subtitle .sub-hl {
   color: var(--ink);
-  font-weight: 600;
+  font-weight: 700;
   position: relative;
   padding: 0 2px;
 }
@@ -296,25 +303,28 @@ h1 .accent::after {
 }
 
 .headline {
-  font-size: 24px;
-  font-weight: 700;
+  font-size: 25px;
+  font-weight: 800;
   color: var(--ink);
   margin-bottom: 20px;
-  letter-spacing: 0.01em;
-  line-height: 1.55;
+  letter-spacing: -0.015em;
+  line-height: 1.5;
   animation: fadeDown 0.7s ease 0.15s both;
+  font-feature-settings: "kern" 1, "ss01" 1, "tnum" 1, "lnum" 1;
 }
 .headline .hl {
   position: relative;
   display: inline-block;
   color: var(--tq);
+  font-weight: 900;
+  font-feature-settings: "tnum" 1, "lnum" 1;
 }
 .headline .hl::after {
   content: "";
   position: absolute;
   left: 0; right: 0; bottom: 2px;
   height: 8px;
-  background: rgba(99,102,241,0.15);
+  background: rgba(99,102,241,0.18);
   z-index: -1;
   border-radius: 2px;
 }
@@ -324,7 +334,7 @@ h1 .accent::after {
   font-size: 15px;
   font-weight: 500;
   color: var(--ink-soft);
-  letter-spacing: 0.01em;
+  letter-spacing: 0.03em;
 }
 
 /* 数据条 */
@@ -614,11 +624,11 @@ footer .disclaimer {
 /* 响应式 */
 @media (max-width: 720px) {
   body { padding: 24px 16px; align-items: flex-start; }
-  h1 { font-size: 30px; letter-spacing: 0.01em; }
+  h1 { font-size: 30px; font-weight: 900; letter-spacing: -0.02em; line-height: 1.2; }
   h1::before { top: 0.08em; bottom: 0.08em; width: 3px; }
-  .headline { font-size: 19px; margin-bottom: 18px; line-height: 1.55; }
-  .headline .hl-sub { font-size: 14px; margin-top: 10px; }
-  .subtitle { font-size: 16px; margin-bottom: 22px; line-height: 1.65; }
+  .headline { font-size: 18px; font-weight: 800; margin-bottom: 18px; line-height: 1.55; letter-spacing: -0.01em; }
+  .headline .hl-sub { font-size: 14px; font-weight: 500; margin-top: 10px; letter-spacing: 0.02em; }
+  .subtitle { font-size: 16px; font-weight: 500; margin-bottom: 22px; line-height: 1.7; letter-spacing: 0.03em; }
   .brand-tag { font-size: 14.5px; padding: 6px 14px; gap: 6px; }
   .brand-tag .full-en { display: none; }
   .brand-tag .full-zh { display: inline; }
@@ -644,9 +654,9 @@ footer .disclaimer {
   h1 { font-size: clamp(17px, 5.5vw, 21px); line-height: 1.35; margin-bottom: 16px; letter-spacing: 0; word-break: keep-all; overflow-wrap: break-word; padding: 0 4px; }
   h1::before { top: 0.08em; bottom: 0.08em; }
   h1 .accent { display: inline; word-break: keep-all; }
-  .subtitle { font-size: 14.5px; line-height: 1.5; margin-bottom: 18px; }
-  .headline { font-size: 14.5px; margin-bottom: 16px; line-height: 1.55; letter-spacing: 0; word-break: keep-all; overflow-wrap: break-word; }
-  .headline .hl-sub { font-size: 13px; margin-top: 8px; }
+  .subtitle { font-size: 14.5px; font-weight: 500; line-height: 1.55; margin-bottom: 18px; letter-spacing: 0.02em; }
+  .headline { font-size: 14px; font-weight: 800; margin-bottom: 16px; line-height: 1.5; letter-spacing: -0.01em; word-break: keep-all; overflow-wrap: break-word; }
+  .headline .hl-sub { font-size: 13px; font-weight: 500; margin-top: 8px; letter-spacing: 0.02em; }
   .headline br { display: inline; }
   .headline > span[style*="display:inline-block"] { display: block !important; margin-top: 4px; font-size: 11.5px; }
   .data-strip { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px 8px; margin-bottom: 24px; padding: 0 4px; width: 100%; max-width: 340px; margin-left: auto; margin-right: auto; }
@@ -670,9 +680,9 @@ footer .disclaimer {
 /* 中等屏 (≤480px) - 给更大空间 */
 @media (max-width: 480px) and (min-width: 381px) {
   .container { max-width: 100%; padding: 0 8px; }
-  h1 { font-size: clamp(21px, 5vw, 26px); line-height: 1.35; letter-spacing: 0; }
-  .subtitle { font-size: 15.5px; margin-bottom: 20px; }
-  .headline { font-size: 17px; line-height: 1.5; margin-bottom: 16px; }
+  h1 { font-size: clamp(21px, 5vw, 26px); line-height: 1.25; letter-spacing: -0.02em; font-weight: 900; }
+  .subtitle { font-size: 15.5px; font-weight: 500; margin-bottom: 20px; letter-spacing: 0.03em; line-height: 1.65; }
+  .headline { font-size: 16px; line-height: 1.5; margin-bottom: 16px; font-weight: 800; letter-spacing: -0.01em; }
   .data-strip { gap: 14px 10px; padding: 0 8px; width: 100%; max-width: 360px; margin-left: auto; margin-right: auto; }
   .data-item .num { font-size: 25px; }
   .data-item .label { font-size: 14.5px; }

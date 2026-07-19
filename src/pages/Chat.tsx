@@ -278,19 +278,6 @@ export default function ChatPage() {
 
         {/* ---------- 输入区 ---------- */}
         <div className="mt-3 sm:mt-4">
-          {/* 场景信息条：仅在非空时显示，对话上下文 */}
-          {!isEmpty && (
-            <div className="scene-strip">
-              <div className="scene-icon">{scene.icon}</div>
-              <div className="scene-text">
-                当前场景：<b>{scene.label}</b> · 切换 Tab 不会串上下文
-              </div>
-              <div className="scene-status">
-                <span className="pulse" />
-                <span>{scene.id === "school" ? "案例匹配中" : scene.id === "essay" ? "文书准备中" : "材料梳理中"}</span>
-              </div>
-            </div>
-          )}
           <div className="bg-white border border-slate-200 rounded-2xl shadow-sm focus-within:border-indigo-400 focus-within:ring-2 focus-within:ring-indigo-100 transition-all">
             <textarea
               ref={inputRef}

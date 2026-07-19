@@ -15,6 +15,9 @@ export default function EmptyState({
       {/* ========== 当前场景单卡 ========== */}
       <div className="mx-auto max-w-xl w-full px-3 sm:px-0">
         <div className="scene-card">
+          <div className="text-[11px] font-semibold text-slate-500 mb-2.5 px-1 tracking-wide">
+            示例
+          </div>
           <div className="sc-prompts">
             {scene.quickPrompts.map((p) => (
               <button

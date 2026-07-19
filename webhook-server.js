@@ -52,31 +52,25 @@ createServer((req, res) => {
       cwd: CWD, timeout: 180_000, encoding: 'utf-8',
     }));
 
-    // Clean old files in nginx container html dir, then copy fresh dist
-    // (avoids hash-suffixed asset accumulation across deploys)
-    res.write('> docker exec rm old html dir\n');
+    // 原子化：tar 打包 dist 后在容器内 rm + 解压
+    // 失败时容器不会留下空目录（旧 html 仍在）
+    res.write('> tar | docker exec (rm + extract dist)\n');
     res.write(execSync(
-      'docker exec tianquan-nginx sh -c "rm -rf /usr/share/nginx/html/*" 2>&1',
-      { timeout: 15_000, encoding: 'utf-8' },
-    ));
-
-    res.write('> docker cp dist to nginx container\n');
-    res.write(execSync(
-      'docker cp dist/. tianquan-nginx:/usr/share/nginx/html/ 2>&1',
-      { timeout: 15_000, encoding: 'utf-8' },
+      'tar -C dist -cf - . | docker exec -i tianquan-nginx sh -c "rm -rf /usr/share/nginx/html/* && tar -C /usr/share/nginx/html -xf -" 2>&1',
+      { timeout: 60_000, encoding: 'utf-8' },
     ));
 
     // 同步项目根的验证文件（微信、百度、Google 等站点验证用）
-    // 规则：项目根（包括子目录）下所有非 dist/ 非 node_modules/ 非 .git/ 的 .txt 文件
-    // 排除 landing/index.html、源码、依赖、CI 配置等
+    // 规则：项目根下所有非排除目录的 .txt 文件
     res.write('> sync root verification files (e.g. *.txt for wechat)\n');
     const VERIFY_EXCLUDE = ['dist', 'node_modules', '.git', 'tianshu', 'backend', 'tests', 'scripts', 'logs', 'landing', '.github', 'node_modules_cache'];
-    const verifyCmd = `find . -type f -name "*.txt" \\( ${VERIFY_EXCLUDE.map(d => `-path "./${d}/*" -o -path "./${d}"`).join(' -o ')} -o \\) -prune -o -type f -name "*.txt" -print 2>/dev/null | head -50`;
+    // 构建 find prune 表达式
+    const pruneExpr = VERIFY_EXCLUDE.map(d => `-name "${d}" -prune -o`).join(' ');
+    const verifyCmd = `find . ${pruneExpr} -type f -name "*.txt" -print 2>/dev/null | head -50`;
     const verifyFiles = execSync(verifyCmd, {
       cwd: CWD, encoding: 'utf-8', timeout: 10_000,
     }).trim().split('\n').filter(Boolean);
     for (const f of verifyFiles) {
-      // 转绝对路径
       const abs = `${CWD}/${f.replace(/^\.\//, '')}`;
       const basename = f.split('/').pop();
       res.write(`  - ${basename}\n`);

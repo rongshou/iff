@@ -225,9 +225,21 @@ h1 {
   font-weight: 800;
   letter-spacing: 0.02em;
   color: var(--ink);
-  margin-bottom: 12px;
+  margin-bottom: 24px;
   line-height: 1.2;
   animation: fadeDown 0.7s ease 0.05s both;
+  padding-left: 14px;
+  position: relative;
+}
+h1::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.12em;
+  bottom: 0.12em;
+  width: 4px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, var(--tq) 0%, var(--ts) 100%);
 }
 h1 .accent {
   position: relative;
@@ -261,9 +273,9 @@ h1 .accent::after {
 .subtitle {
   font-size: 18.5px;
   color: var(--ink-soft);
-  margin-bottom: 12px;
+  margin-bottom: 28px;
   letter-spacing: 0.02em;
-  line-height: 1.6;
+  line-height: 1.65;
   animation: fadeDown 0.7s ease 0.1s both;
 }
 .subtitle .sub-hl {
@@ -284,12 +296,12 @@ h1 .accent::after {
 }
 
 .headline {
-  font-size: 25px;
+  font-size: 24px;
   font-weight: 700;
   color: var(--ink);
-  margin-bottom: 40px;
+  margin-bottom: 20px;
   letter-spacing: 0.01em;
-  line-height: 1.4;
+  line-height: 1.55;
   animation: fadeDown 0.7s ease 0.15s both;
 }
 .headline .hl {
@@ -305,6 +317,14 @@ h1 .accent::after {
   background: rgba(99,102,241,0.15);
   z-index: -1;
   border-radius: 2px;
+}
+.headline .hl-sub {
+  display: block;
+  margin-top: 14px;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--ink-soft);
+  letter-spacing: 0.01em;
 }
 
 /* 数据条 */
@@ -594,9 +614,11 @@ footer .disclaimer {
 /* 响应式 */
 @media (max-width: 720px) {
   body { padding: 24px 16px; align-items: flex-start; }
-  h1 { font-size: 32px; letter-spacing: 0.01em; }
-  .headline { font-size: 20px; margin-bottom: 28px; line-height: 1.45; }
-  .subtitle { font-size: 16px; }
+  h1 { font-size: 30px; letter-spacing: 0.01em; }
+  h1::before { top: 0.08em; bottom: 0.08em; width: 3px; }
+  .headline { font-size: 19px; margin-bottom: 18px; line-height: 1.55; }
+  .headline .hl-sub { font-size: 14px; margin-top: 10px; }
+  .subtitle { font-size: 16px; margin-bottom: 22px; line-height: 1.65; }
   .brand-tag { font-size: 14.5px; padding: 6px 14px; gap: 6px; }
   .brand-tag .full-en { display: none; }
   .brand-tag .full-zh { display: inline; }
@@ -619,10 +641,12 @@ footer .disclaimer {
 @media (max-width: 380px) {
   body { padding: 20px 12px; }
   .container { max-width: 100%; }
-  h1 { font-size: clamp(17px, 5.5vw, 21px); line-height: 1.35; margin-bottom: 10px; letter-spacing: 0; word-break: keep-all; overflow-wrap: break-word; padding: 0 4px; }
+  h1 { font-size: clamp(17px, 5.5vw, 21px); line-height: 1.35; margin-bottom: 16px; letter-spacing: 0; word-break: keep-all; overflow-wrap: break-word; padding: 0 4px; }
+  h1::before { top: 0.08em; bottom: 0.08em; }
   h1 .accent { display: inline; word-break: keep-all; }
-  .subtitle { font-size: 14.5px; line-height: 1.5; margin-bottom: 10px; }
-  .headline { font-size: 15px; margin-bottom: 22px; line-height: 1.55; letter-spacing: 0; word-break: keep-all; overflow-wrap: break-word; }
+  .subtitle { font-size: 14.5px; line-height: 1.5; margin-bottom: 18px; }
+  .headline { font-size: 14.5px; margin-bottom: 16px; line-height: 1.55; letter-spacing: 0; word-break: keep-all; overflow-wrap: break-word; }
+  .headline .hl-sub { font-size: 13px; margin-top: 8px; }
   .headline br { display: inline; }
   .headline > span[style*="display:inline-block"] { display: block !important; margin-top: 4px; font-size: 11.5px; }
   .data-strip { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px 8px; margin-bottom: 24px; padding: 0 4px; width: 100%; max-width: 340px; margin-left: auto; margin-right: auto; }
@@ -647,8 +671,8 @@ footer .disclaimer {
 @media (max-width: 480px) and (min-width: 381px) {
   .container { max-width: 100%; padding: 0 8px; }
   h1 { font-size: clamp(21px, 5vw, 26px); line-height: 1.35; letter-spacing: 0; }
-  .subtitle { font-size: 15.5px; }
-  .headline { font-size: 18px; line-height: 1.5; }
+  .subtitle { font-size: 15.5px; margin-bottom: 20px; }
+  .headline { font-size: 17px; line-height: 1.5; margin-bottom: 16px; }
   .data-strip { gap: 14px 10px; padding: 0 8px; width: 100%; max-width: 360px; margin-left: auto; margin-right: auto; }
   .data-item .num { font-size: 25px; }
   .data-item .label { font-size: 14.5px; }
@@ -673,8 +697,8 @@ footer .disclaimer {
   <h2 class="visually-hidden" style="position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden;">选择适合你的工具</h2>
 
   <div class="headline">
-    <span class="hl">17.6 万</span> 个真实案例，让你<span class="hl">少踩坑</span>。<br>
-    <span style="font-size:14px;font-weight:500;color:var(--ink-soft);margin-top:6px;display:inline-block">知识库<span class="hl">每天 2 次同步</span> · 告别过期信息</span>
+    <span class="hl">17.6 万</span> 个真实案例，让你<span class="hl">少踩坑</span>。
+    <span class="hl-sub">知识库<span class="hl">每天 2 次同步</span> · 告别过期信息</span>
   </div>
 
   <div class="data-strip">

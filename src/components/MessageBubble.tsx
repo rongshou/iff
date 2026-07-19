@@ -71,7 +71,7 @@ const MessageBubble = memo(function MessageBubble({ msg, loading }: { msg: ChatM
   }, [msg.content, isStreaming]);
 
   return (
-    <div className={`flex gap-2 sm:gap-3 ${isUser ? "flex-row-reverse" : "flex-row"}`}>
+    <div className={`flex flex-col gap-1.5 ${isUser ? "items-end" : "items-start"}`}>
       <Avatar role={msg.role} />
       <div
         className={`group flex flex-col ${
@@ -108,9 +108,7 @@ const MessageBubble = memo(function MessageBubble({ msg, loading }: { msg: ChatM
           )}
         </div>
         <div
-          className={`flex items-center gap-2 mt-1 px-1 ${
-            isUser ? "flex-row-reverse" : "flex-row"
-          }`}
+          className={`flex items-center gap-2 mt-0.5 px-1 ${isUser ? "flex-row-reverse" : "flex-row"}`}
         >
           <span className="text-[10px] text-slate-400">
             {formatTime(msg.timestamp)}

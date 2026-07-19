@@ -156,9 +156,32 @@ html, body { min-height: 100%; }
 body {
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "PingFang SC", "Helvetica Neue", sans-serif;
   background:
-    radial-gradient(circle at 12% 8%, rgba(99,102,241,0.10), transparent 40%),
+    /* 点阵底纹（高级 SaaS 质感） */
+    radial-gradient(circle, rgba(99,102,241,0.08) 1px, transparent 1.5px),
+    /* 顶部蓝紫光晕 */
+    radial-gradient(ellipse 800px 500px at 50% 0%, rgba(99,102,241,0.18), transparent 60%),
+    /* 右下紫光 */
     radial-gradient(circle at 88% 92%, rgba(168,85,247,0.10), transparent 40%),
+    /* 顶部光斑 */
+    radial-gradient(circle at 12% 8%, rgba(99,102,241,0.10), transparent 40%),
+    /* 底部边缘柔光（vignette） */
+    radial-gradient(ellipse at 50% 100%, rgba(255,255,255,0.4), transparent 60%),
+    /* 基础渐变 */
     linear-gradient(135deg, var(--bg-1) 0%, var(--bg-2) 50%, var(--bg-3) 100%);
+  background-size:
+    24px 24px,
+    100% 100%,
+    100% 100%,
+    100% 100%,
+    100% 100%,
+    100% 100%;
+  background-position:
+    0 0,
+    center top,
+    right bottom,
+    left top,
+    center bottom,
+    center;
   min-height: 100vh;
   overflow-x: hidden;
   display: flex;
@@ -166,8 +189,16 @@ body {
   justify-content: center;
   color: var(--ink);
   padding: 40px 24px;
-  overflow-x: hidden;
   position: relative;
+}
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(circle at 50% 0%, transparent 0%, rgba(255,255,255,0.15) 60%, rgba(255,255,255,0.5) 100%);
+  pointer-events: none;
+  z-index: 0;
 }
 
 /* 漂浮背景元素 */
@@ -228,21 +259,14 @@ h1 {
   margin-bottom: 24px;
   line-height: 1.15;
   animation: fadeDown 0.7s ease 0.05s both;
-  padding-left: 14px;
+  padding-left: 0;
   position: relative;
   font-feature-settings: "kern" 1, "ss01" 1, "liga" 1;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
 }
 h1::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  top: 0.12em;
-  bottom: 0.12em;
-  width: 4px;
-  border-radius: 999px;
-  background: linear-gradient(180deg, var(--tq) 0%, var(--ts) 100%);
+  display: none;
 }
 h1 .accent {
   position: relative;

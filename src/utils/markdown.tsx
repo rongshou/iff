@@ -195,6 +195,7 @@ export function renderMarkdown(src: string): React.ReactNode {
       }
       blocks.push(
         <div key={`b-${key++}`} className="table-wrap">
+          <div className="table-wrap-scroll-hint">← 左右滑动查看完整表格 →</div>
           <table>
             <thead>
               <tr>

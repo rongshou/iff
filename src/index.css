@@ -383,6 +383,14 @@ body {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
 }
+.prose-chat .table-wrap-scroll-hint {
+  display: none;
+  font-size: 11px;
+  color: #94a3b8;
+  text-align: center;
+  margin-bottom: 4px;
+  letter-spacing: 0.05em;
+}
 .prose-chat table {
   border-collapse: collapse;
   width: 100%;
@@ -402,21 +410,37 @@ body {
   color: #0f172a;
   white-space: nowrap;
 }
-.prose-chat tbody tr:nth-child(even) {
-  background: #f8fafc;
-}
-.prose-chat tbody tr:hover {
-  background: #eef2ff;
+
+/* 桌面（≥768px）：表格不横滚，单元格可换行 */
+@media (min-width: 768px) {
+  .prose-chat table,
+  .prose-chat th,
+  .prose-chat td {
+    white-space: normal;
+    word-break: break-word;
+  }
+  .prose-chat .table-wrap {
+    overflow-x: visible;
+  }
 }
 
-/* 手机上表格调小字号、更紧 padding */
+/* 手机（≤480px）：保留横滚 + 显示滑动提示 */
 @media (max-width: 480px) {
+  .prose-chat .table-wrap-scroll-hint {
+    display: block;
+  }
   .prose-chat table {
     font-size: 0.78em;
   }
   .prose-chat th, .prose-chat td {
     padding: 4px 6px;
   }
+}
+.prose-chat tbody tr:nth-child(even) {
+  background: #f8fafc;
+}
+.prose-chat tbody tr:hover {
+  background: #eef2ff;
 }
 
 /* 自动滚动行为 */

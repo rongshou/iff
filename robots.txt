@@ -1,0 +1,13 @@
+# Iff - 国际学业智能规划
+# https://iffirm.com/
+
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /tianquan/#/
+
+# Sitemap
+Sitemap: https://iffirm.com/sitemap.xml
+
+# Crawl-delay (Google/Bing 默认 0 不需要；设 1 防止压服务器)
+Crawl-delay: 1

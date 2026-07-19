@@ -76,7 +76,7 @@ const MessageBubble = memo(function MessageBubble({ msg, loading }: { msg: ChatM
       <div
         className={`group flex flex-col ${
           isUser ? "items-end" : "items-start"
-        } max-w-[85%] sm:max-w-[75%]`}
+        } max-w-[95%] sm:max-w-[90%]`}
       >
         <div
           className={`bubble-shadow ${

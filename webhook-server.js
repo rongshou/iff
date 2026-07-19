@@ -60,16 +60,19 @@ createServer((req, res) => {
       { timeout: 60_000, encoding: 'utf-8' },
     ));
 
-    // 同步项目根的验证文件（微信、百度、Google 等站点验证用）
-    // 规则：项目根下所有非排除目录的 .txt 文件
-    res.write('> sync root verification files (e.g. *.txt for wechat)\n');
+    // 同步项目根的站点元文件
+    // 同步范围：.txt (验证)、.xml (sitemap/feed)、.svg (favicon)、
+    //          apple-touch-icon.png / og-image.png / manifest.json
+    // 白名单：只允许项目根及 public/ 下的（避免误复制 src/assets 里的中间产物）
+    res.write('> sync root site files (.txt .xml .svg .png .json)\n');
     const VERIFY_EXCLUDE = ['dist', 'node_modules', '.git', 'tianshu', 'backend', 'tests', 'scripts', 'logs', 'landing', '.github', 'node_modules_cache'];
-    // 构建 find prune 表达式
     const pruneExpr = VERIFY_EXCLUDE.map(d => `-name "${d}" -prune -o`).join(' ');
-    const verifyCmd = `find . ${pruneExpr} -type f -name "*.txt" -print 2>/dev/null | head -50`;
+    const verifyCmd = `find . ${pruneExpr} -type f \\( -name "*.txt" -o -name "*.xml" -o -name "*.svg" -o -name "apple-touch-icon.png" -o -name "og-image.png" -o -name "manifest.json" \\) -print 2>/dev/null | head -50`;
     const verifyFiles = execSync(verifyCmd, {
       cwd: CWD, encoding: 'utf-8', timeout: 10_000,
-    }).trim().split('\n').filter(Boolean);
+    }).trim().split('\n').filter(Boolean)
+      // 白名单过滤：项目根 + public/
+      .filter(f => /^\.\/([^\/]+\.(txt|xml|svg|png|json)|public\/[^\/]+\.(txt|xml|svg|png|json))$/.test(f));
     for (const f of verifyFiles) {
       const abs = `${CWD}/${f.replace(/^\.\//, '')}`;
       const basename = f.split('/').pop();

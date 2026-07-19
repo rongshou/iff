@@ -95,10 +95,32 @@ h1 {
   animation: fadeDown 0.7s ease 0.05s both;
 }
 h1 .accent {
-  background: linear-gradient(135deg, var(--tq), var(--ts));
+  position: relative;
+  display: inline-block;
+  background: linear-gradient(135deg, var(--tq) 0%, #6366f1 45%, var(--ts) 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
+  font-size: 1.18em;
+  letter-spacing: 0.01em;
+  padding: 0 0.04em;
+}
+h1 .accent::after {
+  content: "";
+  position: absolute;
+  left: 0.04em;
+  right: 0.04em;
+  bottom: 0.04em;
+  height: 6px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(37,99,235,0.18) 0%, rgba(124,58,237,0.22) 100%);
+  transform: scaleX(0);
+  transform-origin: left center;
+  animation: accentUnderline 0.9s cubic-bezier(0.22, 1, 0.36, 1) 0.55s forwards;
+  z-index: -1;
+}
+@keyframes accentUnderline {
+  to { transform: scaleX(1); }
 }
 
 .subtitle {
@@ -108,6 +130,22 @@ h1 .accent {
   letter-spacing: 0.02em;
   line-height: 1.6;
   animation: fadeDown 0.7s ease 0.1s both;
+}
+.subtitle .sub-hl {
+  color: var(--ink);
+  font-weight: 600;
+  position: relative;
+  padding: 0 2px;
+}
+.subtitle .sub-hl::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, var(--tq-soft), var(--ts-soft));
 }
 
 .headline {
@@ -450,8 +488,8 @@ footer .disclaimer {
     IFF<span class="full"> · INTELLIGENT FOREIGN EDUCATION FRONTIER</span>
   </div>
 
-  <h1>留学这件事，<span class="accent">可以算出来</span></h1>
-  <p class="subtitle">两个工具，帮你完成从"认识自己"到"选对学校"</p>
+  <h1>留学这件事，<span class="accent">可以更智能</span></h1>
+  <p class="subtitle">两个工具，帮你完成从<span class="sub-hl">认识自己</span>到<span class="sub-hl">选对学校</span></p>
 
   <div class="headline">
     让 <span class="hl">17.6 万</span> 个真实录取案例，帮你避坑。<br>

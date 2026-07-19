@@ -121,10 +121,6 @@ body {
   box-shadow: none;
 }
 
-  70%  { box-shadow: 0 0 0 8px rgba(99, 102, 241, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0); }
-}
-
 /* 空状态场景卡片（单卡·柔和质感·响应式） */
 .scene-card {
   position: relative;

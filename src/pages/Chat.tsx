@@ -3,7 +3,6 @@ import type { ChatMessage } from "../types";
 import MessageBubble from "../components/MessageBubble";
 import BrandNav from "../components/BrandNav";
 import EmptyState from "../components/EmptyState";
-import OnboardingWizard from "../components/OnboardingWizard";
 import { SCENES } from "../config/scenes";
 import type { SceneId } from "../config/scenes";
 import { useChatInput } from "../hooks/useChatInput";
@@ -11,7 +10,6 @@ import { useChatScroll } from "../hooks/useChatScroll";
 import { useChatSend } from "../hooks/useChatSend";
 import { useChatStore } from "../store/chatStore";
 import { useAppStore } from "../store/appStore";
-import { loadProfile } from "../services/profile";
 import { isAuthenticated } from "../services/auth";
 import { useNavigate } from "react-router-dom";
 type SceneState = Record<SceneId, ChatMessage[]>;
@@ -46,8 +44,7 @@ export default function ChatPage() {
   const { input, setInput, inputRef, handleKeyDown } = useChatInput(() => handleSend());
   const { scrollRef, showScrollBottom, setShowScrollBottom, onScroll, scrollToBottom } = useChatScroll();
   const [activeScene, setActiveScene] = useState<SceneId>("school");
-  // 首次访问（无 profile 且无对话历史）显示 OnboardingWizard；用户跳过或完成后切回 EmptyState
-  const [wizardDismissed, setWizardDismissed] = useState(false);
+  // 用户跳过或完成后切回 EmptyState
   // 每个场景的对话历史独立存储，切换 Tab 不串
   const [scenes, setScenes] = useState<SceneState>(() => {
     // 从 localStorage 读取上次会话（避免刷新丢上下文）
@@ -304,23 +301,15 @@ export default function ChatPage() {
         {/* ---------- 主体区域 ---------- */}
         {isEmpty ? (
           <div className="flex-1 overflow-y-auto thin-scrollbar pb-2">
-            {!wizardDismissed && loadProfile() === null && totalMessages === 0 ? (
-              <OnboardingWizard
-                scene={scene}
-                onSceneChange={setActiveScene}
-                onComplete={() => setWizardDismissed(true)}
-              />
-            ) : (
-              <EmptyState
-                scene={scene}
-                onPick={(t) => {
-                  // 点击快捷问题：填到输入框，不直接发送，让用户自己修改后再发
-                  setInput(t);
-                  setTimeout(() => inputRef.current?.focus(), 0);
-                }}
-                onSceneChange={setActiveScene}
-              />
-            )}
+            <EmptyState
+              scene={scene}
+              onPick={(t) => {
+                // 点击快捷问题：填到输入框，不直接发送，让用户自己修改后再发
+                setInput(t);
+                setTimeout(() => inputRef.current?.focus(), 0);
+              }}
+              onSceneChange={setActiveScene}
+            />
           </div>
         ) : (
           <div

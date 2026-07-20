@@ -18,6 +18,7 @@ class Settings(BaseSettings):
     # 生产环境必须在 .env 中设置具体的允许来源，如 ["https://your-frontend.com"]
     # "*" 会导致 Starlette CORSMiddleware 拒绝 Private Network Access 预检请求
     CORS_ORIGINS: list[str] = [
+        "https://www.iffirm.com",
         "https://rongshou.github.io",
         "http://localhost:5173",
         "http://localhost:8080",

@@ -2,6 +2,61 @@ import { getAuthHeaders } from "./auth";
 
 const API_BASE = import.meta.env.VITE_API_BASE || "/api";
 
+/** 每次对话保存到后端 */
+export async function saveChatTurn(
+  session_id: string,
+  scene: string,
+  user_message: string,
+  assistant_message: string,
+): Promise<boolean> {
+  try {
+    const res = await fetch(`${API_BASE}/chat/history`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+      body: JSON.stringify({ session_id, scene, user_message, assistant_message }),
+    });
+    const data = await res.json();
+    return data.ok === true;
+  } catch (e) {
+    console.warn("saveChatTurn failed:", e);
+    return false;
+  }
+}
+
+/** 从后端获取对话历史 */
+export async function fetchChatHistory(
+  limit: number = 100,
+  offset: number = 0,
+): Promise<{ sessions: any[]; total: number }> {
+  try {
+    const res = await fetch(`${API_BASE}/chat/history?limit=${limit}&offset=${offset}`, {
+      headers: { ...getAuthHeaders() },
+    });
+    return await res.json();
+  } catch (e) {
+    console.warn("fetchChatHistory failed:", e);
+    return { sessions: [], total: 0 };
+  }
+}
+
+/** 删除后端对话历史 */
+export async function deleteChatHistory(session_id?: string): Promise<boolean> {
+  try {
+    const url = session_id
+      ? `${API_BASE}/chat/history?session_id=${encodeURIComponent(session_id)}`
+      : `${API_BASE}/chat/history`;
+    const res = await fetch(url, {
+      method: "DELETE",
+      headers: { ...getAuthHeaders() },
+    });
+    const data = await res.json();
+    return data.ok === true;
+  } catch (e) {
+    console.warn("deleteChatHistory failed:", e);
+    return false;
+  }
+}
+
 export interface ChatMessageInput {
   role: "user" | "assistant";
   content: string;

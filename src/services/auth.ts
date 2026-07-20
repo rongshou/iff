@@ -94,14 +94,37 @@ export function getAuthCode(): string {
 }
 
 /**
+ * 获取或创建匿名试用 ID（iff_trial_id），用于未登录用户的试用额度追踪。
+ *
+ * 首次读取时若 localStorage 中不存在则就地生成并持久化，保证每个浏览器
+ * 只有一个稳定 ID。后端通过 X-Trial-Id 请求头识别试用用户。
+ */
+export function getTrialId(): string {
+  try {
+    let id = localStorage.getItem("iff_trial_id");
+    if (!id) {
+      id = crypto.randomUUID();
+      localStorage.setItem("iff_trial_id", id);
+    }
+    return id;
+  } catch {
+    return "";
+  }
+}
+
+/**
  * 生成包含授权码的请求头（X-Auth-Code），供所有需认证的 API 调用使用。
  *
  * 始终返回带 X-Auth-Code 键的对象（即便值为空），防止 Vite/ESBuild
  * 在 production build 中因空对象展开优化将 auth header 整条剥离。
+ *
+ * 同时附带 X-Trial-Id：未登录用户靠它走试用额度，已登录用户的后端
+ * 会优先校验 X-Auth-Code 而忽略试用 ID，因此始终发送是安全的。
  */
 export function getAuthHeaders(): Record<string, string> {
   const code = getAuthCode();
-  return { "X-Auth-Code": code };
+  const trialId = getTrialId();
+  return { "X-Auth-Code": code, "X-Trial-Id": trialId };
 }
 
 export function getAuthUsername(): string {

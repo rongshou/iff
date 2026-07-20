@@ -1,0 +1,97 @@
+/* 打印样式 — 仅在浏览器打印 / 另存为 PDF 时生效 */
+
+/* 打印专用头部（屏幕上隐藏） */
+.print-header {
+  display: none;
+}
+
+@media print {
+  /* 隐藏所有非打印元素 */
+  nav,
+  header,
+  footer,
+  .chat-bg > div:first-child, /* BrandNav */
+  textarea,
+  button:not(.print-only),
+  .fixed,
+  .sticky,
+  [class*="bubble-user"],
+  [class*="message"],
+  .empty-state,
+  .onboarding-wizard,
+  [data-no-print] {
+    display: none !important;
+  }
+
+  /* 仅显示可打印内容 */
+  .recommend-card-print,
+  .comparison-table-print {
+    display: block !important;
+  }
+
+  /* 干净的打印布局 */
+  body {
+    background: white;
+    padding: 20px;
+    font-size: 12px;
+    color: #0f172a;
+  }
+  h2 {
+    font-size: 18px;
+    margin-bottom: 8px;
+  }
+  h3 {
+    font-size: 16px;
+    margin-bottom: 6px;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  th,
+  td {
+    border: 1px solid #e2e8f0;
+    padding: 6px 8px;
+    text-align: left;
+  }
+  th {
+    background: #f1f5f9;
+    font-weight: 600;
+  }
+
+  /* 打印头部 */
+  .print-header {
+    display: block !important;
+    text-align: center;
+    margin-bottom: 16px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #e2e8f0;
+  }
+  .print-header h1 {
+    font-size: 20px;
+    color: #6366f1;
+    margin: 0 0 4px 0;
+  }
+  .print-header .print-date {
+    font-size: 12px;
+    color: #64748b;
+  }
+
+  /* 推荐卡片在打印时去掉阴影/圆角，紧凑排列 */
+  .recommend-card-print .lift {
+    box-shadow: none !important;
+    border: 1px solid #e2e8f0 !important;
+    break-inside: avoid;
+  }
+
+  /* 颜色重置：避免打印彩色背景浪费墨水 */
+  .recommend-card-print [class*="bg-gradient"],
+  .comparison-table-print [class*="bg-gradient"] {
+    background: white !important;
+  }
+
+  /* 分页避免在卡片内断开 */
+  .recommend-card-print > * {
+    break-inside: avoid;
+  }
+}

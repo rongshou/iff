@@ -14,4 +14,17 @@ export interface ChatMessage {
   content: string;
   timestamp: number;
   reasoning?: string;
+  recommendPayload?: any;
+}
+
+export interface FavoriteSchool {
+  name: string;
+  country: string;
+  qs_rank?: number;
+  usnews_rank?: number;
+  match_level: string;
+  gpa_median?: number;
+  matched_cases: number;
+  toefl_display?: { type: string; value: number; label: string };
+  meets_toefl?: boolean;
 }

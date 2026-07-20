@@ -5,6 +5,7 @@
 """
 from __future__ import annotations
 
+import json
 import re
 from ..utils.gpa import GPA_RANGES
 from .school_abbrev import _UNIV_ABBREV
@@ -167,6 +168,33 @@ _MAJOR_STOPWORDS = {
     "申请香港硕士", "申请英国硕士", "申请美国硕士", "申请澳洲硕士",
     "读硕士", "读本科", "读博士", "想读", "想去",
 }
+
+
+
+def _parse_original_major(text: str) -> str | None:
+    """从文本中提取用户当前/原专业（排除"目标专业"标记后的内容）。"""
+    # 移除"目标专业：XXX"和"目标：XXX"，避免把目标专业当成原专业
+    cleaned = re.sub(r"目标(?:专业|方向)?\s*[:：]\s*[^\s，。,.!？?]+", "", text)
+    # 先尝试 _parse_major（匹配"XX专业"等模式）
+    result = _parse_major(cleaned)
+    if result:
+        return result
+    # 回退：匹配"XX工程/科学/技术/管理/学"等常见专业后缀
+    # 排除学校名（XX大学/学院）和国家名
+    cleaned2 = re.sub(r"(硕士|本科|博士)(?:生)?", "", cleaned)
+    cleaned2 = re.sub(r"(英国|美国|澳洲|澳大利亚|加拿大|香港|新加坡|日本|德国|法国|新西兰|爱尔兰|荷兰|韩国|马来西亚|澳门|中国香港|中国澳门)", "", cleaned2)
+    cleaned2 = re.sub(r"(双非|985|211|海本|英本|美本|加本|澳本)", "", cleaned2)
+    cleaned2 = re.sub(r"\S+大学[^\s]*", "", cleaned2)  # 移除大学名
+    cleaned2 = re.sub(r"\S+学院[^\s]*", "", cleaned2)  # 移除学院名
+    _MAJOR_SUFFIXES = ("工程", "科学", "技术", "管理", "学", "教育", "商务", "金融")
+    for suffix in _MAJOR_SUFFIXES:
+        for length in range(6, 1, -1):
+            m = re.search(rf"([\u4e00-\u9fffA-Za-z]{{{length}}}){suffix}", cleaned2)
+            if m:
+                major = m.group(1).strip() + suffix
+                if major not in _MAJOR_STOPWORDS and len(major) >= 3:
+                    return major
+    return None
 
 
 def _parse_major(text: str) -> str | None:
@@ -416,7 +444,11 @@ def _extract_profile_from_history(messages: list[dict]) -> dict:
     major = _parse_major(combined) or _parse_major_from_conversation(messages)
     if major:
         profile["target_major"] = major
-        profile["original_major"] = major
+
+    # 本科/原专业（排除目标专业标记后的内容）
+    original_major = _parse_original_major(combined)
+    if original_major:
+        profile["original_major"] = original_major
 
     # 本科院校
     undergrad = _parse_undergrad(combined)
@@ -433,6 +465,28 @@ def _extract_profile_from_history(messages: list[dict]) -> dict:
     ielts = _parse_ielts(combined)
     if ielts:
         profile["ielts_score"] = ielts
+
+    # ── 天枢测评数据提取 ──
+    # 扫描所有用户消息，查找包含 tianshu 字段的 JSON 内容
+    for msg in messages:
+        if msg["role"] != "user":
+            continue
+        text = msg["content"]
+        # 查找消息中可能的 JSON 对象（以 { 开头、含 "tianshu" 的片段）
+        json_start = text.find('{')
+        while json_start != -1:
+            json_end = text.find('}', json_start)
+            if json_end == -1:
+                break
+            candidate = text[json_start:json_end + 1]
+            try:
+                parsed = json.loads(candidate)
+                if isinstance(parsed, dict) and "tianshu" in parsed:
+                    profile["tianshu"] = parsed["tianshu"]
+                    break
+            except (json.JSONDecodeError, ValueError):
+                pass
+            json_start = text.find('{', json_end)
 
     return profile
 

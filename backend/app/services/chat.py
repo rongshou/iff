@@ -252,7 +252,7 @@ def load_context_from_history(messages: list[dict]) -> tuple[str, dict | None]:
         else:
             # profile 已完整，调推荐引擎
             try:
-                result = run_recommend(profile)
+                result = run_recommend(profile, tianshu_data=profile.get("tianshu"))
                 hint = _format_recommend_result(result)
                 if hint:
                     parts.append(hint)

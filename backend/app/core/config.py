@@ -28,8 +28,8 @@ class Settings(BaseSettings):
     LLM_PROVIDER: str = "dashscope"
     LLM_API_KEY: str = ""
     LLM_BASE_URL: str = "https://dashscope.aliyuncs.com/compatible-mode/v1"
-    LLM_MODEL: str = "minimax-m2.7"
-    LLM_FALLBACK_MODEL: str = "minimax-m2.7"
+    LLM_MODEL: str = "deepseek-v4-flash-free"
+    LLM_FALLBACK_MODEL: str = "deepseek-v4-flash-free"
     LLM_MAX_TOKENS: int = 4096
 
     # 授权码体系 — 逗号分隔的合法授权码列表
@@ -39,7 +39,7 @@ class Settings(BaseSettings):
     # 设为 true 可跳过所有 auth 检查（仅限开发环境）
     AUTH_DISABLED: bool = False
 
-    model_config = {"env_prefix": "TIANQUAN_", "env_file": ".env"}
+    model_config = {"env_prefix": "TIANQUAN_", "env_file": ".env", "extra": "ignore"}
 
     def is_auth_code_valid(self, code: str) -> bool:
         """恒定时间比较验证码是否在有效列表中"""

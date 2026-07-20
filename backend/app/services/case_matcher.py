@@ -281,7 +281,23 @@ def _build_response(by_country: dict, target_countries: list[str], gpa_percent: 
                 school_percentiles = get_school_percentiles(uni_name, tier_label, conn=conn)
 
             p50_ref = school_percentiles.get("p50") if school_percentiles else None
+            p25_ref = school_percentiles.get("p25") if school_percentiles else None
             case_count = len(slot["cases"])
+
+            # ── 学校级合理性过滤 ──
+            # 用户百分位远低于学校中位数时，说明即使有少量案例匹配也只是统计噪音
+            # 排除: 用户 GPA 低于 p50 超过 10 个百分点 且 案例数 < 3
+            if p50_ref is not None and (gpa_percent < p50_ref - 10) and case_count < 3:
+                continue
+            # 排除: 用户 GPA 低于 p25 超过 8 个百分点 且 案例数 < 5
+            if p25_ref is not None and (gpa_percent < p25_ref - 8) and case_count < 5:
+                continue
+            # 排除: 无百分位数据时，用户 GPA 远低于匹配案例中位数
+            if not school_percentiles and slot.get("gpas"):
+                matched_median = sorted(slot["gpas"])[len(slot["gpas"]) // 2]
+                matched_pct = matched_median * 25  # 4.0 → 百分制估算
+                if gpa_percent < matched_pct - 12 and case_count < 3:
+                    continue
 
             # 学校 GPA 中位数（从匹配案例估算，用于无百分位数据时的回退）
             school_median_gpa = None
@@ -305,6 +321,9 @@ def _build_response(by_country: dict, target_countries: list[str], gpa_percent: 
                     school_percentiles, gpa_percent,
                     gpa_score, rank_score, evidence_score,
                 )
+                # GPA 要求相差 12 个百分点以上: 提升幅度过于巨大，不展示
+                if gpa_gap is not None and gpa_gap > 12:
+                    continue
 
             matched_gpas = slot["gpas"]
 

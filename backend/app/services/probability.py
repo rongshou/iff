@@ -54,11 +54,11 @@ def classify_admission_chance(
     """
     返回: (分档, 概率分数 0-1, p50参考值, 案例数)
 
-    分档:
-      - "保底" (>p75, chance 0.9+)
-      - "匹配" (p50-p75, chance 0.6-0.9)
-      - "冲刺" (p25-p50, chance 0.3-0.6)
-      - "彩票" (<p25, chance 0.1-0.3)
+     分档:
+       - "保底" (>p75, chance 0.9+)
+       - "匹配" (p50-p75, chance 0.6-0.9)
+       - "冲刺" (p25-p50, chance 0.3-0.6)
+       - "冲刺" (<p25, chance 0.1-0.3)  # <p25 也归入冲刺档，不再使用"彩票"标签
     """
     perc = get_school_percentiles(school_name, tier_label)
     if perc is None:
@@ -77,7 +77,7 @@ def classify_admission_chance(
     if p25 is not None and user_gpa_percent >= p25:
         ratio = (user_gpa_percent - p25) / (p50 - p25) if p50 is not None and p50 > p25 else 0.5
         return "冲刺", 0.25 + ratio * 0.30, p50, n
-    return "彩票", 0.15, p50, n
+    return "冲刺", 0.15, p50, n
 
 
 def get_country_gpa_benchmark(country: str, gpa_range: str) -> Optional[dict]:

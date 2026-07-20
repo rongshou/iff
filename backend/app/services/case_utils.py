@@ -122,7 +122,7 @@ def _get_major_percentiles_batch(
 
 # 专业 GPA 敏感度: 理工科 GPA 决定性强=1.0, 文商科 GPA 非决定性<1.0
 # 阈值下移 (1-s)*区间宽度, 使文商科分档更宽松(贴合"GPA 非唯一因素"的现实)
-# s<0.7 的专业: "彩票"档升级为"冲刺"(GPA 不够但其他因素可能弥补, 保留机会)
+# s<0.7 的专业: 低于reach_thr也归入"冲刺"档(GPA 不够但其他因素可能弥补, 保留机会)
 MAJOR_GPA_SENSITIVITY = {
     "计算机": 1.0, "工程": 1.0, "数学": 1.0, "医学": 1.0,
     "商科": 0.9,
@@ -162,10 +162,10 @@ def _classify_chance_major_aware(
             if gpa_percent >= reach_thr:
                 ratio = (gpa_percent - reach_thr) / (match_thr - reach_thr) if match_thr > reach_thr else 0.5
                 return "冲刺", 0.25 + ratio * 0.30, p50, n
-            # 低敏感度文商科: GPA 不够但其他因素可能弥补, "彩票"升级"冲刺"
+            # 低敏感度文商科: GPA 不够但其他因素可能弥补, 升级为"冲刺"
             if s < 0.7:
                 return "冲刺", 0.15, p50, n
-            return "彩票", 0.15, p50, n
+            return "冲刺", 0.15, p50, n
     return classify_admission_chance(gpa_percent, uni_name, tier_label)
 
 

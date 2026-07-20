@@ -4,8 +4,8 @@
 架构：werss(采集) → kb_pipeline(AI处理) → kb_processed(轻量知识库) → 本模块(搜索)
 
 搜索流程：
-1. 用户查询 → 构造 FTS5 OR 查询
-2. 搜索 kb_processed_fts（BM25 排序）
+1. 用户查询 → 查询理解（提取类型/国家） → 构造 FTS5 AND + OR 双版本查询
+2. 优先 AND 查询 + 硬过滤（类型/国家），结果不足则回退 OR 查询
 3. JOIN kb_processed 获取完整结构化数据（summary, article_type, countries, tags 等）
 4. 过滤 excluded_articles + 广告检测
 5. 返回结构化结果供 chat.py 注入 LLM
@@ -83,33 +83,67 @@ def _escape_fts_term(term: str) -> str:
     return f'"{escaped}"'
 
 
-def _prepare_query(query: str) -> str:
-    """将用户查询转换为安全的 FTS5 OR 查询语法"""
-    # 清洗查询
+def _prepare_query(query: str) -> tuple[str, str]:
+    """将用户查询转换为 FTS5 查询语法，返回 (and_query, or_query)。
+
+    中文处理策略：提取 bigram（2字滑动窗口），而非拆单字。
+    原因：FTS 索引中连续中文被 unicode61 当作一个 token（如"签证"是一个 token），
+    单字查询无法匹配。bigram 能最大化命中概率（"英国签证"→"英国","国签","签证"）。
+
+    AND 查询要求所有词都匹配，OR 查询任一匹配即可。
+    """
     cleaned = _clean_html(query)
-    # 提取有意义的词：英文单词(>=2字符) + 中文字符
-    terms = []
-    # 英文词
+
+    # 提取中文连续字符序列
+    cn_sequences = re.findall(r'[\u4e00-\u9fff]+', cleaned)
+    # 提取英文单词
     en_words = re.findall(r'[a-zA-Z][a-zA-Z0-9]{1,}', cleaned)
+
+    and_terms: list[str] = []
+    or_terms: list[str] = []
+
+    # 中文序列：提取 bigram（2字滑动窗口）
+    for seq in cn_sequences[:5]:
+        if len(seq) >= 2:
+            # 提取所有 bigram
+            bigrams = [seq[i:i+2] for i in range(len(seq) - 1)]
+            for bg in bigrams[:8]:  # 限制 bigram 数量
+                t = _escape_fts_term(bg)
+                and_terms.append(t)
+                or_terms.append(t)
+        else:
+            # 单字：直接作为 term
+            t = _escape_fts_term(seq)
+            and_terms.append(t)
+            or_terms.append(t)
+
+    # 英文词：保持完整
     for w in en_words[:5]:
-        terms.append(_escape_fts_term(w.lower()))
-    # 中文字符（每个字作为一个 token）
-    cn_chars = re.findall(r'[\u4e00-\u9fff]', cleaned)
-    for c in cn_chars[:10]:
-        terms.append(_escape_fts_term(c))
+        t = _escape_fts_term(w.lower())
+        and_terms.append(t)
+        or_terms.append(t)
 
-    if not terms:
-        # 退化处理：取前几个字符
-        for c in cleaned[:5]:
-            if c.strip():
-                terms.append(_escape_fts_term(c))
+    if not and_terms:
+        # 退化处理：取前几个字符的 bigram
+        for i in range(len(cleaned) - 1):
+            chunk = cleaned[i:i+2]
+            if chunk.strip() and not chunk.isspace():
+                t = _escape_fts_term(chunk)
+                and_terms.append(t)
+                or_terms.append(t)
+            if len(and_terms) >= 5:
+                break
 
-    # 构造 OR 查询
-    return " OR ".join(terms) if terms else ""
+    # FTS5: 空格分隔 = 隐含 AND（短语匹配）
+    and_query = " ".join(and_terms) if and_terms else ""
+    # 显式 OR
+    or_query = " OR ".join(or_terms) if or_terms else ""
+
+    return and_query, or_query
 
 
 # ============================================================
-# 分类关键词（用于查询理解，保留供未来扩展）
+# 分类关键词（用于查询理解）
 # ============================================================
 
 CATEGORY_KEYWORDS: dict[str, list[str]] = {
@@ -149,6 +183,21 @@ COUNTRY_KEYWORDS: dict[str, list[str]] = {
     "芬兰": ["芬兰"],
     "挪威": ["挪威"],
     "比利时": ["比利时"],
+}
+
+# 分类名 → article_type 映射（与 kb_pipeline.py AI 提取 prompt 中的类型对齐）
+_CAT_TO_TYPE: dict[str, str] = {
+    "选校与申请": "申请指南",
+    "语言考试": "考试备考",
+    "签证与出入境": "签证指南",
+    "就业与实习": "就业实习",
+    "费用与奖学金": "费用分析",
+    "排名与榜单": "排名解读",
+    "政策与解读": "政策动态",
+    "大学动态": "院校介绍",
+    "低龄留学": "综合资讯",
+    "生活适应": "综合资讯",
+    "考试技巧": "考试备考",
 }
 
 
@@ -278,8 +327,16 @@ def search_articles(query: str, limit: int = 8) -> list[dict[str, Any]]:
 
     excluded_ids = _load_excluded_ids()
 
-    # 构造 FTS5 查询
-    fts_query = _prepare_query(query)
+    # 查询理解：提取国家和类别，用于硬过滤
+    keywords = _extract_keywords(query)
+    boost_countries = [k for k in keywords if k in COUNTRY_KEYWORDS]
+    filter_categories = [k for k in keywords if k in CATEGORY_KEYWORDS]
+    boost_types = list(set(
+        _CAT_TO_TYPE.get(c) for c in filter_categories if _CAT_TO_TYPE.get(c)
+    ))
+
+    # 构造 FTS5 OR 查询
+    _and_query, fts_query = _prepare_query(query)
     if not fts_query:
         return []
 
@@ -288,10 +345,12 @@ def search_articles(query: str, limit: int = 8) -> list[dict[str, Any]]:
     try:
         repo = _get_article_repo()
 
-        # ── 优先：从 kb_processed_fts 搜索 ──
+        # ── 优先：从 kb_processed_fts 搜索（硬过滤 + 级联回退） ──
         with repo.get_conn() as conn:
             if repo.kb_fts_exists(conn) and repo.kb_count(conn) > 0:
-                results = _search_kb(fts_query, limit, excluded_ids, conn)
+                results = _search_kb(fts_query, limit, excluded_ids, conn,
+                                     boost_types=boost_types or None,
+                                     boost_countries=boost_countries or None)
 
         # ── 降级：旧 articles_fts ──
         if not results:
@@ -319,12 +378,8 @@ def search_articles(query: str, limit: int = 8) -> list[dict[str, Any]]:
         return []
 
 
-def _search_kb(fts_query: str, limit: int, excluded_ids: set[str],
-               conn) -> list[dict[str, Any]]:
-    """从 kb_processed_fts 搜索（新版 AI 结构化知识库）。"""
-    repo = _get_article_repo()
-    rows = repo.search_kb_fts(fts_query, limit * 3)
-
+def _build_results(rows: list[dict], excluded_ids: set[str], limit: int) -> list[dict[str, Any]]:
+    """从 DB rows 构建结果列表（公共逻辑）。"""
     results: list[dict] = []
     seen_ids: set[str] = set()
 
@@ -376,6 +431,51 @@ def _search_kb(fts_query: str, limit: int, excluded_ids: set[str],
             break
 
     return results
+
+
+def _search_kb(fts_query: str, limit: int,
+               excluded_ids: set[str], conn,
+               boost_types: list[str] | None = None,
+               boost_countries: list[str] | None = None) -> list[dict[str, Any]]:
+    """从 kb_processed_fts 搜索，支持类型/国家硬过滤 + 级联回退。
+
+    策略（最多 2 次 SQL 查询）：
+    1. OR FTS + 类型/国家 SQL WHERE 硬过滤 → 精确匹配
+    2. 如果结果不足 → OR FTS 无过滤 + tiebreaker 提权
+    """
+    repo = _get_article_repo()
+    min_results = min(limit, 3)
+    has_filter = bool(boost_types or boost_countries)
+
+    # ── 第 1 次查询：OR FTS + 硬过滤 ──
+    if has_filter:
+        rows = repo.search_kb_fts(
+            fts_query, limit * 5,
+            article_types=boost_types or None,
+            countries=boost_countries or None,
+        )
+        results = _build_results(rows, excluded_ids, limit)
+        if len(results) >= min_results:
+            return results
+
+    # ── 第 2 次查询：OR 无过滤（回退或无过滤需求时） ──
+    rows = repo.search_kb_fts(fts_query, limit * 5)
+    all_results = _build_results(rows, excluded_ids, limit)
+
+    # 回退时对匹配 type/country 的文章做 tiebreaker 提权
+    if has_filter:
+        for r in all_results:
+            type_match = boost_types and r["category"] in boost_types
+            country_match = boost_countries and any(
+                c in r.get("countries", []) for c in boost_countries
+            )
+            r["_tiebreak"] = type_match or country_match
+
+        all_results.sort(
+            key=lambda r: (not r.pop("_tiebreak", False), -(r.get("quality_score") or 0))
+        )
+
+    return all_results[:limit]
 
 
 def _search_old_fts(fts_query: str, limit: int, excluded_ids: set[str],
@@ -430,12 +530,13 @@ def _search_handbooks(query: str, limit: int = 4) -> list[dict[str, Any]]:
     - content_snippet: 相关片段
     - source: "handbook"
     """
-    fts_query = _prepare_query(query)
-    if not fts_query:
+    _and_query, or_query = _prepare_query(query)
+    if not or_query:
         return []
 
     try:
-        rows = _get_article_repo().search_handbook_fts(fts_query, limit)
+        # handbook 用 OR 查询（数据量少，不需要精确过滤）
+        rows = _get_article_repo().search_handbook_fts(or_query, limit)
 
         results: list[dict] = []
         for row in rows:

@@ -53,12 +53,13 @@ async def verify_auth(
     # ── Trial mode for /api/chat ──────────────────────────────────
     # If no X-Auth-Code is provided on the chat endpoint, fall back to
     # trial mode.  The first call with a given X-Trial-Id is allowed;
-    # the second call returns 401 with trial_exhausted.
-    if request.url.path.startswith("/api/chat") and not x_auth_code:
+    # the second call returns 401.
+    # NOTE: only match the exact /api/chat path (not /api/chat/history etc.)
+    if request.url.path == "/api/chat" and not x_auth_code:
         if not x_trial_id:
             raise HTTPException(
                 status_code=401,
-                detail="缺少 X-Auth-Code 或 X-Trial-Id 请求头",
+                detail="401 缺少 X-Auth-Code 或 X-Trial-Id 请求头",
             )
 
         ensure_trial_table()
@@ -88,13 +89,13 @@ async def verify_auth(
                 conn.commit()
                 raise HTTPException(
                     status_code=401,
-                    detail={"trial_exhausted": True, "detail": "试用次数已用完，请登录"},
+                    detail="401 试用次数已用完，请登录",
                 )
 
             # chat_count >= 2: already exhausted
             raise HTTPException(
                 status_code=401,
-                detail={"trial_exhausted": True, "detail": "试用次数已用完，请登录"},
+                detail="401 试用次数已用完，请登录",
             )
 
     # ── Normal auth code check ────────────────────────────────────

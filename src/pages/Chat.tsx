@@ -383,7 +383,7 @@ export default function ChatPage() {
               🎉 试用已完成！登录后解锁无限次使用。
             </span>
             <button
-              onClick={() => navigate("/login")}
+              onClick={() => navigate(`/login?redirect=${encodeURIComponent(window.location.hash.slice(1) || "/chat")}`)}
               className="px-4 py-1.5 rounded-lg text-sm font-medium bg-amber-500 text-white hover:bg-amber-600 transition-colors whitespace-nowrap"
             >
               去登录

@@ -213,7 +213,13 @@ export function useChatSend(
           const msg = retryErr instanceof Error ? retryErr.message : "";
           let errorMsg = "网络连接失败，请检查网络后重试";
           let contentMsg = "抱歉，请求失败，请稍后重试。";
-          if (msg.includes("授权码") || msg.includes("X-Auth-Code") || msg.includes("401")) {
+          if (msg.includes("试用")) {
+            errorMsg = "试用次数已用完，请登录后继续使用";
+            contentMsg = "试用次数已用完，请登录后继续使用。";
+            setTimeout(() => {
+              window.location.hash = `#/login?redirect=${encodeURIComponent(window.location.hash.slice(1) || "/chat")}`;
+            }, 2000);
+          } else if (msg.includes("授权码") || msg.includes("X-Auth-Code") || msg.includes("401")) {
             errorMsg = "授权已过期，请重新登录";
             contentMsg = "授权已过期，请重新登录后再试。";
             authLogout();
@@ -257,7 +263,7 @@ export function useChatSend(
     if (!content || loading || sendingRef.current) return;
     // 试用拦截：已用完试用且未登录 → 直接跳登录页，不发送请求
     if (useAppStore.getState().trialUsed && !isAuthenticated()) {
-      window.location.hash = "#/login";
+      window.location.hash = `#/login?redirect=${encodeURIComponent(window.location.hash.slice(1) || "/chat")}`;
       return;
     }
     sendingRef.current = true;

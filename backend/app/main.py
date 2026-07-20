@@ -10,8 +10,9 @@ from .api.chat import router as chat_router
 from .api.auth import router as auth_router
 from .api.school import router as school_router
 from .api.knowledge import router as knowledge_router
+from .api.favorites import router as favorites_router
 from .core.config import settings
-from .core.security import verify_auth
+from .core.security import ensure_trial_table, verify_auth
 
 
 class PrivateNetworkMiddleware:
@@ -94,6 +95,9 @@ def create_app() -> FastAPI:
     # Starlette add_middleware wraps: last added = outermost.
     app.add_middleware(PrivateNetworkMiddleware)
 
+    # Initialize trial sessions table for first-request-free trial mode
+    ensure_trial_table()
+
     app.include_router(recommend_router)
     app.include_router(mbti_router)
     app.include_router(timeline_router)
@@ -102,6 +106,7 @@ def create_app() -> FastAPI:
     app.include_router(auth_router)
     app.include_router(school_router)
     app.include_router(knowledge_router)
+    app.include_router(favorites_router)
 
     return app
 

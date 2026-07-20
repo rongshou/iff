@@ -205,8 +205,10 @@ class ArticleRepository(Repository):
         )
         return row[0] > 0 if row else False
 
-    def search_kb_fts(self, fts_query: str, limit: int) -> list[dict]:
-        """搜索 kb_processed_fts，BM25 排序。
+    def search_kb_fts(self, fts_query: str, limit: int,
+                       article_types: list[str] | None = None,
+                       countries: list[str] | None = None) -> list[dict]:
+        """搜索 kb_processed_fts，BM25 排序，支持结构化预过滤。
 
         权重分配（列顺序: article_id=0, title=1, summary=2, clean_text=3,
                      article_type=4, countries=5, tags=6）：
@@ -218,21 +220,42 @@ class ArticleRepository(Repository):
         - clean_text: 1x（全文最低权重）
         - article_id: 0（不参与排序）
 
+        Args:
+            fts_query: FTS5 MATCH 查询字符串
+            limit: 返回条数上限
+            article_types: 按文章类型预过滤（如 ["申请指南", "签证指南"]）
+            countries: 按国家预过滤（如 ["美国", "英国"]），匹配 JSON 数组字段
+
         返回字段: article_id, title, summary, article_type, countries, tags,
                   quality_score, publish_time
         """
-        sql = """
+        params: list = [fts_query]
+        where_extra = ""
+        
+        if article_types:
+            placeholders = ",".join(["?"] * len(article_types))
+            where_extra += f" AND k.article_type IN ({placeholders})"
+            params.extend(article_types)
+        
+        if countries:
+            country_conditions = " OR ".join(["k.countries LIKE ?"] * len(countries))
+            where_extra += f" AND ({country_conditions})"
+            for c in countries:
+                params.append(f'%"{c}"%')
+        
+        sql = f"""
             SELECT f.article_id,
                    k.title, k.summary, k.article_type, k.countries, k.tags,
                    k.quality_score, k.publish_time,
                    bm25(kb_processed_fts, 0, 10.0, 5.0, 1.0, 2.0, 3.0, 8.0) as rank_score
             FROM kb_processed_fts f
             JOIN kb_processed k ON f.article_id = k.article_id
-            WHERE kb_processed_fts MATCH ?
+            WHERE kb_processed_fts MATCH ?{where_extra}
             ORDER BY rank_score ASC
             LIMIT ?
         """
-        rows = self.fetch_all(sql, (fts_query, limit))
+        params.append(limit)
+        rows = self.fetch_all(sql, tuple(params))
         return [dict(r) for r in rows]
 
     def get_kb_article(self, article_id: str) -> dict | None:

@@ -1,6 +1,7 @@
 import { useState, useMemo, memo } from "react";
 import type { ChatMessage } from "../types";
 import { renderMarkdown } from "../utils/markdown";
+import RecommendCard from "./RecommendCard";
 
 function formatTime(ms: number) {
   const d = new Date(ms);
@@ -84,11 +85,15 @@ const MessageBubble = memo(function MessageBubble({ msg, loading }: { msg: ChatM
               ? "bubble-user px-4 py-2.5 rounded-2xl rounded-tr-md"
               : "bubble-ai px-[18px] py-3.5 rounded-2xl rounded-tl-md"
           } text-[15px] sm:text-[15.5px] leading-relaxed ${
-            isUser ? "" : "prose-chat"
+            isUser || msg.recommendPayload ? "" : "prose-chat"
           }`}
         >
           {isUser ? (
             <div className="whitespace-pre-wrap break-words">{msg.content}</div>
+          ) : msg.recommendPayload ? (
+            <div className="break-words">
+              <RecommendCard payload={msg.recommendPayload} />
+            </div>
           ) : msg.content ? (
             isStreaming ? (
               <div className="whitespace-pre-wrap break-words">{msg.content}</div>
@@ -118,6 +123,6 @@ const MessageBubble = memo(function MessageBubble({ msg, loading }: { msg: ChatM
       </div>
     </div>
   );
-}, (prev, next) => prev.msg.id === next.msg.id && prev.msg.content === next.msg.content && prev.msg.reasoning === next.msg.reasoning && prev.loading === next.loading);
+}, (prev, next) => prev.msg.id === next.msg.id && prev.msg.content === next.msg.content && prev.msg.reasoning === next.msg.reasoning && prev.msg.recommendPayload === next.msg.recommendPayload && prev.loading === next.loading);
 
 export default MessageBubble;

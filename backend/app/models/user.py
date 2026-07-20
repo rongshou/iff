@@ -15,6 +15,7 @@ class RecommendRequest(BaseModel):
     undergraduate_school: Optional[str] = Field(None, examples=["清华大学"])
     gre_score: Optional[int] = Field(None, examples=[320])
     toefl_score: Optional[int] = Field(None, examples=[100])
+    toefl_new_score: Optional[float] = Field(None, examples=[5.5])
     ielts_score: Optional[float] = Field(None, examples=[7.5])
 
     @model_validator(mode="after")

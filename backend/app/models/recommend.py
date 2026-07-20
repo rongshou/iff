@@ -17,6 +17,12 @@ class SchoolMatchItem(BaseModel):
     admission_score: float = 0.0
     p50_reference: Optional[float] = None
     gpa_gap: Optional[float] = None  # 冲刺校: 需提升多少百分点才能进匹配档
+    toefl_requirement: Optional[int] = None  # 学校旧托福要求 0-120
+    toefl_new_requirement: Optional[float] = None  # 学校新托福要求 1-6
+    meets_toefl: Optional[bool] = None  # None=无要求/无分数, True=达标, False=不达标
+    toefl_display: Optional[dict] = None  # 前端展示用：{"type":"new","value":5.0,"label":"新托福 5.0"}
+    toefl_kb_sources: list[str] = []  # 知识库中检索到的托福相关原文片段（兼容旧版）
+    toefl_kb_insights: dict = {}  # 知识库消化后的结构化洞察
 
 
 class CountryMatchResult(BaseModel):
@@ -37,7 +43,8 @@ class BackgroundInfo(BaseModel):
     school_tier: int = 0
     school_tier_label: str = ""
     gre_score: Optional[int] = None
-    toefl_score: Optional[int] = None
+    toefl_score: Optional[int] = None  # 旧分制 0-120
+    toefl_new_score: Optional[float] = None  # 新分制 1-6
     ielts_score: Optional[float] = None
 
 

@@ -144,8 +144,14 @@ def process_articles(limit=None, reprocess=False):
             kb_conn.commit(); skipped_count += 1; continue
 
         # 入库
+        # 确保所有字段都是字符串
+        def to_str(v):
+            if v is None: return ""
+            if isinstance(v, str): return v
+            return json.dumps(v, ensure_ascii=False)
+
         kb_conn.execute("""INSERT OR REPLACE INTO kb_processed (article_id, title, summary, article_type, countries, universities, key_data, target_audience, tags, quality_score, clean_text, source_url, mp_id, publish_time) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
-            (aid, title, structured.get("summary",""), article_type, json.dumps(structured.get("countries",[]),ensure_ascii=False), json.dumps(structured.get("universities",[]),ensure_ascii=False), to_str(structured.get("key_data","")), to_str(structured.get("target_audience","")), json.dumps(structured.get("tags",[]),ensure_ascii=False), quality_score, clean_text[:2000], url, mp_id, publish_time))
+            (str(aid), to_str(title), to_str(structured.get("summary","")), to_str(article_type), json.dumps(structured.get("countries",[]),ensure_ascii=False), json.dumps(structured.get("universities",[]),ensure_ascii=False), to_str(structured.get("key_data","")), to_str(structured.get("target_audience","")), json.dumps(structured.get("tags",[]),ensure_ascii=False), float(quality_score), str(clean_text[:2000]), to_str(url), to_str(mp_id), publish_time))
         kb_conn.execute("INSERT OR REPLACE INTO kb_process_state VALUES (?, 'done', NULL, datetime('now'))", (aid,))
         kb_conn.commit()
         print(f"  Done: type={article_type}, score={quality_score}, countries={structured.get('countries',[])}", flush=True)

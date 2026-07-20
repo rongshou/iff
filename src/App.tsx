@@ -66,6 +66,16 @@ export default function App() {
         <div style={{ marginTop: 4, opacity: 0.7 }}>
           Iff · 天权智能留学问答平台 · {VERSION}
         </div>
+        <div style={{ marginTop: 4, opacity: 0.6 }}>
+          <a
+            href="https://beian.miit.gov.cn/"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ color: "inherit", textDecoration: "none" }}
+          >
+            沪ICP备20004281号-1
+          </a>
+        </div>
       </footer>
     </>
   );

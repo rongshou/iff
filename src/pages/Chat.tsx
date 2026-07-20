@@ -2,18 +2,52 @@ import { useState, useRef, useEffect, useMemo } from "react";
 import type { ChatMessage } from "../types";
 import MessageBubble from "../components/MessageBubble";
 import BrandNav from "../components/BrandNav";
+import EmptyState from "../components/EmptyState";
+import OnboardingWizard from "../components/OnboardingWizard";
 import { SCENES } from "../config/scenes";
 import type { SceneId } from "../config/scenes";
 import { useChatInput } from "../hooks/useChatInput";
 import { useChatScroll } from "../hooks/useChatScroll";
 import { useChatSend } from "../hooks/useChatSend";
 import { useChatStore } from "../store/chatStore";
+import { useAppStore } from "../store/appStore";
+import { loadProfile } from "../services/profile";
+import { isAuthenticated } from "../services/auth";
+import { useNavigate } from "react-router-dom";
 type SceneState = Record<SceneId, ChatMessage[]>;
+
+/* ---------- cross-scene context helpers ---------- */
+
+function isRecord(v: unknown): v is Record<string, unknown> {
+  return typeof v === "object" && v !== null;
+}
+
+/** 从 recommendPayload.by_country[].schools[].name 提取前 3 个学校名 */
+function extractTopSchoolNames(payload: unknown): string[] {
+  if (!isRecord(payload)) return [];
+  const byCountry = payload.by_country;
+  if (!Array.isArray(byCountry)) return [];
+  const names: string[] = [];
+  for (const c of byCountry) {
+    if (!isRecord(c)) continue;
+    const schools = c.schools;
+    if (!Array.isArray(schools)) continue;
+    for (const s of schools) {
+      if (isRecord(s) && typeof s.name === "string" && s.name) {
+        names.push(s.name);
+        if (names.length >= 3) return names;
+      }
+    }
+  }
+  return names;
+}
 
 export default function ChatPage() {
   const { input, setInput, inputRef, handleKeyDown } = useChatInput(() => handleSend());
   const { scrollRef, showScrollBottom, setShowScrollBottom, onScroll, scrollToBottom } = useChatScroll();
   const [activeScene, setActiveScene] = useState<SceneId>("school");
+  // 首次访问（无 profile 且无对话历史）显示 OnboardingWizard；用户跳过或完成后切回 EmptyState
+  const [wizardDismissed, setWizardDismissed] = useState(false);
   // 每个场景的对话历史独立存储，切换 Tab 不串
   const [scenes, setScenes] = useState<SceneState>(() => {
     // 从 localStorage 读取上次会话（避免刷新丢上下文）
@@ -50,6 +84,16 @@ export default function ChatPage() {
   const setError = useChatStore((s) => s.setError as React.Dispatch<React.SetStateAction<string | null>>);
   const setCollectedInfo = useChatStore((s) => s.setCollectedInfo);
 
+  // 跨场景上下文：选校结果带去文书/签证场景
+  const recentSchools = useAppStore((s) => s.crossSceneContext.recentSchools);
+  const clearCrossSceneContext = useAppStore((s) => s.clearCrossSceneContext);
+
+  // 试用模式：未登录用户首次收到 AI 回复后标记试用已用，并拦截后续发送
+  const trialUsed = useAppStore((s) => s.trialUsed);
+  const markTrialUsed = useAppStore((s) => s.markTrialUsed);
+  const navigate = useNavigate();
+  const trialBlocked = trialUsed && !isAuthenticated();
+
   const abortRef = useRef<AbortController | null>(null);
   const atBottomRef = useRef(true);
   const { handleSend, handleStop, handleClear, handleClearAll } = useChatSend(
@@ -58,7 +102,28 @@ export default function ChatPage() {
     loading, input, atBottomRef,
   );
 
+  // 清空当前场景时一并清空跨场景上下文（避免陈旧选校结果残留）
+  const handleClearWithCtx = () => {
+    clearCrossSceneContext();
+    handleClear();
+  };
+
   const messages = scenes[activeScene];
+
+  // 监听 school 场景的推荐结果，提取前 3 学校名写入跨场景上下文
+  const schoolMessages = scenes.school;
+  useEffect(() => {
+    for (let i = schoolMessages.length - 1; i >= 0; i--) {
+      const m = schoolMessages[i];
+      if (m.recommendPayload) {
+        const names = extractTopSchoolNames(m.recommendPayload);
+        if (names.length > 0) {
+          useAppStore.getState().setCrossSceneContext({ recentSchools: names });
+        }
+        return;
+      }
+    }
+  }, [schoolMessages]);
   const scene = useMemo(
     () => SCENES.find((s) => s.id === activeScene)!,
     [activeScene]
@@ -121,6 +186,13 @@ export default function ChatPage() {
   const lastAssistantDone =
     lastAssistant && !loading && lastAssistant.content && !lastAssistant.content.startsWith("抱歉");
 
+  // 首次 AI 回复完成且用户未登录 → 标记试用已用（写入 localStorage + Zustand）
+  useEffect(() => {
+    if (lastAssistantDone && !isAuthenticated() && !trialUsed) {
+      markTrialUsed();
+    }
+  }, [lastAssistantDone, trialUsed, markTrialUsed]);
+
   return (
     <div className="h-screen chat-bg flex flex-col">
       <div className="max-w-3xl w-full mx-auto flex-1 flex flex-col min-h-0 px-4 sm:px-6 py-0 sm:py-2">
@@ -139,8 +211,9 @@ export default function ChatPage() {
                   {
                     label: "清空",
                     icon: "trash",
-                    onClick: handleClear,
+                    onClick: handleClearWithCtx,
                     title: "只清空当前场景的对话",
+                    hideTextOnMobile: true,
                   },
                   {
                     label: "全部清空",
@@ -176,7 +249,7 @@ export default function ChatPage() {
 
         {/* ---------- 场景 Tab ---------- */}
         <div className="mb-3 sm:mb-4 -mx-1 px-1 overflow-x-auto thin-scrollbar">
-          <div className="inline-flex gap-1 p-1 bg-slate-100/80 rounded-xl">
+          <div className="inline-flex gap-1 p-1 bg-slate-100/80 rounded-xl flex-nowrap">
             {SCENES.map((s) => {
               const isActive = activeScene === s.id;
               const count = scenes[s.id].length;
@@ -209,18 +282,45 @@ export default function ChatPage() {
           </div>
         </div>
 
+        {/* ---------- 跨场景上下文 chips（文书/签证场景显示选校结果） ---------- */}
+        {(activeScene === "essay" || activeScene === "visa") && recentSchools.length > 0 && (
+          <div className="mb-3 sm:mb-4 flex items-center gap-2 bg-indigo-50 rounded-xl px-3 py-2 overflow-x-auto thin-scrollbar">
+            <span className="text-xs text-indigo-700 font-medium shrink-0">当前选校结果:</span>
+            {recentSchools.map((name) => (
+              <button
+                key={name}
+                onClick={() => {
+                  setInput(`帮 ${name} 写${activeScene === "essay" ? " PS" : " 签证材料"}`);
+                  setTimeout(() => inputRef.current?.focus(), 0);
+                }}
+                className="text-xs px-3 py-1 rounded-full bg-white border border-slate-200 text-slate-700 hover:border-indigo-300 hover:text-indigo-600 transition-colors whitespace-nowrap"
+              >
+                {name}
+              </button>
+            ))}
+          </div>
+        )}
+
         {/* ---------- 主体区域 ---------- */}
         {isEmpty ? (
           <div className="flex-1 overflow-y-auto thin-scrollbar pb-2">
-            <EmptyState
-              scene={scene}
-              onPick={(t) => {
-                // 点击快捷问题：填到输入框，不直接发送，让用户自己修改后再发
-                setInput(t);
-                setTimeout(() => inputRef.current?.focus(), 0);
-              }}
-              onSceneChange={setActiveScene}
-            />
+            {!wizardDismissed && loadProfile() === null && totalMessages === 0 ? (
+              <OnboardingWizard
+                scene={scene}
+                onSceneChange={setActiveScene}
+                onComplete={() => setWizardDismissed(true)}
+              />
+            ) : (
+              <EmptyState
+                scene={scene}
+                onPick={(t) => {
+                  // 点击快捷问题：填到输入框，不直接发送，让用户自己修改后再发
+                  setInput(t);
+                  setTimeout(() => inputRef.current?.focus(), 0);
+                }}
+                onSceneChange={setActiveScene}
+              />
+            )}
           </div>
         ) : (
           <div
@@ -276,6 +376,21 @@ export default function ChatPage() {
           </div>
         )}
 
+        {/* ---------- 试用拦截横幅 ---------- */}
+        {trialBlocked && (
+          <div className="mt-3 sm:mt-4 flex items-center justify-between gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
+            <span className="text-sm text-amber-800 font-medium">
+              🎉 试用已完成！登录后解锁无限次使用。
+            </span>
+            <button
+              onClick={() => navigate("/login")}
+              className="px-4 py-1.5 rounded-lg text-sm font-medium bg-amber-500 text-white hover:bg-amber-600 transition-colors whitespace-nowrap"
+            >
+              去登录
+            </button>
+          </div>
+        )}
+
         {/* ---------- 输入区 ---------- */}
         <div className="mt-3 sm:mt-4">
           <div className="bg-white border border-slate-200 rounded-2xl shadow-sm focus-within:border-indigo-400 focus-within:ring-2 focus-within:ring-indigo-100 transition-all">
@@ -284,10 +399,10 @@ export default function ChatPage() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder={`聊聊${scene.label}相关的问题...（Enter 发送，Shift+Enter 换行）`}
-              disabled={false}
+              placeholder={trialBlocked ? "请登录后继续使用" : `聊聊${scene.label}相关的问题...（Enter 发送，Shift+Enter 换行）`}
+              disabled={trialBlocked}
               rows={1}
-              className="w-full resize-none bg-transparent px-4 pt-3 pb-2 text-sm sm:text-[15px] text-slate-800 placeholder:text-slate-400 focus:outline-none disabled:opacity-60 max-h-40 thin-scrollbar"
+              className="w-full resize-none bg-transparent px-3 sm:px-4 pt-3 pb-2 text-sm sm:text-[15px] text-slate-800 placeholder:text-slate-400 focus:outline-none disabled:opacity-60 max-h-40 thin-scrollbar"
             />
             <div className="flex items-center justify-between px-3 pb-3">
               <div className="text-[11px] text-slate-400 hidden sm:block">
@@ -302,7 +417,7 @@ export default function ChatPage() {
                     <span className="w-2 h-2 bg-slate-500 rounded-sm" />
                     停止
                   </button>
-                ) : (
+                ) : trialBlocked ? null : (
                   <button
                     onClick={() => handleSend()}
                     disabled={!input.trim()}
@@ -323,10 +438,5 @@ export default function ChatPage() {
     </div>
   );
 }
-
-/* ---------- 空状态 ---------- */
-
-import EmptyState from "../components/EmptyState";
-
 
 /* ---------- 消息气泡已抽出为独立组件：src/components/MessageBubble.tsx ---------- */

@@ -1,16 +1,23 @@
 import { Navigate, HashRouter, Routes, Route, Outlet } from "react-router-dom";
 import { useEffect } from "react";
-import { isAuthenticated } from "./services/auth";
+import { isAuthenticated, getTrialId } from "./services/auth";
 import { loadSchoolAbbreviations } from "./services/school";
+import { useAppStore } from "./store/appStore";
 import LoginPage from "./pages/Login";
 import ChatPage from "./pages/Chat";
 import ProfilePage from "./pages/ProfilePage";
 
 const VERSION = import.meta.env.VITE_APP_VERSION || "v?";
 
-/** 路由守卫：未登录跳转 /login */
+/**
+ * 路由守卫：
+ * - 已登录用户 → 放行
+ * - 未登录且未用过试用 → 放行（试用模式，由 Chat 页面在首次回复后拦截）
+ * - 未登录且已用过试用 → 跳转 /login
+ */
 function AuthGuard() {
-  if (!isAuthenticated()) {
+  const trialUsed = useAppStore((s) => s.trialUsed);
+  if (!isAuthenticated() && trialUsed) {
     return <Navigate to="/login" replace />;
   }
   return <Outlet />;
@@ -20,6 +27,12 @@ export default function App() {
   // 启动时预加载学校简称映射（fire-and-forget），让 Chat 页面调用时走同步缓存
   useEffect(() => {
     void loadSchoolAbbreviations();
+    // 确保匿名试用 ID 尽早生成，后续 chat 请求头才能带上
+    try {
+      getTrialId();
+    } catch {
+      // ignore storage failures (private mode / quota)
+    }
   }, []);
   return (
     <>

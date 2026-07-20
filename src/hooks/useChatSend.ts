@@ -1,10 +1,16 @@
 import { useRef } from "react";
 import { generateId, ts, SCENE_INFO, looksLikeSchoolRequest, extractInfo, getMissingFields, profileToInfo } from "../services/chat-helpers";
 import { loadProfile, mergeChatInfo, createChatHistoryItem, addHistoryItem } from "../services/profile";
-import { sendChat, streamChat } from "../services/chat";
-import { logout as authLogout } from "../services/auth";
+import { sendChat, streamChat, saveChatTurn } from "../services/chat";
+import { logout as authLogout, isAuthenticated } from "../services/auth";
+import { useAppStore } from "../store/appStore";
 import type { ChatMessage } from "../types";
 import type { SceneId } from "../config/scenes";
+
+/** 生成唯一会话 ID */
+function genSessionId(): string {
+  return `chat_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+}
 
 type SceneState = Record<SceneId, ChatMessage[]>;
 
@@ -34,6 +40,7 @@ export function useChatSend(
 ) {
   const messages = scenes[activeScene] || [];
   const sendingRef = useRef(false);
+  const sessionIdRef = useRef<Record<string, string>>({});
 
   const updateSceneMessages = (updater: (prev: ChatMessage[]) => ChatMessage[]) => {
     setScenes((prev: SceneState) => ({ ...prev, [activeScene]: updater(prev[activeScene]) }));
@@ -52,6 +59,7 @@ export function useChatSend(
     setCollectedInfo((prev: Record<SceneId, Record<string, string>>) => ({ ...prev, [activeScene]: {} }));
     setError(null);
     setInput("");
+    sessionIdRef.current[activeScene] = genSessionId(); // 新会话 ID
     setTimeout(() => inputRef.current?.focus(), 0);
   };
 
@@ -65,6 +73,7 @@ export function useChatSend(
     }
     setScenes({ school: [], essay: [], visa: [] });
     setCollectedInfo({} as Record<SceneId, Record<string, string>>);
+    sessionIdRef.current = {}; // 重置所有会话 ID
   };
 
   const doSendToAI = async (msgs: ChatMessage[]) => {
@@ -133,6 +142,19 @@ export function useChatSend(
           // flush any pending batched state on stream completion
           flushContent();
           flushReasoning();
+          // 自动保存本轮到后端
+          const lastUser = msgs.filter(m => m.role === "user").pop();
+          if (lastUser && accumulated && !sessionIdRef.current[activeScene]) {
+            sessionIdRef.current[activeScene] = genSessionId();
+          }
+          if (lastUser && accumulated) {
+            saveChatTurn(
+              sessionIdRef.current[activeScene],
+              activeScene,
+              lastUser.content,
+              accumulated,
+            );
+          }
         },
         controller.signal,
         (reasoning: string) => {
@@ -174,6 +196,19 @@ export function useChatSend(
               m.id === assistantId ? { ...m, content: res.reply } : m
             ),
           }));
+          // 自动保存本轮到后端
+          const lastUser = msgs.filter(m => m.role === "user").pop();
+          if (lastUser && res.reply) {
+            if (!sessionIdRef.current[activeScene]) {
+              sessionIdRef.current[activeScene] = genSessionId();
+            }
+            saveChatTurn(
+              sessionIdRef.current[activeScene],
+              activeScene,
+              lastUser.content,
+              res.reply,
+            );
+          }
         } catch (retryErr: unknown) {
           const msg = retryErr instanceof Error ? retryErr.message : "";
           let errorMsg = "网络连接失败，请检查网络后重试";
@@ -186,6 +221,9 @@ export function useChatSend(
           } else if (msg.includes("余额")) {
             errorMsg = "AI 服务暂不可用（余额不足），请联系管理员";
             contentMsg = "AI 服务暂不可用，请联系管理员处理。";
+          } else if (msg.includes("对话服务异常")) {
+            errorMsg = "AI 服务暂时不可用（OpenCode API 异常），请稍后重试";
+            contentMsg = "AI 服务暂时不可用，请稍后重试。";
           } else if (msg.includes("500")) {
             errorMsg = "服务端处理出错，已记录日志，请稍后重试";
           } else if (msg.includes("timeout") || msg.includes("超时")) {
@@ -217,6 +255,11 @@ export function useChatSend(
   const handleSend = async (text?: string) => {
     const content = (text ?? input).trim();
     if (!content || loading || sendingRef.current) return;
+    // 试用拦截：已用完试用且未登录 → 直接跳登录页，不发送请求
+    if (useAppStore.getState().trialUsed && !isAuthenticated()) {
+      window.location.hash = "#/login";
+      return;
+    }
     sendingRef.current = true;
     setError(null);
 

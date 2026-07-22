@@ -7,6 +7,7 @@ from typing import Any, TYPE_CHECKING
 from ..core.config import settings
 from .news_knowledge import search_articles
 from .essay_knowledge import is_essay_query, build_essay_context
+from .language_requirements import build_language_context
 from .recommend import run as run_recommend
 from .chat_prompts import (
     SYSTEM_PROMPT,
@@ -200,6 +201,16 @@ def load_context_from_history(messages: list[dict]) -> tuple[str, dict | None]:
         logger.warning("load_essay_context failed", exc_info=True)
 
     # ====================================================================
+    # 1c. 注入语言要求数据（当问题涉及托福/雅思/语言成绩时）
+    # ====================================================================
+    try:
+        lang_ctx = build_language_context(last_user, messages)
+        if lang_ctx:
+            parts.append(lang_ctx)
+    except Exception:
+        logger.warning("load_language_context failed", exc_info=True)
+
+    # ====================================================================
     # 2. 判断用户意图：选校相关 vs 通用问答
     # ====================================================================
     # 优先按最新一条消息判断——如果用户刚问的是文书/签证，就不走选校推荐
@@ -240,7 +251,9 @@ def load_context_from_history(messages: list[dict]) -> tuple[str, dict | None]:
             if profile.get("study_level"):
                 collected.append(f"学历: {profile['study_level']}")
             if profile.get("target_major"):
-                collected.append(f"专业: {profile['target_major']}")
+                collected.append(f"目标专业: {profile['target_major']}")
+            if profile.get("original_major") and profile.get("original_major") != profile.get("target_major"):
+                collected.append(f"目前就读专业: {profile['original_major']}")
 
             missing_labels = [f["label"] for f in _get_missing_fields(profile)]
 

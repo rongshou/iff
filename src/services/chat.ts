@@ -65,6 +65,7 @@ export interface ChatMessageInput {
 export interface ChatResponse {
   reply: string;
   messages: ChatMessageInput[];
+  recommend_payload?: any;
 }
 
 export async function sendChat(
@@ -93,7 +94,8 @@ export async function streamChat(
   onChunk: (text: string) => void,
   onDone: () => void,
   signal?: AbortSignal,
-  onReasoning?: (text: string) => void
+  onReasoning?: (text: string) => void,
+  onRecommend?: (payload: any) => void,
 ): Promise<void> {
   let res: Response;
   try {
@@ -142,6 +144,7 @@ export async function streamChat(
           const obj = JSON.parse(data);
           if (obj.content) onChunk(obj.content);
           if (obj.reasoning && onReasoning) onReasoning(obj.reasoning);
+          if (obj.recommend_payload && onRecommend) onRecommend(obj.recommend_payload);
         } catch {
           // skip invalid JSON
         }
@@ -164,6 +167,7 @@ export async function streamChat(
           const obj = JSON.parse(data);
           if (obj.content) onChunk(obj.content);
           if (obj.reasoning && onReasoning) onReasoning(obj.reasoning);
+          if (obj.recommend_payload && onRecommend) onRecommend(obj.recommend_payload);
         } catch {
           // skip invalid JSON
         }

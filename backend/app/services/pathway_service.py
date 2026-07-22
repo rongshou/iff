@@ -84,31 +84,29 @@ def find_pathway_suggestions(
     target_major: Optional[str] = None,
 ) -> list[dict]:
     """
-    触发预科建议的场景：
-    1. GPA 偏低 (百分制 < 75 或双非 < 80)
-    2. 跨专业申请 (original_major != target_major)
+    触发预科建议的场景：仅在 GPA 偏低时（百分制 < 75 或双非 < 80）。
+    跨专业申请不再单独触发预科——成绩足够的跨专业学生可以直接申请，
+    只有当其 GPA 同时偏低时才展示预科作为备选路径。
     """
     pathway_map = build_pathway_map(conn, study_level)
 
     if gpa_percent is None:
         return []
 
-    reasons = []
-
-    # 低 GPA 触发
-    low_gpa = gpa_percent < 75 or (school_tier >= 3 and gpa_percent < 80)
-    if low_gpa:
-        reasons.append("GPA偏低，预科可降低录取门槛")
-
-    # 跨专业触发
+    # 跨专业判断仅用于后续筛选与目标专业相关的预科方向，不再作为触发条件
     is_cross_major = (
         original_major and target_major
         and original_major.strip() != target_major.strip()
         and target_major.strip() not in original_major
         and original_major.strip() not in target_major
     )
-    if is_cross_major and gpa_percent < 85:
-        reasons.append(f"从「{original_major}」转「{target_major}」，预科可补修专业基础")
+
+    reasons = []
+
+    # 低 GPA 触发（唯一的触发条件）
+    low_gpa = gpa_percent < 75 or (school_tier >= 3 and gpa_percent < 80)
+    if low_gpa:
+        reasons.append("GPA偏低，预科可降低录取门槛")
 
     if not reasons:
         return []

@@ -406,11 +406,11 @@ def run(profile: dict, tianshu_data: Optional[dict] = None) -> dict:
                 if not school_name:
                     continue
                 row = conn.execute(
-                    """SELECT u.toefl_total, u.toefl_new_total
+                    """SELECT u.toefl_total, u.toefl_new_total, u.ielts_overall, u.ielts_single
                        FROM universities u
                        WHERE u.name = ?
                        UNION
-                       SELECT u.toefl_total, u.toefl_new_total
+                       SELECT u.toefl_total, u.toefl_new_total, u.ielts_overall, u.ielts_single
                        FROM university_aliases a
                        JOIN universities u ON a.university_id = u.id
                        WHERE a.alias = ?""",
@@ -418,6 +418,8 @@ def run(profile: dict, tianshu_data: Optional[dict] = None) -> dict:
                 ).fetchone()
                 req_total = row[0] if row else None
                 req_new = row[1] if row else None
+                ielts_overall = row[2] if row else None
+                ielts_single = row[3] if row else None
                 # 学校要求（始终展示，无需用户分数）
                 school["toefl_requirement"] = req_total
                 school["toefl_new_requirement"] = req_new
@@ -435,6 +437,24 @@ def run(profile: dict, tianshu_data: Optional[dict] = None) -> dict:
                     school["toefl_display"] = {"type": "old", "value": req_total, "label": f"托福 {req_total}"}
                 else:
                     school["toefl_display"] = None
+
+                # ── 雅思要求（universities 为空时回退 us_admission_info.ielts_min） ──
+                if ielts_overall in (None, ""):
+                    us_row = conn.execute(
+                        "SELECT ielts_min FROM us_admission_info WHERE university = ?",
+                        (school_name,),
+                    ).fetchone()
+                    if us_row and us_row[0] is not None:
+                        ielts_overall = us_row[0]
+                school["ielts_requirement"] = ielts_overall
+                school["ielts_single_requirement"] = ielts_single
+                if ielts_overall not in (None, ""):
+                    label = f"雅思 {ielts_overall}"
+                    if ielts_single not in (None, ""):
+                        label += f"（单项 {ielts_single}）"
+                    school["ielts_display"] = {"value": ielts_overall, "label": label}
+                else:
+                    school["ielts_display"] = None
 
                 # ── 知识库托福信息消化（区分新旧分制） ──
                 insights = _digest_toefl_knowledge(conn, school_name)

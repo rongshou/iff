@@ -94,6 +94,7 @@ export function useChatSend(
 
       let accumulated = "";
       let reasoningText = "";
+      let recommendPayload: any = undefined;
       // rAF batching: cap React state updates at ~60fps during streaming
       // instead of firing setScenes on EVERY token (which freezes the page)
       let rAFContent = 0;
@@ -121,6 +122,16 @@ export function useChatSend(
         }));
       };
 
+      const flushRecommendPayload = () => {
+        if (!recommendPayload) return;
+        setScenes((prev: SceneState) => ({
+          ...prev,
+          [activeScene]: prev[activeScene].map((m: ChatMessage) =>
+            m.id === assistantId ? { ...m, recommendPayload } : m
+          ),
+        }));
+      };
+
       await streamChat(
         apiMessages,
         (chunk: string) => {
@@ -142,6 +153,7 @@ export function useChatSend(
           // flush any pending batched state on stream completion
           flushContent();
           flushReasoning();
+          flushRecommendPayload();
           // 自动保存本轮到后端
           const lastUser = msgs.filter(m => m.role === "user").pop();
           if (lastUser && accumulated && !sessionIdRef.current[activeScene]) {
@@ -171,6 +183,16 @@ export function useChatSend(
               }));
             });
           }
+        },
+        (payload: any) => {
+          recommendPayload = payload;
+          // immediately apply to the message so the UI re-renders with RecommendCard
+          setScenes((prev: SceneState) => ({
+            ...prev,
+            [activeScene]: prev[activeScene].map((m: ChatMessage) =>
+              m.id === assistantId ? { ...m, recommendPayload: payload } : m
+            ),
+          }));
         }
       );
     } catch (e: any) {
@@ -193,7 +215,9 @@ export function useChatSend(
           setScenes((prev: SceneState) => ({
             ...prev,
             [activeScene]: prev[activeScene].map((m: ChatMessage) =>
-              m.id === assistantId ? { ...m, content: res.reply } : m
+              m.id === assistantId
+                ? { ...m, content: res.reply, recommendPayload: res.recommend_payload }
+                : m
             ),
           }));
           // 自动保存本轮到后端

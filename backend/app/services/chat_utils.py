@@ -173,29 +173,60 @@ _MAJOR_STOPWORDS = {
 
 def _parse_original_major(text: str) -> str | None:
     """从文本中提取用户当前/原专业（排除"目标专业"标记后的内容）。"""
-    # 移除"目标专业：XXX"和"目标：XXX"，避免把目标专业当成原专业
-    cleaned = re.sub(r"目标(?:专业|方向)?\s*[:：]\s*[^\s，。,.!？?]+", "", text)
-    # 先尝试 _parse_major（匹配"XX专业"等模式）
+    # 移除"目标专业：XXX""目标专业是XXX""目标：XXX"，避免把目标专业当成原专业
+    cleaned = re.sub(r"目标(?:专业|方向)?\s*(?:是|为|[:：])\s*[^\s，。,.!？?]+", "", text)
+
+    # 模式A: 专业在前、值在后 —— "专业是XX" "专业：XX" "专业 XX" "目前专业XX" "本科专业是XX"
+    for m in re.finditer(r"专业\s*(?:是|为|叫|[:：])?\s*([^\s，。,.!？?]{2,})", cleaned):
+        candidate = re.sub(r"(的|了|啊|呀|哦|呢|吧)$", "", m.group(1).strip())
+        if (
+            candidate
+            and not candidate.startswith("的")
+            and candidate not in _MAJOR_STOPWORDS
+            and not re.search(r"(怎么|如何|好不好|好就业|有前途|吗|呢)$", candidate)
+        ):
+            return candidate
+
+    # 模式D: "学的是XX" "读的是XX" "我是学XX的" "主修XX"
+    for m in re.finditer(
+        r"(?:学的是|读的是|主修的是|(?:我是|我|本人)\s*(?:学|读|主修|辅修|修)\s*的?)\s*([\u4e00-\u9fffA-Za-z]{2,15})",
+        cleaned,
+    ):
+        candidate = re.sub(r"(的|了)$", "", m.group(1).strip())
+        if candidate and candidate not in _MAJOR_STOPWORDS:
+            return candidate
+
+    # 模式B: "XX专业"（复用 _parse_major，剥离前导功能词并过滤误匹配）
     result = _parse_major(cleaned)
     if result:
-        return result
-    # 回退：匹配"XX工程/科学/技术/管理/学"等常见专业后缀
-    # 排除学校名（XX大学/学院）和国家名
-    cleaned2 = re.sub(r"(硕士|本科|博士)(?:生)?", "", cleaned)
-    cleaned2 = re.sub(r"(英国|美国|澳洲|澳大利亚|加拿大|香港|新加坡|日本|德国|法国|新西兰|爱尔兰|荷兰|韩国|马来西亚|澳门|中国香港|中国澳门)", "", cleaned2)
-    cleaned2 = re.sub(r"(双非|985|211|海本|英本|美本|加本|澳本)", "", cleaned2)
-    cleaned2 = re.sub(r"\S+大学[^\s]*", "", cleaned2)  # 移除大学名
-    cleaned2 = re.sub(r"\S+学院[^\s]*", "", cleaned2)  # 移除学院名
-    _MAJOR_SUFFIXES = ("工程", "科学", "技术", "管理", "学", "教育", "商务", "金融")
-    for suffix in _MAJOR_SUFFIXES:
-        for length in range(6, 1, -1):
-            m = re.search(rf"([\u4e00-\u9fffA-Za-z]{{{length}}}){suffix}", cleaned2)
-            if m:
-                major = m.group(1).strip() + suffix
-                if major not in _MAJOR_STOPWORDS and len(major) >= 3:
-                    return major
-    return None
+        stripped = re.sub(r"^(我是|我|本人|目前|就读|就于|就|读|学|于|的是)+", "", result)
+        if (
+            stripped
+            and len(stripped) >= 2
+            and stripped not in _MAJOR_STOPWORDS
+            and not re.search(r"[我是的就]$", stripped)
+        ):
+            return stripped
 
+    # 模式C: 以专业后缀结尾的独立词语（如"通信工程""计算机科学"）
+    _MAJOR_SUFFIXES = (
+        "工程", "科学", "技术", "管理", "教育", "商务", "金融", "医学", "法学",
+        "文学", "理学", "工学", "经济学", "心理学", "社会学", "自动化",
+        "计算机", "数学", "物理", "化学", "统计", "会计", "设计", "建筑",
+        "土木", "机械", "电子", "通信", "软件", "新闻", "传媒", "护理",
+        "药学", "环境", "材料", "能源", "航空", "哲学", "教育学",
+    )
+    for token in re.split(r"[\s，。,.!？?;；:：、]+", cleaned):
+        if re.search(r"大学|学院", token):
+            continue
+        if re.match(r"^(我|是|的|就|读|学|目前|本人|想|打算|准备)", token):
+            continue
+        # 剥离学历前缀，如"本科电子信息工程" -> "电子信息工程"
+        token = re.sub(r"^(本科|硕士|博士|大专|研究生)", "", token)
+        for suffix in _MAJOR_SUFFIXES:
+            if token.endswith(suffix) and len(token) >= 3 and token not in _MAJOR_STOPWORDS:
+                return token
+    return None
 
 def _parse_major(text: str) -> str | None:
     # 模式0: 常见英文缩写 + 硕士/专业/方向
@@ -337,7 +368,23 @@ def _extract_best_university(text: str) -> str | None:
 # 通过 `_UNIV_ABBREV` 别名导入以保持下面所有引用代码不变。
 
 
+# 已知高校全称（来自简称词典的 values），用于优先完整匹配，
+# 避免"北京邮电大学"被截断成"邮电大学"。按长度降序仅作遍历用。
+_KNOWN_FULL_NAMES: list[str] = sorted(set(_UNIV_ABBREV.values()), key=len, reverse=True)
+
+
 def _parse_undergrad(text: str) -> str | None:
+    # 0. 优先匹配已知高校全称（避免"北京邮电大学"被截断成"邮电大学"），取最靠左的命中
+    best_name = None
+    best_pos = len(text) + 1
+    for full_name in _KNOWN_FULL_NAMES:
+        pos = text.find(full_name)
+        if pos != -1 and pos < best_pos:
+            best_pos = pos
+            best_name = full_name
+    if best_name:
+        return best_name
+
     # 1. 优先提取完整的 XX大学/XX学院（能避免"山大"误匹配"中山大学"）
     full = _extract_best_university(text)
     if full:
@@ -609,8 +656,16 @@ def _format_recommend_result(result: dict) -> str:
                     majors_str = f" | 录取专业: {'/'.join(shown)}"
                     if more > 0:
                         majors_str += f" 等{more}个专业"
+                lang_parts = []
+                toefl_disp = s.get("toefl_display")
+                if toefl_disp and toefl_disp.get("label"):
+                    lang_parts.append(toefl_disp["label"])
+                ielts_disp = s.get("ielts_display")
+                if ielts_disp and ielts_disp.get("label"):
+                    lang_parts.append(ielts_disp["label"])
+                lang_str = f" | 语言: {' / '.join(lang_parts)}" if lang_parts else ""
                 lines.append(
-                    f"    - {name}{rank_str} | {cases} 例{p50_str}{majors_str}{gap_str}"
+                    f"    - {name}{rank_str} | {cases} 例{p50_str}{majors_str}{lang_str}{gap_str}"
                 )
 
     lines.append("")
@@ -643,7 +698,10 @@ def _format_recommend_result(result: dict) -> str:
                     detail += f" | 语言要求: 雅思 {ielts}"
                 lines.append(f"    · {detail}")
     else:
-        lines.append("（你的背景适合直录，无需特别策略）")
+        lines.append(
+            "（你的背景足以直接录取，无需预科/桥梁/双录取等过渡路径。"
+            "请明确告诉申请人适合直录，不要推荐任何预科或桥梁课程）"
+        )
 
     return "\n".join(lines)
 

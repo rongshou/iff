@@ -18,6 +18,8 @@ services:
     build: ./backend
     image: tianquan-backend:latest
     container_name: tianquan-backend
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     ports:
       - "127.0.0.1:3470:3470"
     environment:
@@ -31,10 +33,16 @@ services:
       TIANQUAN_LLM_MODEL: "${TIANQUAN_LLM_MODEL:-deepseek-v4-flash-free}"
       TIANQUAN_LLM_FALLBACK_MODEL: "${TIANQUAN_LLM_FALLBACK_MODEL:-deepseek-v4-flash-free}"
       TIANQUAN_LLM_MAX_TOKENS: "${TIANQUAN_LLM_MAX_TOKENS:-8192}"
-      TIANQUAN_LLM_API_KEY: "${TIANQUAN_LLM_API_KEY:?set TIANQUAN_LLM_API_KEY in .env}"
-      TIANQUAN_VALID_AUTH_CODES: "${TIANQUAN_VALID_AUTH_CODES:?set TIANQUAN_VALID_AUTH_CODES in .env}"
+      TIANQUAN_LLM_API_KEY: "${TIANQUAN_LLM_API_KEY:-}"
+      TIANQUAN_VALID_AUTH_CODES: "${TIANQUAN_VALID_AUTH_CODES:-}"
+      ALIPAY_APP_ID: "${ALIPAY_APP_ID:?set ALIPAY_APP_ID in .env}"
+      ALIPAY_APP_PRIVATE_KEY_FILE: "/app/alipay_private_key.pem"
+      ALIPAY_PUBLIC_KEY: "${ALIPAY_PUBLIC_KEY:?set ALIPAY_PUBLIC_KEY in .env}"
+      ALIPAY_SANDBOX: "${ALIPAY_SANDBOX:-true}"
+      ALIPAY_NOTIFY_URL: "${ALIPAY_NOTIFY_URL:-}"
     volumes:
       - "${ADVISOR_DATA_DIR:-/home/admin/.openclaw/workspace-study-abroad/study-abroad-advisor/data}:/app/data"
+      - "/home/admin/tianquan/alipay_private_key.pem:/app/alipay_private_key.pem:ro"
       - "${WERSS_DB_PATH:-/home/admin/werss/data/db.db}:/app/data/werss.db"
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:3470/api/health')"]
